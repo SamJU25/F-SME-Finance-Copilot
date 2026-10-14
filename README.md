@@ -6,29 +6,35 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org/)
-[![PWA Ready](https://img.shields.io/badge/PWA-Ready-orange.svg)](https://web.dev/progressive-web-apps/)
+[![PWA roadmap](https://img.shields.io/badge/PWA-roadmap-orange.svg)](https://web.dev/progressive-web-apps/)
 [![Solidity 0.8.20](https://img.shields.io/badge/Solidity-0.8.20-363636.svg)](https://soliditylang.org/)
 [![FISCO BCOS](https://img.shields.io/badge/Consortium-FISCO_BCOS-blueviolet.svg)](https://fisco-bcos.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Project Form Factor**: Responsive Web Service + Progressive Web App (PWA) with native in-browser WebAuthn (TouchID/FaceID) hardware verification.
+**Current demo**: a local, read-only CSV cash review. The broader PWA, WebAuthn and integrations described below are architecture targets, not verified live capabilities.
 
 ---
 
-### Master Documentation Suite
+### Project status and documentation map
 
-Every specification, design decision, and operational guideline is documented and interconnected:
+The repository contains both a small first-demo contract and a much broader architecture blueprint. Coding agents should first read [`AGENTS.md`](AGENTS.md) for instruction precedence and verified status, then [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for the demo contract and task boundaries. The current code and tests—not the broader design references in [`docs/system.md`](docs/system.md), [`docs/architecture.md`](docs/architecture.md), [`docs/security.md`](docs/security.md), or the ADRs—show what is implemented. Before editing, inspect `git status` and preserve existing changes; do not commit or switch branches unless asked.
+
+The checked-in coding-agent skills under `.agent/skills/` are repository-specific; if a task names an account-synced skill, read that exact `SKILL.md` from its supplied location and resolve any referenced files relative to it. Team task prompts set goals, acceptance and boundaries—not a prescribed UI or implementation design. Teammates may choose the approach within those constraints; coordinate before shared-contract, dependency or scope changes.
+
+The current implementation includes a synthetic-CSV analysis endpoint and browser upload/results flow; it does not include authentication, multi-tenant database security, live bank connections, money movement, LLM integration, or blockchain execution. See [`AGENTS.md`](AGENTS.md) for checks and limitations. The wider capability diagrams below are design targets, not claims of working functionality.
 
 - 📘 [System Design Specification](docs/system.md) — Implementation mechanics, mathematical formulations, schemas & smart contracts
 - 🏛️ [Architectural Plan & Roadmap](docs/architecture.md) — 6-layer topology, 1-Supervisor + 4-Squads model & multi-agent orchestration
 - 🛡️ [Security Architecture & Defense-in-Depth](docs/security.md) — 5 Invariants, threat defense, self-healing & decadal resilience
-- 👥 [Team Distribution & Parallel Track Guide](docs/team_distribution_guide.md) — 4-track isolated roles, autonomous prompts & branch protocols
-- ⚡ [Sprint Execution Workflow](.agent/workflows/sprint-workflow.md) — 5-gate development lifecycle & parallel track operating model
+- 👥 [Team Distribution Guide](docs/team_distribution_guide.md) — first-demo kickoff, role ownership and handoffs
+- ⚡ [Coding-Agent Workflow](.agent/workflows/sprint-workflow.md) — contract-first task setup, safe edits and verification
 - 📜 [Architecture Decision Records (ADRs)](docs/adr/) — 7 formal architecture decision records (ADR-001 to ADR-007)
 
 ---
 
 ## 1. Executive Summary & Problem Statement
+
+> **Status note:** This section and the architecture/security documents linked below describe the intended product and future design. For the actual first-demo scope, implementation status and teammate tasks, use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) and verify claims against current code/tests.
 
 Small and Medium Enterprises (SMEs) represent over 90% of global businesses and 50% of employment. However, **82% of SME closures stem from cash flow mismanagement and working capital timing mismatches**, rather than a lack of underlying profitability.
 
@@ -164,55 +170,76 @@ We selected a Responsive Web Application with Progressive Web App (PWA) packagin
 
 ---
 
-## 6. Quickstart & Verification (30-Second Setup)
+## 6. Local Demo Setup & Verification
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+ (for frontend dashboard)
+- Python 3.11+ (the API and tests)
+- Node.js 18+ and npm (the frontend; `package-lock.json` pins the dependency tree)
 
-### Step 1: Clone Repository
+### Step 1: Clone the repository
 ```powershell
 git clone https://github.com/SamJU25/F-SME-Finance-Copilot.git
 cd F-SME-Finance-Copilot
 ```
 
-### Step 2: Install Python Dependencies
+### Step 2: Create an isolated Python environment
+Use a virtual environment so project dependencies do not change your system Python. In PowerShell:
 ```powershell
-pip install -r requirements.txt
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+On macOS/Linux, activate it with `source .venv/bin/activate` instead. If PowerShell blocks activation, run the environment's Python directly as `.venv\Scripts\python.exe -m pip install -r requirements.txt` and `.venv\Scripts\python.exe -m pytest -q`.
+
+### Step 3: Install frontend dependencies
+Run from the repository root; `npm ci` uses the committed lockfile and should not be replaced by `npm install` for a reproducible setup.
+```powershell
+npm ci
 ```
 
-### Step 3: Run Deterministic Verification Suites
-Execute the unit calculations and security invariant tests:
+### Step 4: Start the connected local demo
+Open two terminals at the repository root and activate the Python virtual environment in the API terminal. In terminal 1:
 ```powershell
-pytest
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
-*Current Verification Baseline*: **11 passed in 0.48s** (7 financial calculation assertions + 4 security invariant assertions).
+In terminal 2:
+```powershell
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+Open <http://127.0.0.1:3000>, download the [synthetic sample CSV](public/synthetic-statement.csv), and upload it. The API health check is <http://127.0.0.1:8000/api/v1/health>. The browser calls `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000`). Set it before starting Next.js in development or before building for production if the API is at another origin; use a base URL without a trailing slash. `MAX_ANALYSIS_UPLOAD_BYTES` optionally configures the API upload cap (positive integer; default `1048576`, or 1 MiB). The current API CORS allowlist is limited to `http://localhost:3000` and `http://127.0.0.1:3000` in `api/main.py`.
 
-### Step 4: Verify Knowledge Graph & Architecture AST
+For a same-LAN demo only, bind both servers to `0.0.0.0`, set `NEXT_PUBLIC_API_BASE_URL` to the API machine's reachable IP (for example, `http://192.168.1.20:8000`), and add the exact frontend browser origin (for example, `http://192.168.1.30:3000`) to the API's `allow_origins` list in `api/main.py`. The API URL must be reachable from the browser, and CORS must match the frontend origin—not the API origin. Allow the ports only on a trusted local network; do not expose this unauthenticated demo to the public internet.
+
+### Configuration
+
+| Variable | Used by | Default | Purpose |
+|---|---|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | Next.js frontend | `http://localhost:8000` | API origin; set before starting Next.js or running `npm run build`. Use an origin without a trailing slash. |
+| `MAX_ANALYSIS_UPLOAD_BYTES` | FastAPI API | `1048576` (1 MiB) | Positive-integer limit for one CSV upload. Set before starting Uvicorn. |
+
+### Step 5: Verify the checkout
+Run these commands from the repository root (with the Python virtual environment active):
 ```powershell
-cmd /c "python -m graphify update ."
+pytest -q
+npm run type-check
+npm run build
 ```
-*Graph Baseline*: **1,797 nodes, 1,815 edges across 213 communities**.
+The browser upload path is a demo against synthetic files; passing tests and frontend checks do not establish production security, financial suitability or a regulated forecast. GitHub Actions runs these backend tests and frontend checks on pushes and pull requests via [`.github/workflows/ci.yml`](.github/workflows/ci.yml); the local commands above remain useful before you hand off a change.
+
+### Optional: Refresh the knowledge graph
+The code graph is generated navigation data, not a source of truth. If Graphify is installed in the Python environment, `python -m graphify update .` refreshes the code graph, not the semantic wiki. See [`AGENTS.md`](AGENTS.md) for the last checked graph totals and extraction caveats; the Graphify wiki index currently warns that its articles are stale.
+```powershell
+python -m graphify update .
+```
 
 ---
 
-## 7. Parallel Team Collaboration Model
+## 7. Team kickoff and coding-agent handoff
 
-To enable 4 developers with different specialties to collaborate concurrently without git merge conflicts, the codebase is partitioned into **4 disjoint track directories**:
+The first-demo pipeline is already integrated; teammates should start from the code and tests that exist, not assume that planned blueprint services are starter backbones. The [team execution plan](docs/team_execution_plan.md) contains the shared CSV/API contract, current implementation status, actual owner paths and test locations, plus a short task-brief template and copy-ready prompts. The [team distribution guide](docs/team_distribution_guide.md) explains how the lead assigns work and integrates handoffs. The [CI workflow](.github/workflows/ci.yml) runs backend tests and frontend type/build checks on pushes and pull requests; this validates the current demo baseline, not deferred blueprint capabilities.
 
-```
-                                 ┌──> feat/agent-security-core (Track A - Lead) ────────┐
-                                 ├──> feat/frontend-dashboard  (Track B - Frontend) ────┼──> main
-git checkout -b <track-branch> ──┼──> feat/fintech-engine      (Track C - Calculations) ┤   (Production)
-                                 └──> feat/blockchain-qa       (Track D - Security/BCOS)┘
-```
-
-- **Track A (Team Lead)**: `services/security/`, `services/llm/`, `api/`
-- **Track B (Frontend Specialist)**: `frontend/` (Next.js 14 App Router, Recharts, PWA)
-- **Track C (Quantitative Engineer)**: `services/calculations/`, `services/risk/`, `services/matcher/`
-- **Track D (Blockchain & QA Engineer)**: `services/ingestion/`, `contracts/`, `tests/security/`
-
-Complete role instructions and autonomous agent kickoff directives are documented in [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md).
+For each coding-agent task, the lead supplies the user outcome, observable acceptance checks, owner and scope boundaries. The prompt intentionally leaves design and implementation choices to the teammate within the agreed contract. A folder boundary can reduce overlapping edits, but it cannot guarantee conflict-free or semantically compatible merges; review and test the integrated changes before the demo.
 
 ---
 

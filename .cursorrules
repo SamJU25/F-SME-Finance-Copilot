@@ -2,14 +2,9 @@
 
 You are an expert FinTech AI Pair Programmer working on the Autonomous SME Finance Copilot for FinTechathon 2026 Track E (Tsinghua University PBCSF & WeBank).
 
-## 1. Master Documentation (Read Before Coding)
-Before writing or modifying any code, read the master specifications:
-- `docs/system.md`: Technical system design, math models, schemas, and smart contracts.
-- `docs/architecture.md`: Macro topology, 1-Supervisor + 4-Squads model, and roadmap.
-- `docs/security.md`: 5 Invariants, threat defense, self-healing, and decadal resilience.
-- `docs/team_distribution_guide.md`: 4-track isolated roles, turnkey agent prompts, and branch protocols.
-- `docs/adr/`: Architecture Decision Records (ADR-001 to ADR-007).
-- `.agent/workflows/sprint-workflow.md`: 5-Gate Development Protocol & Parallel Track Sprints.
+## 1. Project Truth & Documentation Precedence
+Start with `AGENTS.md` and the current user request. `AGENTS.md` defines the source-of-truth order and verified implementation baseline. For first-demo tasks, `docs/team_execution_plan.md` is the target contract, not evidence of implementation. Read only relevant blueprint sections and applicable ADRs; verify behavior against current code and tests. Graphify output is generated navigation data whose freshness must be checked. If an explicit request expands the demo, honor it; otherwise ask about unresolved contract conflicts.
+
 
 ## 2. Non-Negotiable Engineering Invariants
 1. **0% LLM Math**: Never let an LLM calculate financial ratios, cash runway, or interest. All financial math MUST use Python `decimal.Decimal` with `ROUND_HALF_UP` in `services/calculations/`.
@@ -18,27 +13,15 @@ Before writing or modifying any code, read the master specifications:
    - Tier 2 (Staging): Proposing actions; saved to `action_intents` staging queue (no money moves).
    - Tier 3 (Execution): Live transfers or loan commitments STRICTLY require human biometric 2FA (WebAuthn).
 3. **Strict Type Parsing**: All API schemas use Pydantic v2 (compiled in Rust) with `extra="forbid"` and strict validation.
-4. **Tenant Isolation**: PostgreSQL Row-Level Security (RLS) is mandatory. Never trust client `tenant_id` parameters; extract it from verified JWT tokens.
+4. **Tenant Isolation (when multi-tenant auth/storage is in scope)**: Enforce the approved tenant boundary in the backend and database; never trust a client-supplied tenant ID. The first demo is synthetic and has no authenticated tenant isolation—do not claim RLS/JWT controls are active.
 5. **No AI Slop**: Never use banned words (*delve, foster, leverage, utilize, facilitate, empower, streamline, robust, cutting-edge, paradigm shift, supercharge, harness*). Write direct, factual prose.
 6. **The Ladder (Minimal Diffs)**: Minimal working code. Reuse existing helpers. Boring over clever. Fix root causes once; never patch symptoms.
 
-## 3. Parallel Track Roadmap Discipline
-Execute tasks within your designated track directory boundary on your assigned git branch:
-- Track A (Team Lead): Security Gate, LiteLLM Gateway, & APIs (`services/security/`, `services/llm/`, `api/`)
-- Track B (Frontend): Next.js 14 App Router, 4-state UI, & Charts (`frontend/`)
-- Track C (Quant / Calc): Decimal Financial Math, MAPIE Forecasting, & PuLP Matcher (`services/calculations/`, `services/risk/`, `services/matcher/`)
-- Track D (Blockchain / QA): CSV Ingestion + PII Scrubbing, FISCO BCOS Registry, & Security Pentests (`services/ingestion/`, `contracts/`, `tests/security/`)
+## 3. Ownership & Verification
+For team tasks with an assigned member/track, follow the ownership boundary in `docs/team_execution_plan.md`; for other tasks, follow the user's requested scope and preserve unrelated work. Do not assume the blueprint's future services exist.
 
-## 4. Mandatory Terminal Command After Code Changes
-After creating or modifying any code files, you MUST run:
-```powershell
-cmd /c "python -m graphify update ."
-```
-Run `pytest` to verify 100% test pass before declaring any task complete.
+After source-code changes, run `python -m graphify update .` when available (code graph only), plus the focused tests and relevant project checks. Documentation-only edits do not require a code-graph rebuild. Report unavailable build/test dependencies honestly; a passing subset is not a claim of 100% coverage.
 
-## 5. Mandatory Agent Execution Protocol (Plan -> Build -> Verify)
-When receiving ANY task prompt, the agent MUST execute in 3 strict phases:
-1. **Phase 1 (Plan First)**: Output a concise 3-step plan identifying files to touch within your assigned track folder. Stop and confirm boundaries.
-2. **Phase 2 (Boundary Lock & Build)**: Edit code ONLY inside your track directory. Never touch or rewrite files outside your track. Follow the Ladder (minimal diffs).
-3. **Phase 3 (Verify with Evidence)**: Execute terminal verification (`pytest` or `npm test`). Require 100% passing tests before concluding.
+## 4. Task Workflow
+For non-trivial changes, state a concise plan, preserve existing working-tree edits, implement within the authorized scope, and verify the affected behavior. Ask before resolving a genuine ambiguity or expanding a shared contract. Never claim checks that were not run.
 

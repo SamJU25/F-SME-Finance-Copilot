@@ -1,0 +1,5 @@
+transaction_id,posted_on,amount,currency,description,closing_balance
+TX-001,2026-10-01,-1200.00,USD,Synthetic rent,8800.00
+TX-002,2026-10-03,-300.00,USD,Synthetic supplies,8500.00
+TX-003,2026-10-05,1000.00,USD,Synthetic customer receipt,9500.00
+TX-004,2026-10-06,not-money,USD,Synthetic invalid amount example,9500.00

@@ -4,14 +4,19 @@ Scope: All software development, research, financial engineering, and testing in
 
 ---
 
+## 0. Project Truth & Instruction Precedence
+- Start with [`AGENTS.md`](AGENTS.md) and the current user request. It defines the authority order, verified implementation baseline, and known gaps.
+- For first-demo work, use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) as the target contract, not as proof the features exist. Read only the relevant sections of the architecture/security blueprints and applicable ADRs; stop if a contract conflict cannot be resolved from the explicit user scope.
+- Verify implementation claims against source and tests. Treat `graphify-out/` as generated navigation data whose freshness must be checked.
+
 ## 1. Environment & Architecture Overview
 - **Master Specifications**:
   - [`docs/system.md`](docs/system.md): Concrete implementation mechanics, math models, schemas & contracts.
   - [`docs/architecture.md`](docs/architecture.md): Macro topology, 1-Supervisor + 4-Squads model & roadmap.
   - [`docs/security.md`](docs/security.md): 5 Invariants, threat defense, self-healing & decadal security.
-  - [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): 4-track isolated roles, turnkey agent prompts & branch protocols.
+  - [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): first-demo kickoff, role ownership and handoffs; see the execution plan for the current contract.
   - [`docs/adr/`](docs/adr/): 7 formal Architecture Decision Records.
-  - [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): 5-Gate Development Protocol & Parallel Track Sprints.
+  - [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): contract-first coding-agent task setup, safe edits and verification.
 - **Project Structure**:
   - [`.agent/agents/`](.agent/agents): 57 specialized subagents across 8 squads (Suites 0 through 7).
   - [`.agent/skills/`](.agent/skills): 54 deterministic execution skills (governance, fintech math, web, security).
@@ -28,7 +33,7 @@ Every response and code modification must satisfy these 10 standing rules:
 
 ### 2.1 Knowledge Graph Synchronization (`graphify`)
 - For architecture questions, inspect `graphify-out/wiki/index.md` or query via `python -m graphify query "<question>"`.
-- **Mandatory on every file creation or edit**: Execute `python -m graphify update .` (pass `--force` if files were deleted or renamed).
+- For source-code changes, run `python -m graphify update .` when Graphify is available; this refreshes the code graph only. Documentation-only edits do not require a code-graph rebuild. Semantic document/wiki refreshes are separate and may require the configured Graphify extraction backend; report if unavailable.
 
 ### 2.2 Internet Research Routing (`agent-reach`)
 - Route all research through Agent Reach: Jina Reader (`curl -s "https://r.jina.ai/<URL>"`), GitHub CLI, `yt-dlp`.
@@ -79,7 +84,7 @@ Every response and code modification must satisfy these 10 standing rules:
 ## 3. Skill & Agent Utilization for Claude
 When handling a user request:
 1. Identify the matching squad in [`AGENTS.md`](AGENTS.md).
-2. Read the `SKILL.md` file in `.agent/skills/<skill-name>/SKILL.md` for the subagent's Primary Skills before writing code.
+2. Read the relevant `.agent/skills/<skill-name>/SKILL.md` before using that skill; skill resources resolve relative to the skill directory.
 3. Follow the red-green-refactor cycle and execute tests using `pytest`.
 
 ---

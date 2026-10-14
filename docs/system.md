@@ -1,7 +1,7 @@
 # SME Finance Copilot: Master System Design (`system.md`)
 
 - **Document Role**: Concrete Technical Specifications, Schemas, Algorithms & Code Contracts
-- **Status**: Production Blueprint
+- **Status**: Architecture blueprint; not evidence of implemented or production-ready capabilities
 - **Date**: 2026-10-14
 - **Competition Target**: FinTechathon 2026 Track E (Tsinghua University PBCSF & WeBank)
 
@@ -9,8 +9,8 @@
 - 📘 [System Design (`docs/system.md`)](system.md) — Schemas, math models & smart contract specs
 - 🏛️ [Architecture Plan (`docs/architecture.md`)](architecture.md) — 6-layer topology & multi-agent squads
 - 🛡️ [Security Architecture (`docs/security.md`)](security.md) — 5 Invariants, threat modeling & decadal resilience
-- 👥 [Team Distribution Guide (`docs/team_distribution_guide.md`)](team_distribution_guide.md) — 4-track isolated roles & autonomous directives
-- ⚡ [Sprint Workflow (`.agent/workflows/sprint-workflow.md`)](../.agent/workflows/sprint-workflow.md) — 5-gate development protocol
+- 👥 [Team Distribution Guide (`docs/team_distribution_guide.md`)](team_distribution_guide.md) — first-demo kickoff and role handoffs
+- ⚡ [Coding-Agent Workflow (`.agent/workflows/sprint-workflow.md`)](../.agent/workflows/sprint-workflow.md) — contract-first task setup and verification
 - 📜 [Architecture Decision Records (`docs/adr/`)](adr/) — ADR-001 to ADR-007
 
 ---

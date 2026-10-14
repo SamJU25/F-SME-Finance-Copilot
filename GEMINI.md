@@ -4,14 +4,17 @@ Scope: All software development, research, financial analysis, and architecture 
 
 ---
 
-## 0. Master Specifications & Engineering Documentation
-Before proposing or writing code, every contributor must inspect the master specifications:
-- [`docs/system.md`](docs/system.md): Concrete implementation mechanics, math models, schemas & smart contracts.
-- [`docs/architecture.md`](docs/architecture.md): Macro topology, 1-Supervisor + 4-Squads model & roadmap.
-- [`docs/security.md`](docs/security.md): 5 Invariants, threat defense, self-healing & decadal security.
-- [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): 4-track isolated roles, turnkey agent prompts & branch protocols.
-- [`docs/adr/`](docs/adr/): 7 formal Architecture Decision Records.
-- [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): 5-Gate Development Protocol & Parallel Track Sprints.
+## 0. Project Truth & Engineering Documentation
+
+Start with [`AGENTS.md`](AGENTS.md) and the user's explicit task. `AGENTS.md` defines project-document precedence and the verified implementation baseline. For first-demo work, [`docs/team_execution_plan.md`](docs/team_execution_plan.md) is the target contract—not proof the endpoint, UI, or integration is implemented. Read only relevant blueprint sections and applicable ADRs; do not treat future architecture as task scope by default. Verify behavior in current source/tests, and check whether generated `graphify-out/` artifacts are fresh before relying on them. If the explicit task and target contract cannot be reconciled, ask rather than silently choosing.
+
+### Relevant references
+- [`docs/system.md`](docs/system.md): System design blueprint.
+- [`docs/architecture.md`](docs/architecture.md): Architecture blueprint.
+- [`docs/security.md`](docs/security.md): Security design blueprint.
+- [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): Team handoffs; the execution plan owns the current first-demo contract.
+- [`docs/adr/`](docs/adr/): Accepted decisions, when applicable.
+- [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): Task workflow.
 
 ---
 
@@ -22,11 +25,7 @@ Every contributor (human developer or AI coding agent) working in this workspace
 ### 1.1 Knowledge Graph Synchronization (`graphify`)
 - The knowledge graph is located at `graphify-out/`.
 - For codebase architecture questions, query the graph first via `graphify query "<question>"` or inspect `graphify-out/wiki/index.md`.
-- **Mandatory On Every Project Update**: After modifying or creating code files, execute:
-  ```powershell
-  cmd /c "python -m graphify update ."
-  ```
-  If files were deleted or renamed, pass `--force`.
+- After source-code changes, run `python -m graphify update .` when Graphify is available; this command refreshes the code graph, not semantic documentation/wiki content. Documentation-only edits do not require a code-graph rebuild. Report Graphify extraction blockers or stale generated artifacts plainly.
 
 ### 1.2 Internet Research Routing (`agent-reach`)
 - When internet research, web page extraction, repository inspection, video transcription, or social lookup is requested:

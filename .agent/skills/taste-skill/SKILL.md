@@ -20,4 +20,5 @@ Deliver premium visual craft and eliminate generic AI styling patterns.
 - Give key elements room to breathe; maintain strong hierarchical focal points.
 
 ### 3. Repository Ground Truth
-- In this repository, [DESIGN-SYSTEM.md](project design tokens) tokens (`--void`, `--surface`, `--cyan`, `--amber`) remain the master palette.
+- Do not assume a `DESIGN-SYSTEM.md` or predefined design tokens exist. Check the actual frontend source/configuration and current demo brief first.
+- The repository's first-demo plan leaves visual design open; choose a coherent palette, typography and layout that serve the finance workflow, document any tokens you add, and do not claim they are established project standards until committed and used.

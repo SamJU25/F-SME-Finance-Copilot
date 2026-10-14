@@ -7,6 +7,7 @@ Aligns with docs/system.md Section 4 and docs/security.md Section 4.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes.health import router as health_router
+from api.routes.analyze import router as analyze_router
 
 app = FastAPI(
     title="SME Finance Copilot API",
@@ -27,6 +28,7 @@ app.add_middleware(
 
 # Include API Routers
 app.include_router(health_router)
+app.include_router(analyze_router)
 
 
 @app.get("/")

@@ -20,12 +20,10 @@ async def get_health_status():
     return HealthStatus(
         status="healthy",
         version="1.0.0",
-        form_factor="Responsive Web Application + PWA",
+        form_factor="Local CSV analysis demo",
         active_invariants=[
-            "Deterministic Decimal Arithmetic (0% LLM math)",
-            "Three-Tier Security Gate (Tier 3 WebAuthn required)",
-            "PostgreSQL Row-Level Security (Multi-tenant isolation)",
-            "Rust-compiled Pydantic v2 Type Validation",
-            "Consortium Blockchain Anchor (FISCO BCOS)"
+            "CSV analysis uses Python Decimal arithmetic",
+            "CSV rows and file-level inputs are validated before analysis",
+            "Synthetic first-demo requests are read-only and are not persisted"
         ]
     )

@@ -56,5 +56,7 @@ def test_fastapi_health_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
-    assert "Responsive Web Application + PWA" in data["form_factor"]
-    assert len(data["active_invariants"]) >= 5
+    assert data["form_factor"] == "Local CSV analysis demo"
+    assert "CSV analysis uses Python Decimal arithmetic" in data["active_invariants"]
+    assert "Synthetic first-demo requests are read-only and are not persisted" in data["active_invariants"]
+    assert len(data["active_invariants"]) == 3

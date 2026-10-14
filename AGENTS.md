@@ -5,6 +5,35 @@ This workspace is engineered specifically for building the **Autonomous AI Agent
 ### Master Documentation & Operational Protocols:
 - 📘 [System Design Specification](docs/system.md) | 🏛️ [Architectural Plan](docs/architecture.md) | 🛡️ [Security Architecture](docs/security.md)
 - 👥 [Team Distribution Guide](docs/team_distribution_guide.md) | ⚡ [Sprint Workflow](.agent/workflows/sprint-workflow.md) | 📜 [ADRs](docs/adr/)
+- 🧭 [First-demo contract and implementation status](docs/team_execution_plan.md)
+
+## 0. Project Truth, Instruction Precedence & Current Baseline
+
+Use this order when project documents disagree:
+1. The user's explicit task and safety constraints for this session.
+2. This file (`AGENTS.md`) for repository-wide agent behavior.
+3. [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for the first-demo scope, shared API/data contract, ownership, and acceptance criteria. It describes the agreed target; it is not proof that the target is implemented.
+4. The current source code and tests for what actually runs today. Treat tests as evidence only for the behavior they cover.
+5. Applicable ADRs for accepted decisions; then [`docs/system.md`](docs/system.md), [`docs/architecture.md`](docs/architecture.md), and [`docs/security.md`](docs/security.md) as broader design blueprints. Blueprint features are not implementation claims or automatic sprint scope.
+6. `graphify-out/` reports, wiki pages, and graph data are generated navigation aids, not authorities. Check their freshness and confirm claims in source/tests.
+7. Agent personas, skill catalogs, and platform-specific instruction files route work; they do not supersede this precedence or the user's scope.
+
+Read only the specification sections needed for the task. Before using a skill, read its exact `SKILL.md` and resolve referenced resources relative to that skill directory; account-synced skills may be outside this checkout and must not be assumed to mirror `.agent/skills/`. If a requested change clearly expands the first-demo contract, follow the user's explicit scope; otherwise pause on a genuine contract conflict and ask the user/team lead rather than silently choosing the larger blueprint.
+
+### Verified repository baseline (checked 2026-10-14)
+- `pytest -q`: **25 passed** on 2026-10-14, including first-demo endpoint, ingestion, cash-analysis, and health-report tests.
+- FastAPI exposes root, health, and `POST /api/v1/analyze`; the route accepts UTF-8 CSV plus a positive day threshold, enforces a 1 MiB upload limit, and responds with stable row/file errors and decimal strings. Unit tests verify the intended demo health payload; a separately observed process on port 8000 returned stale health output that claimed unimplemented blueprint invariants, so check/restart the API process before relying on its live health endpoint.
+- The Next.js UI lives in the root `app/` entrypoint and `frontend/src/app/`, with shared types under `frontend/src/`. It submits to `NEXT_PUBLIC_API_BASE_URL` or defaults to `http://localhost:8000`. Build/type-check pass. Browser smoke test uploaded synthetic rows to the local API and rendered `$9,500.00`, `$100.00` daily burn, 95-day historical runway, and the invalid-amount reason for CSV row 5.
+- `package-lock.json` is present. In a clean temporary copy on 2026-10-14, `npm ci`, `npm run type-check`, and `npm run build` passed. An in-place `npm ci` in the shared checkout was blocked because the running Next.js server had its SWC native module open; do not delete or overwrite shared `node_modules` to work around this.
+- The code graph was refreshed after source edits with `python -m graphify update .`: **1,892 nodes / 1,983 edges / 236 communities**. Solidity extraction was skipped because `tree-sitter-solidity` is not installed; community labels may still need refresh. The semantic wiki is explicitly marked stale because `update` does not re-export wiki markdown. The dated graph backup is an older snapshot; generated graph files can reflect the commit rather than current unstaged edits. This refresh was code-only and does not include the latest doc-only contract wording.
+- The first-demo UI uses a small implementation-specific token set in `frontend/src/app/globals.css`; it is not a broader product design system. No backend deployment or production configuration has been added.
+- This file is the shared cross-agent instruction entrypoint; `CLAUDE.md`, `GEMINI.md`, and `.cursorrules` link back here for precedence and baseline.
+
+---
+
+## 1. Multi-Agent Operating Model & Hierarchy Matrix
+
+Antigravity operates as the **Lead Orchestrator**, coordinating high-level architecture through 12 Global Governance Specialists while delegating specialized domain tasks to 45 Project FinTech Specialists across 7 suites:
 
 ---
 
