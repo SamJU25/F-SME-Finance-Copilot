@@ -21,12 +21,12 @@ Use this order when project documents disagree:
 Read only the specification sections needed for the task. Before using a skill, read its exact `SKILL.md` and resolve referenced resources relative to that skill directory; account-synced skills may be outside this checkout and must not be assumed to mirror `.agent/skills/`. If a requested change clearly expands the first-demo contract, follow the user's explicit scope; otherwise pause on a genuine contract conflict and ask the user/team lead rather than silently choosing the larger blueprint.
 
 ### Verified repository baseline (checked 2026-10-14)
-- `pytest -q`: **45 passed** on 2026-10-14, including first-demo analyze route, underwriting dossier matcher, staging ledger, consortium invoice hasher, and security invariant tests.
+- `pytest -q`: **46 passed** on 2026-10-14, including full end-to-end user journey (`tests/e2e/test_csv_upload_e2e.py`), first-demo analyze route, underwriting dossier matcher, staging ledger, consortium invoice hasher, and security invariant tests.
 - FastAPI exposes root, health, `POST /api/v1/analyze`, `POST /api/v1/underwrite`, and `POST /api/v1/actions`; routes accept UTF-8 CSV or typed payloads, enforce upload limits, and respond with stable row/file errors and decimal strings.
+- Multi-stage container packaging is configured via `Dockerfile.backend`, `Dockerfile.frontend`, `docker-compose.yml`, `.dockerignore`, and `.env.example` with dynamic environment variables, unprivileged runtime users (`appuser`, `nextjs`), and `/health` probe checks.
 - The Next.js UI lives in the root `app/` entrypoint and `frontend/src/app/`, with shared types under `frontend/src/`. It submits to `NEXT_PUBLIC_API_BASE_URL` or defaults to `http://localhost:8000`. Build/type-check pass. Browser smoke test uploaded synthetic rows to the local API and rendered `$9,500.00`, `$100.00` daily burn, 95-day historical runway, and the invalid-amount reason for CSV row 5.
 - `package-lock.json` is present. In a clean temporary copy on 2026-10-14, `npm ci`, `npm run type-check`, and `npm run build` passed. An in-place `npm ci` in the shared checkout was blocked because the running Next.js server had its SWC native module open; do not delete or overwrite shared `node_modules` to work around this.
-- The code graph was refreshed after source edits with `python -m graphify update .`: **1,892 nodes / 1,983 edges / 236 communities**. Solidity extraction was skipped because `tree-sitter-solidity` is not installed; community labels may still need refresh. The semantic wiki is explicitly marked stale because `update` does not re-export wiki markdown. The dated graph backup is an older snapshot; generated graph files can reflect the commit rather than current unstaged edits. This refresh was code-only and does not include the latest doc-only contract wording.
-- The first-demo UI uses a small implementation-specific token set in `frontend/src/app/globals.css`; it is not a broader product design system. No backend deployment or production configuration has been added.
+- The code graph was refreshed after source edits with `python -m graphify update .`: **2,190 nodes / 2,469 edges / 261 communities**. Solidity extraction was skipped because `tree-sitter-solidity` is not installed; community labels may still need refresh.
 - This file is the shared cross-agent instruction entrypoint; `CLAUDE.md`, `GEMINI.md`, and `.cursorrules` link back here for precedence and baseline.
 
 ---
@@ -149,6 +149,8 @@ When a user request arrives, Antigravity Lead Orchestrator routes execution acco
 | **Blockchain Invoice Verification** ("Prevent invoice double-financing on FISCO BCOS") | `blockchain-developer` | `systems-architect`, `test-automator` | `postgres-db-design`, `pytest-financial-testing` |
 | **Backend API Implementation** ("Build FastAPI routes for cash flow analysis") | `fastapi-developer` | `backend-developer`, `qa-verifier` | `fastapi-backend-craft`, `test-driven-development` |
 | **Frontend Dashboard Development** ("Build financial chart and alert UI") | `frontend-craft-engineer` | `nextjs-developer`, `ui-designer` | `nextjs-react-dashboard`, `taste-skill`, `antislop` |
+| **Container & Production Deployment** ("Deploy backend and frontend in Docker") | `systems-architect` | `docker-expert`, `fastapi-developer` | `docker-patterns`, `verification-before-completion` |
+| **End-to-End User Flow Testing** ("Test full CSV upload to biometric execution") | `qa-verifier` | `test-automator`, `fastapi-developer` | `e2e-testing`, `pytest-financial-testing` |
 | **Code Review & Verification** ("Audit changes and verify test suite") | `qa-verifier` | `code-reviewer`, `debugger` | `verification-before-completion`, `systematic-debugging` |
 | **Knowledge Graph Synchronization** ("Sync code relationships after edits") | `systems-architect` | `technical-writer` | `graphify` (`cmd /c "python -m graphify update ."`) |
 

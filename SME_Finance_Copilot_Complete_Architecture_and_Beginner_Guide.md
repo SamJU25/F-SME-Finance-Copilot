@@ -1,4 +1,4 @@
-﻿# SME Finance Copilot — Complete Master Architecture & Beginner's Guide
+# SME Finance Copilot — Complete Master Architecture & Beginner's Guide
 
 This document combines the **complete technical system architecture, security specifications, and code blueprints** with **plain-English real-world business examples** in one place.
 
@@ -318,13 +318,20 @@ f:\SME Finance Copilot
 │       └── invoice_hasher.py       # Canonical SHA-256 invoice hasher & double-pledge defense
 ├── contracts/
 │   └── InvoiceRegistry.sol         # FISCO BCOS Solidity consortium invoice registry
+├── Dockerfile.backend              # Multi-stage Python 3.11-slim container with /health probe
+├── Dockerfile.frontend             # Multi-stage Node 20-alpine container with dynamic API base
+├── docker-compose.yml              # Parameterized bridge orchestration (zero hardcoded ports)
+├── .dockerignore                   # Build context isolation (excludes git, node_modules, logs)
+├── .env.example                    # Clean environment configuration template
 ├── frontend/src/
 │   ├── app/
 │   │   ├── page.tsx                # Accessible Next.js 14 review screen
 │   │   └── globals.css             # High-craft typography and tabular numbers
 │   └── types/
 │       └── api.ts                  # Shared TypeScript contracts matching backend models
-└── tests/ (45 Passed Assertions)
+└── tests/ (46 Passed Assertions)
+    ├── e2e/
+    │   └── test_csv_upload_e2e.py  # 1 test: Full user flow (upload -> provenance -> math -> gate)
     ├── integration/
     │   ├── test_analyze_api.py     # 4 tests: CSV upload, decimal strings, 413 limits
     │   └── test_backbone_apis.py   # 4 tests: Tier 2 staging, Tier 3 403 checks, underwriting
@@ -342,7 +349,7 @@ f:\SME Finance Copilot
 ### Verified Terminal Proof
 ```text
 pytest -q
-45 passed, 1 warning in 0.66s
+46 passed, 1 warning in 0.63s
 ```
 
 ---
@@ -355,8 +362,8 @@ This section defines the division of labor, file boundaries, starter code backbo
 
 | Member | Primary Role | Owned Directories & Files | Key Deliverable |
 |---|---|---|---|
-| **Member 1** | Team Lead, API Integrator & Security Gatekeeper | `api/`, `services/security/`, `tests/integration/`, `tests/security/` | FastAPI routes, Three-Tier Security Gate, OpenAPI validation |
-| **Member 2** | Frontend Dashboard Specialist | `frontend/src/`, `app/` | Accessible Next.js 14 review screen, Tab 2 & 3 cards, state handling |
+| **Member 1** | Team Lead, API Integrator & Security Gatekeeper | `api/`, `services/security/`, `tests/integration/`, `tests/security/`, `tests/e2e/`, `Dockerfile.backend`, `docker-compose.yml` | FastAPI routes, Three-Tier Security Gate, container orchestration, E2E tests |
+| **Member 2** | Frontend Dashboard Specialist | `frontend/src/`, `app/`, `Dockerfile.frontend` | Accessible Next.js 14 review screen, Tab 2 & 3 cards, frontend container |
 | **Member 3** | Ingestion & Blockchain QA Engineer | `services/ingestion/`, `services/blockchain/`, `contracts/`, `tests/unit/test_ingestion_demo.py` | CSV validation, error provenance codes, SHA-256 invoice hashing |
 | **Member 4** | Quantitative FinTech Engine Specialist | `services/calculations/`, `services/matcher/`, `tests/unit/test_cash_analysis.py`, `tests/unit/test_matcher.py` | Pure Decimal financial math, WeBank DAB scoring, APR matching |
 
@@ -365,17 +372,18 @@ This section defines the division of labor, file boundaries, starter code backbo
 ### Member 1: Team Lead, API Integrator & Security Gatekeeper
 
 #### Plain-English Role
-Member 1 acts as the project anchor. They design the shared API contracts, mount backend endpoints, and enforce the Three-Tier Security Gate so that unauthorized money movement or raw data leakage cannot occur.
+Member 1 acts as the project anchor. They design the shared API contracts, mount backend endpoints, manage container deployment, and enforce the Three-Tier Security Gate so that unauthorized money movement or raw data leakage cannot occur.
 
 #### Owned Directories & Files
 - `api/main.py`
 - `api/routes/health.py`, `api/routes/analyze.py`, `api/routes/underwrite.py`, `api/routes/actions.py`
 - `services/security/three_tier_gate.py`, `services/security/staging_ledger.py`
-- `tests/integration/test_analyze_api.py`, `tests/integration/test_backbone_apis.py`, `tests/security/test_invariants.py`
+- `tests/integration/test_analyze_api.py`, `tests/integration/test_backbone_apis.py`, `tests/security/test_invariants.py`, `tests/e2e/test_csv_upload_e2e.py`
+- `Dockerfile.backend`, `docker-compose.yml`, `.dockerignore`, `.env.example`
 - `docs/team_execution_plan.md`
 
 #### What Was Already Built & Tested for You (The Implemented Backbone)
-You do not need to build the API server from scratch. The following backbone is fully operational and verified by 12 passing tests:
+You do not need to build the API server or test suite from scratch. The following backbone is fully operational and verified by 13 passing tests:
 
 1. **ASGI Application & Route Assembly (`api/main.py`)**:
    - Configured FastAPI instance with CORS middleware.
@@ -390,6 +398,10 @@ You do not need to build the API server from scratch. The following backbone is 
    - `POST /api/v1/actions/execute`: Intercepts Tier 3 execution calls, requiring a verified biometric token (`DEMO_FIDO2_PASSKEY_VALIDATED`). Returns HTTP 403 if missing or invalid.
 5. **Thread-Safe Staging Ledger (`services/security/staging_ledger.py`)**:
    - In-memory proposal registry tracking pending actions, timestamps, amounts, and statuses.
+6. **Multi-Stage Backend Container (`Dockerfile.backend`, `docker-compose.yml`)**:
+   - Multi-stage Python 3.11-slim build running under unprivileged `appuser` (UID 10001) with active `/health` probe and dynamic `${PORT:-8000}`.
+7. **End-to-End User Flow Test Suite (`tests/e2e/test_csv_upload_e2e.py`)**:
+   - Automated full-flow integration testing CSV ingestion, row 6 error provenance, runway math, WeBank matching, and biometric gate defense.
 
 #### What You Build Next on Top of This Backbone
 - Add API rate limiting to protect endpoints against denial-of-service attempts.
@@ -435,10 +447,11 @@ class SecurityStagingLedger:
 
 #### Verification & Test Commands
 ```bash
-# Run integration and security tests
+# Run integration, security, and e2e tests
 pytest tests/integration/test_analyze_api.py
 pytest tests/integration/test_backbone_apis.py
 pytest tests/security/test_invariants.py
+pytest tests/e2e/test_csv_upload_e2e.py
 ```
 
 #### Stop-Ship Rules
@@ -469,9 +482,10 @@ Member 2 builds what the small business owner sees and clicks. They turn backend
 - `frontend/src/types/api.ts`
 - `frontend/src/components/`
 - Root Next.js entrypoints: `app/`
+- `Dockerfile.frontend`
 
 #### What Was Already Built & Tested for You (The Implemented Backbone)
-You do not need to configure build systems or start from an empty screen. The UI skeleton and types are live and passing:
+You do not need to configure build systems or start from an empty screen. The UI skeleton, types, and container are live and passing:
 
 1. **Next.js 14 App Router Foundation (`frontend/src/app/page.tsx`)**:
    - Production setup with zero lint or TypeScript compilation errors (`npm run type-check` and `npm run build` pass clean).
@@ -486,6 +500,8 @@ You do not need to configure build systems or start from an empty screen. The UI
 4. **Design Tokens & High-Craft Styling (`frontend/src/app/globals.css`)**:
    - Monospace tabular figures (`tabular-nums`) ensuring clean alignment of financial digits.
    - Neutral, privacy-first styling with zero hardcoded contest branding or decorative AI glow.
+5. **Multi-Stage Frontend Container (`Dockerfile.frontend`)**:
+   - Production-ready Node 20-alpine container with non-root user (`nextjs`) and dynamic `NEXT_PUBLIC_API_BASE_URL` build injection.
 
 #### What You Build Next on Top of This Backbone
 - Build Tab 2 (Underwriting Dossier Card): Call `POST /api/v1/underwrite` to display WeBank DAB, 90-day NSF incidents, and pre-qualified financing option cards with True APR disclosures.

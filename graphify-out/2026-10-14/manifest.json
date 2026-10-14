@@ -978,9 +978,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1791908050.857445,
-    "seen": 1791908105.8742323,
-    "ast_hash": "c9056755a376805a592ff5dcced4d738",
+    "mtime": 1791998712.1545484,
+    "seen": 1791998728.386637,
+    "ast_hash": "104f1ccca840e4ba32c619262931f185",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -1395,6 +1395,48 @@
     "mtime": 1791979867.6486957,
     "seen": 1791980089.5575159,
     "ast_hash": "8b342495ec25f634da5f14bce980e8db",
+    "semantic_hash": ""
+  },
+  "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
+    "mtime": 1791983339.819174,
+    "seen": 1791998728.4079945,
+    "ast_hash": "c6852b07cb83a7cbdfad709074ba3b49",
+    "semantic_hash": ""
+  },
+  "tests/e2e/__init__.py": {
+    "mtime": 1791998542.8995535,
+    "seen": 1791998728.3882987,
+    "ast_hash": "2fd668ba1c5d0515d0822b8ce8044a67",
+    "semantic_hash": ""
+  },
+  "tests/e2e/test_csv_upload_e2e.py": {
+    "mtime": 1791998690.3587067,
+    "seen": 1791998728.3883011,
+    "ast_hash": "cbb5f475a4b2dc2569a6b612ae52d07e",
+    "semantic_hash": ""
+  },
+  ".agent/skills/docker-patterns/SKILL.md": {
+    "mtime": 1791998478.6290638,
+    "seen": 1791998728.4012399,
+    "ast_hash": "f16f1eb508982313198f98c92f130488",
+    "semantic_hash": ""
+  },
+  ".agent/skills/e2e-testing/SKILL.md": {
+    "mtime": 1791998488.2564683,
+    "seen": 1791998728.4014661,
+    "ast_hash": "2a87686cb1ecabc9593c53ba88795af8",
+    "semantic_hash": ""
+  },
+  "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
+    "mtime": 1791983339.8186657,
+    "seen": 1791998728.4079893,
+    "ast_hash": "7f7268f597fa9b33942fe707bb964b56",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1791998524.1797614,
+    "seen": 1791998728.407992,
+    "ast_hash": "dea613647001d787bb79bd86b883e875",
     "semantic_hash": ""
   }
 }

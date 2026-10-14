@@ -1,0 +1,42 @@
+# Build Stage
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Final Runtime Stage
+FROM python:3.11-slim AS runner
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/home/appuser/.local/bin:$PATH" \
+    HOST=0.0.0.0 \
+    PORT=8000
+
+# Security: Non-root user
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /bin/sh -m appuser
+
+# Copy installed python wheels from builder
+COPY --from=builder /root/.local /home/appuser/.local
+
+# Copy application source code
+COPY --chown=appuser:appgroup api /app/api
+COPY --chown=appuser:appgroup services /app/services
+COPY --chown=appuser:appgroup contracts /app/contracts
+
+USER appuser
+
+EXPOSE ${PORT}
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request, os; port=os.environ.get('PORT', '8000'); urllib.request.urlopen(f'http://127.0.0.1:{port}/health')" || exit 1
+
+CMD ["sh", "-c", "uvicorn api.main:app --host ${HOST} --port ${PORT}"]

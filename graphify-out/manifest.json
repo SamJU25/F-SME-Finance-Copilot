@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791982715.3108065,
-    "seen": 1791982734.1665304,
-    "ast_hash": "969e9c6e0c1f4ea44a786e71616b3983",
+    "mtime": 1791998916.3334627,
+    "seen": 1791999460.960502,
+    "ast_hash": "0e629aeed562f45fea3d425d5e7b687b",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -978,9 +978,9 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1791908050.857445,
-    "seen": 1791908105.8742323,
-    "ast_hash": "c9056755a376805a592ff5dcced4d738",
+    "mtime": 1791998712.1545484,
+    "seen": 1791998728.386637,
+    "ast_hash": "104f1ccca840e4ba32c619262931f185",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "docs/team_execution_plan.md": {
-    "mtime": 1791980779.6386993,
-    "seen": 1791982734.1689534,
-    "ast_hash": "12c9b49c479ba40c001a0af4a45851bf",
+    "mtime": 1791998954.3406973,
+    "seen": 1791999460.963282,
+    "ast_hash": "ab971c1cd09066f5799908fc6b46211f",
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
@@ -1398,9 +1398,45 @@
     "semantic_hash": ""
   },
   "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
-    "mtime": 1791982870.90848,
-    "seen": 1791982937.181844,
-    "ast_hash": "4efcfb34659ebbafcf39291a568577e2",
+    "mtime": 1791999434.6463265,
+    "seen": 1791999460.9610527,
+    "ast_hash": "8dd88bc2dd669d26c22b2208c45d1565",
+    "semantic_hash": ""
+  },
+  "tests/e2e/__init__.py": {
+    "mtime": 1791998542.8995535,
+    "seen": 1791998728.3882987,
+    "ast_hash": "2fd668ba1c5d0515d0822b8ce8044a67",
+    "semantic_hash": ""
+  },
+  "tests/e2e/test_csv_upload_e2e.py": {
+    "mtime": 1791998690.3587067,
+    "seen": 1791998728.3883011,
+    "ast_hash": "cbb5f475a4b2dc2569a6b612ae52d07e",
+    "semantic_hash": ""
+  },
+  ".agent/skills/docker-patterns/SKILL.md": {
+    "mtime": 1791998478.6290638,
+    "seen": 1791998728.4012399,
+    "ast_hash": "f16f1eb508982313198f98c92f130488",
+    "semantic_hash": ""
+  },
+  ".agent/skills/e2e-testing/SKILL.md": {
+    "mtime": 1791998488.2564683,
+    "seen": 1791998728.4014661,
+    "ast_hash": "2a87686cb1ecabc9593c53ba88795af8",
+    "semantic_hash": ""
+  },
+  "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
+    "mtime": 1791999038.9781897,
+    "seen": 1791999460.9609382,
+    "ast_hash": "ed5eb091eb523763d938fb1238d10c4e",
+    "semantic_hash": ""
+  },
+  "docker-compose.yml": {
+    "mtime": 1791998524.1797614,
+    "seen": 1791998728.407992,
+    "ast_hash": "dea613647001d787bb79bd86b883e875",
     "semantic_hash": ""
   }
 }
