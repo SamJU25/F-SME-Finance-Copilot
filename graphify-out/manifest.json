@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791976051.7959244,
-    "seen": 1791978927.37633,
-    "ast_hash": "7ff12c1ee26f75a219ab5dd7d380ae20",
+    "mtime": 1791982715.3108065,
+    "seen": 1791982734.1665304,
+    "ast_hash": "969e9c6e0c1f4ea44a786e71616b3983",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "docs/team_execution_plan.md": {
-    "mtime": 1791977885.2850358,
-    "seen": 1791978927.3763654,
-    "ast_hash": "11b4511b79266325f10974b23b59fd14",
+    "mtime": 1791980779.6386993,
+    "seen": 1791982734.1689534,
+    "ast_hash": "12c9b49c479ba40c001a0af4a45851bf",
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
@@ -1395,6 +1395,12 @@
     "mtime": 1791979867.6486957,
     "seen": 1791980089.5575159,
     "ast_hash": "8b342495ec25f634da5f14bce980e8db",
+    "semantic_hash": ""
+  },
+  "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
+    "mtime": 1791982870.90848,
+    "seen": 1791982937.181844,
+    "ast_hash": "4efcfb34659ebbafcf39291a568577e2",
     "semantic_hash": ""
   }
 }

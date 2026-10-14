@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791976051.7959244,
-    "seen": 1791978927.37633,
-    "ast_hash": "7ff12c1ee26f75a219ab5dd7d380ae20",
+    "mtime": 1791982715.3108065,
+    "seen": 1791982734.1665304,
+    "ast_hash": "969e9c6e0c1f4ea44a786e71616b3983",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -1134,9 +1134,9 @@
     "semantic_hash": ""
   },
   "api/main.py": {
-    "mtime": 1791980267.079355,
-    "seen": 1791980414.9020941,
-    "ast_hash": "0cf1a949c69a8c9ac93814d5669cf98a",
+    "mtime": 1791980579.9949663,
+    "seen": 1791980632.687096,
+    "ast_hash": "f077f70bd95ff647a8823aef8e2cd5fb",
     "semantic_hash": ""
   },
   "api/routes/__init__.py": {
@@ -1188,9 +1188,9 @@
     "semantic_hash": ""
   },
   "services/ingestion/csv_parser.py": {
-    "mtime": 1791973980.638093,
-    "seen": 1791974290.4654603,
-    "ast_hash": "a0aa7c200d731d4924328904fb628da3",
+    "mtime": 1791980541.694735,
+    "seen": 1791980632.6894715,
+    "ast_hash": "ea79e8f589bfbc3b275e3b6953b8f6e8",
     "semantic_hash": ""
   },
   "services/security/__init__.py": {
@@ -1236,15 +1236,15 @@
     "semantic_hash": ""
   },
   "docs/team_execution_plan.md": {
-    "mtime": 1791977885.2850358,
-    "seen": 1791978927.3763654,
-    "ast_hash": "11b4511b79266325f10974b23b59fd14",
+    "mtime": 1791980779.6386993,
+    "seen": 1791982734.1689534,
+    "ast_hash": "12c9b49c479ba40c001a0af4a45851bf",
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
-    "mtime": 1791974182.0215158,
-    "seen": 1791974290.4639466,
-    "ast_hash": "2d229036eaab73823e1e3470bd158e93",
+    "mtime": 1791980567.6837506,
+    "seen": 1791980632.6874356,
+    "ast_hash": "f90641db97afd450315ccdac5dfabde9",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1791973365.880952,
-    "seen": 1791973723.8877184,
-    "ast_hash": "243e9c60d6712da63953df5a33ab50ed",
+    "mtime": 1791980610.4529903,
+    "seen": 1791980632.688095,
+    "ast_hash": "d35c59f2b1392fb9e1537ec89fe136d7",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1284,9 +1284,9 @@
     "semantic_hash": ""
   },
   "services/calculations/cash_analysis.py": {
-    "mtime": 1791972540.945476,
-    "seen": 1791973324.0260448,
-    "ast_hash": "44cc18f4983f5dc65335fcfc8f6b9b9e",
+    "mtime": 1791980556.8491971,
+    "seen": 1791980632.689222,
+    "ast_hash": "362b36447e7e5bfc9d2074ba6bb15ebd",
     "semantic_hash": ""
   },
   "tests/integration/__init__.py": {

@@ -33,17 +33,11 @@ Read only the specification sections needed for the task. Before using a skill, 
 
 ## 1. Multi-Agent Operating Model & Hierarchy Matrix
 
-Antigravity operates as the **Lead Orchestrator**, coordinating high-level architecture through 12 Global Governance Specialists while delegating specialized domain tasks to 45 Project FinTech Specialists across 7 suites:
-
----
-
-## 1. Multi-Agent Operating Model & Hierarchy Matrix
-
-Antigravity operates as the **Lead Orchestrator**, coordinating high-level architecture through 12 Global Governance Specialists while delegating specialized domain tasks to 45 Project FinTech Specialists across 7 suites:
+The Copilot operates via a **Lead Financial Orchestrator**, coordinating high-level architecture through 12 Global Governance Specialists while delegating specialized domain tasks to 45 Project FinTech Specialists across 7 suites:
 
 ```
-                            LEAD ORCHESTRATOR (Antigravity)
-                                           │
+                          LEAD FINANCIAL ORCHESTRATOR
+                                       │
   ┌────────────────────────────────────────┴────────────────────────────────────────┐
   ▼                                                                                 ▼
 [ 0-global-specialists ]                                                  [ 1 to 7 Project Suites ]

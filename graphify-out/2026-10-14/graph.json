@@ -4,13 +4,39 @@
   "graph": {},
   "nodes": [
     {
+      "id": "api_routes_analyze_cashanalysisresponse",
+      "label": "CashAnalysisResponse",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "cashanalysisresponse",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L26"
+    },
+    {
+      "id": "api_routes_analyze_rejectedrowresponse",
+      "label": "RejectedRowResponse",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "rejectedrowresponse",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L20"
+    },
+    {
       "id": "api_routes_health_healthstatus",
       "label": "HealthStatus",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "file_type": "code",
       "norm_label": "healthstatus",
       "source_file": "api/routes/health.py",
@@ -43,84 +69,6 @@
       "source_location": "L33"
     },
     {
-      "id": "services_security_staging_ledger_actionstatus",
-      "label": "ActionStatus",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "actionstatus",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L19"
-    },
-    {
-      "id": "services_security_staging_ledger_executionrequest",
-      "label": "ExecutionRequest",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "executionrequest",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L50"
-    },
-    {
-      "id": "services_security_three_tier_gate_securitytier",
-      "label": "SecurityTier",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "securitytier",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L12"
-    },
-    {
-      "id": "services_security_three_tier_gate_stagedactionintent",
-      "label": "StagedActionIntent",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "stagedactionintent",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L18"
-    },
-    {
-      "id": "api_routes_analyze_cashanalysisresponse",
-      "label": "CashAnalysisResponse",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "cashanalysisresponse",
-      "source_file": "api/routes/analyze.py",
-      "source_location": "L26"
-    },
-    {
-      "id": "api_routes_analyze_rejectedrowresponse",
-      "label": "RejectedRowResponse",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "rejectedrowresponse",
-      "source_file": "api/routes/analyze.py",
-      "source_location": "L20"
-    },
-    {
       "id": "services_ingestion_csv_parser_csvingestionerror",
       "label": "CSVIngestionError",
       "_callable": true,
@@ -132,19 +80,6 @@
       "norm_label": "csvingestionerror",
       "source_file": "services/ingestion/csv_parser.py",
       "source_location": "L25"
-    },
-    {
-      "id": "services_ingestion_csv_parser_demotransaction",
-      "label": "DemoTransaction",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 217,
-      "community_name": "parse_bank_csv",
-      "file_type": "code",
-      "norm_label": "demotransaction",
-      "source_file": "services/ingestion/csv_parser.py",
-      "source_location": "L48"
     },
     {
       "id": "frontend_src_types_api_actionstatus",
@@ -407,6 +342,19 @@
       "source_location": "L19"
     },
     {
+      "id": "services_ingestion_csv_parser_demotransaction",
+      "label": "DemoTransaction",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 223,
+      "community_name": "test_matcher.py",
+      "file_type": "code",
+      "norm_label": "demotransaction",
+      "source_file": "services/ingestion/csv_parser.py",
+      "source_location": "L48"
+    },
+    {
       "id": "services_matcher_liquidity_matcher_financingoption",
       "label": "FinancingOption",
       "_callable": true,
@@ -446,43 +394,17 @@
       "source_location": "L30"
     },
     {
-      "id": "services_security_staging_ledger_intentnotfounderror",
-      "label": "IntentNotFoundError",
+      "id": "services_security_staging_ledger_actionstatus",
+      "label": "ActionStatus",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
-      "norm_label": "intentnotfounderror",
+      "norm_label": "actionstatus",
       "source_file": "services/security/staging_ledger.py",
-      "source_location": "L29"
-    },
-    {
-      "id": "services_security_staging_ledger_stagingledger",
-      "label": "StagingLedger",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
-      "file_type": "code",
-      "norm_label": "stagingledger",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L59"
-    },
-    {
-      "id": "services_security_staging_ledger_stagingrequest",
-      "label": "StagingRequest",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
-      "file_type": "code",
-      "norm_label": "stagingrequest",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L41"
+      "source_location": "L19"
     },
     {
       "id": "services_security_staging_ledger_biometricverificationerror",
@@ -490,12 +412,38 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "biometricverificationerror",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L37"
+    },
+    {
+      "id": "services_security_staging_ledger_executionrequest",
+      "label": "ExecutionRequest",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "executionrequest",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L50"
+    },
+    {
+      "id": "services_security_staging_ledger_intentnotfounderror",
+      "label": "IntentNotFoundError",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "intentnotfounderror",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L29"
     },
     {
       "id": "services_security_staging_ledger_intentstateerror",
@@ -503,12 +451,25 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "intentstateerror",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L33"
+    },
+    {
+      "id": "services_security_staging_ledger_stagingledger",
+      "label": "StagingLedger",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "stagingledger",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L59"
     },
     {
       "id": "services_security_staging_ledger_stagingledgererror",
@@ -516,12 +477,51 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "stagingledgererror",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L25"
+    },
+    {
+      "id": "services_security_staging_ledger_stagingrequest",
+      "label": "StagingRequest",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "stagingrequest",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L41"
+    },
+    {
+      "id": "services_security_three_tier_gate_securitytier",
+      "label": "SecurityTier",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "securitytier",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L12"
+    },
+    {
+      "id": "services_security_three_tier_gate_stagedactionintent",
+      "label": "StagedActionIntent",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "stagedactionintent",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L18"
     },
     {
       "id": "api_routes_underwrite_financingoptionresponse",
@@ -758,12 +758,48 @@
       "source_location": "L43"
     },
     {
+      "id": "api_main_root",
+      "label": "root()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "root()",
+      "source_file": "api/main.py",
+      "source_location": "L48"
+    },
+    {
+      "id": "api_routes_analyze_analyze_csv",
+      "label": "analyze_csv()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "analyze_csv()",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L41"
+    },
+    {
+      "id": "api_routes_analyze_format_money",
+      "label": "_format_money()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "_format_money()",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L73"
+    },
+    {
       "id": "api_routes_health_get_health_status",
       "label": "get_health_status()",
       "_callable": true,
       "_origin": "ast",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "file_type": "code",
       "norm_label": "get_health_status()",
       "source_file": "api/routes/health.py",
@@ -794,6 +830,18 @@
       "source_location": "L71"
     },
     {
+      "id": "tests_security_test_invariants_test_fastapi_health_endpoint",
+      "label": "test_fastapi_health_endpoint()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "file_type": "code",
+      "norm_label": "test_fastapi_health_endpoint()",
+      "source_file": "tests/security/test_invariants.py",
+      "source_location": "L53"
+    },
+    {
       "id": "tests_security_test_invariants_test_pii_redaction_masks_ibans_and_phones",
       "label": "test_pii_redaction_masks_ibans_and_phones()",
       "_callable": true,
@@ -806,6 +854,18 @@
       "source_location": "L34"
     },
     {
+      "id": "tests_security_test_invariants_test_tier_3_requires_biometric_execution",
+      "label": "test_tier_3_requires_biometric_execution()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "file_type": "code",
+      "norm_label": "test_tier_3_requires_biometric_execution()",
+      "source_file": "tests/security/test_invariants.py",
+      "source_location": "L45"
+    },
+    {
       "id": "tests_security_test_invariants_test_type_boundary_rejects_extra_fields",
       "label": "test_type_boundary_rejects_extra_fields()",
       "_callable": true,
@@ -816,18 +876,6 @@
       "norm_label": "test_type_boundary_rejects_extra_fields()",
       "source_file": "tests/security/test_invariants.py",
       "source_location": "L19"
-    },
-    {
-      "id": "services_security_three_tier_gate_requires_biometric_execution",
-      "label": "requires_biometric_execution()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "requires_biometric_execution()",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L31"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_enforces_configured_upload_limit",
@@ -878,28 +926,52 @@
       "source_location": "L14"
     },
     {
-      "id": "api_routes_analyze_analyze_csv",
-      "label": "analyze_csv()",
+      "id": "tests_integration_test_backbone_apis_test_actions_reject_flow",
+      "label": "test_actions_reject_flow()",
       "_callable": true,
       "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
       "file_type": "code",
-      "norm_label": "analyze_csv()",
-      "source_file": "api/routes/analyze.py",
-      "source_location": "L41"
+      "norm_label": "test_actions_reject_flow()",
+      "source_file": "tests/integration/test_backbone_apis.py",
+      "source_location": "L62"
     },
     {
-      "id": "api_routes_analyze_format_money",
-      "label": "_format_money()",
+      "id": "tests_integration_test_backbone_apis_test_actions_staging_and_tier_3_execution_flow",
+      "label": "test_actions_staging_and_tier_3_execution_flow()",
       "_callable": true,
       "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
       "file_type": "code",
-      "norm_label": "_format_money()",
-      "source_file": "api/routes/analyze.py",
-      "source_location": "L73"
+      "norm_label": "test_actions_staging_and_tier_3_execution_flow()",
+      "source_file": "tests/integration/test_backbone_apis.py",
+      "source_location": "L20"
+    },
+    {
+      "id": "tests_integration_test_backbone_apis_test_underwrite_api_rejects_malformed_csv",
+      "label": "test_underwrite_api_rejects_malformed_csv()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
+      "file_type": "code",
+      "norm_label": "test_underwrite_api_rejects_malformed_csv()",
+      "source_file": "tests/integration/test_backbone_apis.py",
+      "source_location": "L107"
+    },
+    {
+      "id": "tests_integration_test_backbone_apis_test_underwrite_api_returns_dossier_and_matched_options",
+      "label": "test_underwrite_api_returns_dossier_and_matched_options()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
+      "file_type": "code",
+      "norm_label": "test_underwrite_api_returns_dossier_and_matched_options()",
+      "source_file": "tests/integration/test_backbone_apis.py",
+      "source_location": "L80"
     },
     {
       "id": "services_ingestion_csv_parser_csvingestionerror_init",
@@ -1394,24 +1466,12 @@
       "source_location": "L60"
     },
     {
-      "id": "api_main_root",
-      "label": "root()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 224,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "root()",
-      "source_file": "api/main.py",
-      "source_location": "L39"
-    },
-    {
       "id": "api_routes_actions_execute_action_intent",
       "label": "execute_action_intent()",
       "_callable": true,
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "execute_action_intent()",
       "source_file": "api/routes/actions.py",
@@ -1423,7 +1483,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "get_action_intent()",
       "source_file": "api/routes/actions.py",
@@ -1435,7 +1495,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "list_action_intents()",
       "source_file": "api/routes/actions.py",
@@ -1447,7 +1507,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "reject_action_intent()",
       "source_file": "api/routes/actions.py",
@@ -1459,7 +1519,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "stage_action_intent()",
       "source_file": "api/routes/actions.py",
@@ -1470,8 +1530,8 @@
       "label": ".clear()",
       "_callable": true,
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": ".clear()",
       "source_file": "services/security/staging_ledger.py",
@@ -1482,8 +1542,8 @@
       "label": ".execute_intent()",
       "_callable": true,
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": ".execute_intent()",
       "source_file": "services/security/staging_ledger.py",
@@ -1494,8 +1554,8 @@
       "label": ".get_intent()",
       "_callable": true,
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": ".get_intent()",
       "source_file": "services/security/staging_ledger.py",
@@ -1506,8 +1566,8 @@
       "label": ".__init__()",
       "_callable": true,
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": ".__init__()",
       "source_file": "services/security/staging_ledger.py",
@@ -1518,128 +1578,80 @@
       "label": ".list_intents()",
       "_callable": true,
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": ".list_intents()",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L92"
     },
     {
-      "id": "services_security_staging_ledger_stagingledger_verify_biometric_token",
-      "label": "._verify_biometric_token()",
+      "id": "services_security_staging_ledger_stagingledger_reject_intent",
+      "label": ".reject_intent()",
       "_callable": true,
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
-      "norm_label": "._verify_biometric_token()",
+      "norm_label": ".reject_intent()",
       "source_file": "services/security/staging_ledger.py",
-      "source_location": "L150"
-    },
-    {
-      "id": "tests_unit_test_security_gate_ledger",
-      "label": "ledger()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
-      "file_type": "code",
-      "norm_label": "ledger()",
-      "source_file": "tests/unit/test_security_gate.py",
-      "source_location": "L18"
-    },
-    {
-      "id": "tests_integration_test_backbone_apis_test_actions_reject_flow",
-      "label": "test_actions_reject_flow()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_actions_reject_flow()",
-      "source_file": "tests/integration/test_backbone_apis.py",
-      "source_location": "L62"
-    },
-    {
-      "id": "tests_integration_test_backbone_apis_test_actions_staging_and_tier_3_execution_flow",
-      "label": "test_actions_staging_and_tier_3_execution_flow()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_actions_staging_and_tier_3_execution_flow()",
-      "source_file": "tests/integration/test_backbone_apis.py",
-      "source_location": "L20"
-    },
-    {
-      "id": "tests_integration_test_backbone_apis_test_underwrite_api_rejects_malformed_csv",
-      "label": "test_underwrite_api_rejects_malformed_csv()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_underwrite_api_rejects_malformed_csv()",
-      "source_file": "tests/integration/test_backbone_apis.py",
-      "source_location": "L107"
-    },
-    {
-      "id": "tests_integration_test_backbone_apis_test_underwrite_api_returns_dossier_and_matched_options",
-      "label": "test_underwrite_api_returns_dossier_and_matched_options()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_underwrite_api_returns_dossier_and_matched_options()",
-      "source_file": "tests/integration/test_backbone_apis.py",
-      "source_location": "L80"
-    },
-    {
-      "id": "tests_security_test_invariants_test_fastapi_health_endpoint",
-      "label": "test_fastapi_health_endpoint()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_fastapi_health_endpoint()",
-      "source_file": "tests/security/test_invariants.py",
-      "source_location": "L53"
-    },
-    {
-      "id": "tests_security_test_invariants_test_tier_3_requires_biometric_execution",
-      "label": "test_tier_3_requires_biometric_execution()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_tier_3_requires_biometric_execution()",
-      "source_file": "tests/security/test_invariants.py",
-      "source_location": "L45"
+      "source_location": "L128"
     },
     {
       "id": "services_security_staging_ledger_stagingledger_stage_intent",
       "label": ".stage_intent()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": ".stage_intent()",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L66"
     },
     {
+      "id": "services_security_staging_ledger_stagingledger_verify_biometric_token",
+      "label": "._verify_biometric_token()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "._verify_biometric_token()",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L150"
+    },
+    {
+      "id": "services_security_three_tier_gate_requires_biometric_execution",
+      "label": "requires_biometric_execution()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "requires_biometric_execution()",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L31"
+    },
+    {
+      "id": "tests_unit_test_security_gate_ledger",
+      "label": "ledger()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "ledger()",
+      "source_file": "tests/unit/test_security_gate.py",
+      "source_location": "L18"
+    },
+    {
       "id": "tests_unit_test_security_gate_test_cannot_execute_already_executed_intent",
       "label": "test_cannot_execute_already_executed_intent()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "test_cannot_execute_already_executed_intent()",
       "source_file": "tests/unit/test_security_gate.py",
@@ -1650,8 +1662,8 @@
       "label": "test_draw_credit_line_requires_biometric()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "test_draw_credit_line_requires_biometric()",
       "source_file": "tests/unit/test_security_gate.py",
@@ -1662,8 +1674,8 @@
       "label": "test_intent_not_found()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "test_intent_not_found()",
       "source_file": "tests/unit/test_security_gate.py",
@@ -1674,8 +1686,8 @@
       "label": "test_reject_staged_intent()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "test_reject_staged_intent()",
       "source_file": "tests/unit/test_security_gate.py",
@@ -1686,8 +1698,8 @@
       "label": "test_stage_intent_creates_pending_proposal()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "test_stage_intent_creates_pending_proposal()",
       "source_file": "tests/unit/test_security_gate.py",
@@ -1698,24 +1710,12 @@
       "label": "test_tier_3_transfer_requires_biometric_signature()",
       "_callable": true,
       "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "test_tier_3_transfer_requires_biometric_signature()",
       "source_file": "tests/unit/test_security_gate.py",
       "source_location": "L41"
-    },
-    {
-      "id": "services_security_staging_ledger_stagingledger_reject_intent",
-      "label": ".reject_intent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
-      "file_type": "code",
-      "norm_label": ".reject_intent()",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L128"
     },
     {
       "id": "api_routes_underwrite_format_money",
@@ -2122,7 +2122,7 @@
       "label": "\u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f CRITICAL WARNING: ALWAYS USE THE LATEST EARNINGS DATA \u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "\u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f critical warning: always use the latest earnings data \u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f",
@@ -2134,7 +2134,7 @@
       "label": "Detailed Workflow for Earnings Updates",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "detailed workflow for earnings updates",
@@ -2142,11 +2142,35 @@
       "source_location": "L1"
     },
     {
+      "id": "agent_skills_earnings_analysis_references_workflow_phase_1_earnings_data_collection_30_60_minutes",
+      "label": "Phase 1: Earnings Data Collection (30-60 minutes)",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "phase 1: earnings data collection (30-60 minutes)",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L17"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_phase_2_analysis_2_3_hours",
+      "label": "Phase 2: Analysis (2-3 hours)",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "phase 2: analysis (2-3 hours)",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L247"
+    },
+    {
       "id": "agent_skills_earnings_analysis_references_workflow_phase_3_chart_generation_1_2_hours",
       "label": "Phase 3: Chart Generation (1-2 hours)",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "phase 3: chart generation (1-2 hours)",
@@ -2158,7 +2182,7 @@
       "label": "Phase 4: Report Creation (2-3 hours)",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "phase 4: report creation (2-3 hours)",
@@ -2170,7 +2194,7 @@
       "label": "Phase 5: Quality Check & Delivery (30 minutes)",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "phase 5: quality check & delivery (30 minutes)",
@@ -2178,11 +2202,35 @@
       "source_location": "L447"
     },
     {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_10_update_valuation_price_target",
+      "label": "Step 10: Update Valuation & Price Target",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 10: update valuation & price target",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L333"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_11_assess_rating_impact",
+      "label": "Step 11: Assess Rating Impact",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 11: assess rating impact",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L346"
+    },
+    {
       "id": "agent_skills_earnings_analysis_references_workflow_step_12_generate_8_12_charts",
       "label": "Step 12: Generate 8-12 Charts",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "step 12: generate 8-12 charts",
@@ -2194,7 +2242,7 @@
       "label": "Step 13: Create DOCX Report",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "step 13: create docx report",
@@ -2206,7 +2254,7 @@
       "label": "Step 14: Optional - Update XLS Model",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "step 14: optional - update xls model",
@@ -2218,7 +2266,7 @@
       "label": "Step 15: Quality Checklist",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "step 15: quality checklist",
@@ -2230,12 +2278,120 @@
       "label": "Step 16: Deliver Report",
       "_origin": "ast",
       "community": 10,
-      "community_name": "Detailed Workflow for Earnings Updates",
+      "community_name": "Phase 2: Analysis (2-3 hours)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "step 16: deliver report",
       "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
       "source_location": "L497"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_1_identify_the_latest_earnings_period",
+      "label": "Step 1: Identify the Latest Earnings Period",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 1: identify the latest earnings period",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L19"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_2_gather_earnings_materials",
+      "label": "Step 2: Gather Earnings Materials",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 2: gather earnings materials",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L132"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_3_extract_key_metrics",
+      "label": "Step 3: Extract Key Metrics",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 3: extract key metrics",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L216"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_4_identify_key_themes_from_call",
+      "label": "Step 4: Identify Key Themes from Call",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 4: identify key themes from call",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L238"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_5_beat_miss_analysis",
+      "label": "Step 5: Beat/Miss Analysis",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 5: beat/miss analysis",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L249"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_6_segment_geographic_product_analysis",
+      "label": "Step 6: Segment/Geographic/Product Analysis",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 6: segment/geographic/product analysis",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L278"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_7_margin_analysis",
+      "label": "Step 7: Margin Analysis",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 7: margin analysis",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L292"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_8_guidance_analysis",
+      "label": "Step 8: Guidance Analysis",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 8: guidance analysis",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L300"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_workflow_step_9_update_financial_model",
+      "label": "Step 9: Update Financial Model",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "step 9: update financial model",
+      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
+      "source_location": "L312"
     },
     {
       "id": "agent_agents_0_global_specialists_code_optimizer",
@@ -5912,18 +6068,6 @@
       "source_location": "L34"
     },
     {
-      "id": "agents_1_multi_agent_operating_model_hierarchy_matrix_40",
-      "label": "1. Multi-Agent Operating Model & Hierarchy Matrix",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "2. Subagent Suites Directory (57 Specialized Subagents)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "1. multi-agent operating model & hierarchy matrix",
-      "source_file": "AGENTS.md",
-      "source_location": "L40"
-    },
-    {
       "id": "agents_2_subagent_suites_directory_57_specialized_subagents",
       "label": "2. Subagent Suites Directory (57 Specialized Subagents)",
       "_origin": "ast",
@@ -5933,7 +6077,7 @@
       "node_kind": "heading",
       "norm_label": "2. subagent suites directory (57 specialized subagents)",
       "source_file": "AGENTS.md",
-      "source_location": "L66"
+      "source_location": "L60"
     },
     {
       "id": "agents_3_dynamic_task_routing_matrix_scenario_to_squad_mapping",
@@ -5945,7 +6089,7 @@
       "node_kind": "heading",
       "norm_label": "3. dynamic task routing matrix (scenario-to-squad mapping)",
       "source_file": "AGENTS.md",
-      "source_location": "L143"
+      "source_location": "L137"
     },
     {
       "id": "agents_4_antigravity_agent_execution_protocol",
@@ -5957,7 +6101,7 @@
       "node_kind": "heading",
       "norm_label": "4. antigravity agent execution protocol",
       "source_file": "AGENTS.md",
-      "source_location": "L163"
+      "source_location": "L157"
     },
     {
       "id": "agents_master_documentation_operational_protocols",
@@ -5993,7 +6137,7 @@
       "node_kind": "heading",
       "norm_label": "suite 0: global governance specialists (`.agent/agents/0-global-specialists/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L68"
+      "source_location": "L62"
     },
     {
       "id": "agents_suite_1_agentic_ai_orchestration_agent_agents_1_agentic_orchestration",
@@ -6005,7 +6149,7 @@
       "node_kind": "heading",
       "norm_label": "suite 1: agentic ai orchestration (`.agent/agents/1-agentic-orchestration/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L82"
+      "source_location": "L76"
     },
     {
       "id": "agents_suite_2_fintech_engine_blockchain_agent_agents_2_fintech_engine",
@@ -6017,7 +6161,7 @@
       "node_kind": "heading",
       "norm_label": "suite 2: fintech engine & blockchain (`.agent/agents/2-fintech-engine/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L91"
+      "source_location": "L85"
     },
     {
       "id": "agents_suite_3_backend_platform_agent_agents_3_backend_platform",
@@ -6029,7 +6173,7 @@
       "node_kind": "heading",
       "norm_label": "suite 3: backend platform (`.agent/agents/3-backend-platform/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L99"
+      "source_location": "L93"
     },
     {
       "id": "agents_suite_4_frontend_dashboard_agent_agents_4_frontend_dashboard",
@@ -6041,7 +6185,7 @@
       "node_kind": "heading",
       "norm_label": "suite 4: frontend dashboard (`.agent/agents/4-frontend-dashboard/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L107"
+      "source_location": "L101"
     },
     {
       "id": "agents_suite_5_security_compliance_qa_agent_agents_5_security_qa",
@@ -6053,7 +6197,7 @@
       "node_kind": "heading",
       "norm_label": "suite 5: security, compliance & qa (`.agent/agents/5-security-qa/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L113"
+      "source_location": "L107"
     },
     {
       "id": "agents_suite_6_product_hackathon_pitch_agent_agents_6_product_pitch",
@@ -6065,7 +6209,7 @@
       "node_kind": "heading",
       "norm_label": "suite 6: product & hackathon pitch (`.agent/agents/6-product-pitch/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L122"
+      "source_location": "L116"
     },
     {
       "id": "agents_suite_7_research_intelligence_squad_agent_agents_7_research_intelligence",
@@ -6077,7 +6221,7 @@
       "node_kind": "heading",
       "norm_label": "suite 7: research & intelligence squad (`.agent/agents/7-research-intelligence/`)",
       "source_file": "AGENTS.md",
-      "source_location": "L130"
+      "source_location": "L124"
     },
     {
       "id": "agents_verified_repository_baseline_checked_2026_10_14",
@@ -12492,11 +12636,99 @@
       "source_location": "L126"
     },
     {
+      "id": "api_main",
+      "label": "main.py",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "main.py",
+      "source_file": "api/main.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "api_main_py_get",
+      "label": "get",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "get",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "api_routes_analyze",
+      "label": "analyze.py",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "analyze.py",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "api_routes_analyze_py_basemodel",
+      "label": "BaseModel",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "basemodel",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "api_routes_analyze_py_decimal",
+      "label": "Decimal",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "decimal",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "api_routes_analyze_py_jsonresponse",
+      "label": "JSONResponse",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "jsonresponse",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "api_routes_analyze_py_post",
+      "label": "post",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "post",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "api_routes_analyze_py_uploadfile",
+      "label": "UploadFile",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "code",
+      "norm_label": "uploadfile",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "api_routes_health",
       "label": "health.py",
       "_origin": "ast",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "file_type": "code",
       "norm_label": "health.py",
       "source_file": "api/routes/health.py",
@@ -12507,7 +12739,7 @@
       "label": "BaseModel",
       "_origin": "ast",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "file_type": "code",
       "norm_label": "basemodel",
       "source_file": "",
@@ -12518,18 +12750,40 @@
       "label": "get",
       "_origin": "ast",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "file_type": "code",
       "norm_label": "get",
       "source_file": "",
       "source_location": ""
     },
     {
+      "id": "api_main_rationale_1",
+      "label": "FastAPI Main Application Entrypoint. Configures CORS, Security Headers, and\u2026",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "rationale",
+      "norm_label": "fastapi main application entrypoint. configures cors, security headers, and...",
+      "source_file": "api/main.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "api_routes_analyze_rationale_1",
+      "label": "Bank statement CSV analysis endpoint; processes transactions in-memory without\u2026",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "analyze.py",
+      "file_type": "rationale",
+      "norm_label": "bank statement csv analysis endpoint; processes transactions in-memory without...",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L1"
+    },
+    {
       "id": "api_routes_health_rationale_1",
       "label": "System health and operational invariant status endpoint.",
       "_origin": "ast",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "file_type": "rationale",
       "norm_label": "system health and operational invariant status endpoint.",
       "source_file": "api/routes/health.py",
@@ -13293,6 +13547,17 @@
       "source_location": "L1"
     },
     {
+      "id": "tests_security_test_invariants",
+      "label": "test_invariants.py",
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "file_type": "code",
+      "norm_label": "test_invariants.py",
+      "source_file": "tests/security/test_invariants.py",
+      "source_location": "L1"
+    },
+    {
       "id": "docs_team_execution_plan_shared_contract_agree_before_implementation",
       "label": "Shared contract \u2014 agree before implementation",
       "_origin": "ast",
@@ -13306,12 +13571,12 @@
     },
     {
       "id": "services_ingestion_csv_parser_rationale_1",
-      "label": "CSV parsing for the synthetic, read-only first-demo analysis flow.",
+      "label": "Bank statement CSV data ingestion and sanitization service.",
       "_origin": "ast",
       "community": 200,
       "community_name": "csv_parser.py",
       "file_type": "rationale",
-      "norm_label": "csv parsing for the synthetic, read-only first-demo analysis flow.",
+      "norm_label": "bank statement csv data ingestion and sanitization service.",
       "source_file": "services/ingestion/csv_parser.py",
       "source_location": "L1"
     },
@@ -13349,6 +13614,17 @@
       "source_location": "L78"
     },
     {
+      "id": "tests_security_test_invariants_rationale_1",
+      "label": "Security Invariant Verification Tests. Verifies Type Boundaries, PII Redaction,\u2026",
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "file_type": "rationale",
+      "norm_label": "security invariant verification tests. verifies type boundaries, pii redaction,...",
+      "source_file": "tests/security/test_invariants.py",
+      "source_location": "L1"
+    },
+    {
       "id": "tests_security_test_invariants_rationale_20",
       "label": "Verify Rust Pydantic parser rejects parameter smuggling (HTTP 422 behavior).",
       "_origin": "ast",
@@ -13369,6 +13645,28 @@
       "norm_label": "verify customer account numbers and phone numbers are scrubbed.",
       "source_file": "tests/security/test_invariants.py",
       "source_location": "L35"
+    },
+    {
+      "id": "tests_security_test_invariants_rationale_46",
+      "label": "Verify money transfers and loan commitments mandate Tier 3 biometric signatures.",
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "file_type": "rationale",
+      "norm_label": "verify money transfers and loan commitments mandate tier 3 biometric signatures.",
+      "source_file": "tests/security/test_invariants.py",
+      "source_location": "L46"
+    },
+    {
+      "id": "tests_security_test_invariants_rationale_54",
+      "label": "Verify API boots and reports active system invariants.",
+      "_origin": "ast",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "file_type": "rationale",
+      "norm_label": "verify api boots and reports active system invariants.",
+      "source_file": "tests/security/test_invariants.py",
+      "source_location": "L54"
     },
     {
       "id": "agent_skills_dcf_model_skill_critical_constraints_read_these_first",
@@ -13731,136 +14029,88 @@
       "source_location": "L1020"
     },
     {
-      "id": "services_security_init",
-      "label": "services/security/__init__.py",
+      "id": "agent_skills_earnings_analysis_references_report_structure_1_page_1_requirements",
+      "label": "1. Page 1 Requirements",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "services/security/__init__.py",
-      "source_file": "services/security/__init__.py",
-      "source_location": "L1"
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "1. page 1 requirements",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L307"
     },
     {
-      "id": "services_security_staging_ledger",
-      "label": "staging_ledger.py",
+      "id": "agent_skills_earnings_analysis_references_report_structure_2_all_tables_requirements",
+      "label": "2. All Tables Requirements",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "staging_ledger.py",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L1"
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "2. all tables requirements",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L313"
     },
     {
-      "id": "services_security_staging_ledger_py_basemodel",
-      "label": "BaseModel",
+      "id": "agent_skills_earnings_analysis_references_report_structure_3_all_charts_requirements",
+      "label": "3. All Charts Requirements",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "basemodel",
-      "source_file": "",
-      "source_location": ""
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "3. all charts requirements",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L318"
     },
     {
-      "id": "services_security_staging_ledger_py_enum",
-      "label": "Enum",
+      "id": "agent_skills_earnings_analysis_references_report_structure_4_year_notation",
+      "label": "4. Year Notation",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "enum",
-      "source_file": "",
-      "source_location": ""
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "4. year notation",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L323"
     },
     {
-      "id": "services_security_staging_ledger_py_str",
-      "label": "str",
+      "id": "agent_skills_earnings_analysis_references_report_structure_5_writing_style",
+      "label": "5. Writing Style",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "str",
-      "source_file": "",
-      "source_location": ""
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "5. writing style",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L327"
     },
     {
-      "id": "services_security_three_tier_gate",
-      "label": "three_tier_gate.py",
+      "id": "agent_skills_earnings_analysis_references_report_structure_6_hyperlink_requirements",
+      "label": "6. Hyperlink Requirements \u2b50\u2b50\u2b50",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "three_tier_gate.py",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L1"
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "6. hyperlink requirements \u2b50\u2b50\u2b50",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L333"
     },
     {
-      "id": "services_security_three_tier_gate_py_basemodel",
-      "label": "BaseModel",
+      "id": "agent_skills_earnings_analysis_references_report_structure_formatting_requirements",
+      "label": "FORMATTING REQUIREMENTS",
       "_origin": "ast",
       "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "basemodel",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_security_three_tier_gate_py_enum",
-      "label": "Enum",
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "enum",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_security_three_tier_gate_py_str",
-      "label": "str",
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "str",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_1",
-      "label": "In-memory staging ledger for Tier 2 proposal staging and Tier 3 Human-in-the-\u2026",
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "rationale",
-      "norm_label": "in-memory staging ledger for tier 2 proposal staging and tier 3 human-in-the-...",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_security_three_tier_gate_rationale_1",
-      "label": "Three-Tier Security Gate and Action Intent Staging. Aligns with\u2026",
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "rationale",
-      "norm_label": "three-tier security gate and action intent staging. aligns with...",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_security_three_tier_gate_rationale_32",
-      "label": "Evaluates whether an action requires Tier 3 physical biometric confirmation.",
-      "_origin": "ast",
-      "community": 204,
-      "community_name": "staging_ledger.py",
-      "file_type": "rationale",
-      "norm_label": "evaluates whether an action requires tier 3 physical biometric confirmation.",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L32"
+      "community_name": "FORMATTING REQUIREMENTS",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "formatting requirements",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L305"
     },
     {
       "id": "agent_skills_dcf_model_skill_at_start_of_dcf_build",
@@ -14101,6 +14351,17 @@
       "source_location": "L1"
     },
     {
+      "id": "tests_integration_test_backbone_apis",
+      "label": "test_backbone_apis.py",
+      "_origin": "ast",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
+      "file_type": "code",
+      "norm_label": "test_backbone_apis.py",
+      "source_file": "tests/integration/test_backbone_apis.py",
+      "source_location": "L1"
+    },
+    {
       "id": "api_routes_init_rationale_1",
       "label": "FastAPI routes package.",
       "_origin": "ast",
@@ -14109,6 +14370,17 @@
       "file_type": "rationale",
       "norm_label": "fastapi routes package.",
       "source_file": "api/routes/__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "tests_integration_test_backbone_apis_rationale_1",
+      "label": "Integration tests for new Backbone APIs: - Tier 2/3 Action Staging and\u2026",
+      "_origin": "ast",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
+      "file_type": "rationale",
+      "norm_label": "integration tests for new backbone apis: - tier 2/3 action staging and...",
+      "source_file": "tests/integration/test_backbone_apis.py",
       "source_location": "L1"
     },
     {
@@ -14443,81 +14715,52 @@
       "source_location": "L24"
     },
     {
-      "id": "api_routes_analyze",
-      "label": "analyze.py",
+      "id": "agent_skills_earnings_analysis_references_report_structure_citation_examples_for_specific_content",
+      "label": "Citation Examples for Specific Content",
       "_origin": "ast",
       "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "analyze.py",
-      "source_file": "api/routes/analyze.py",
-      "source_location": "L1"
+      "community_name": "Citation Examples for Specific Content",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "citation examples for specific content",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L340"
     },
     {
-      "id": "api_routes_analyze_py_basemodel",
-      "label": "BaseModel",
+      "id": "agent_skills_earnings_analysis_references_report_structure_for_beat_miss_analysis",
+      "label": "For Beat/Miss Analysis:",
       "_origin": "ast",
       "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "basemodel",
-      "source_file": "",
-      "source_location": ""
+      "community_name": "Citation Examples for Specific Content",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "for beat/miss analysis:",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L342"
     },
     {
-      "id": "api_routes_analyze_py_decimal",
-      "label": "Decimal",
+      "id": "agent_skills_earnings_analysis_references_report_structure_for_guidance",
+      "label": "For Guidance:",
       "_origin": "ast",
       "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "decimal",
-      "source_file": "",
-      "source_location": ""
+      "community_name": "Citation Examples for Specific Content",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "for guidance:",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L350"
     },
     {
-      "id": "api_routes_analyze_py_jsonresponse",
-      "label": "JSONResponse",
+      "id": "agent_skills_earnings_analysis_references_report_structure_for_key_metrics",
+      "label": "For Key Metrics:",
       "_origin": "ast",
       "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "jsonresponse",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "api_routes_analyze_py_post",
-      "label": "post",
-      "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "post",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "api_routes_analyze_py_uploadfile",
-      "label": "UploadFile",
-      "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "code",
-      "norm_label": "uploadfile",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "api_routes_analyze_rationale_1",
-      "label": "First-demo CSV analysis endpoint; it performs no external calls or writes.",
-      "_origin": "ast",
-      "community": 216,
-      "community_name": "analyze.py",
-      "file_type": "rationale",
-      "norm_label": "first-demo csv analysis endpoint; it performs no external calls or writes.",
-      "source_file": "api/routes/analyze.py",
-      "source_location": "L1"
+      "community_name": "Citation Examples for Specific Content",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "for key metrics:",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L360"
     },
     {
       "id": "tests_unit_test_ingestion_demo",
@@ -14554,12 +14797,12 @@
     },
     {
       "id": "services_ingestion_csv_parser_rationale_96",
-      "label": "Parse the exact demo CSV schema, preserving row numbers and safe reason codes.",
+      "label": "Parse standard bank statement CSV schema, preserving row numbers and safe\u2026",
       "_origin": "ast",
       "community": 217,
       "community_name": "parse_bank_csv",
       "file_type": "rationale",
-      "norm_label": "parse the exact demo csv schema, preserving row numbers and safe reason codes.",
+      "norm_label": "parse standard bank statement csv schema, preserving row numbers and safe...",
       "source_file": "services/ingestion/csv_parser.py",
       "source_location": "L96"
     },
@@ -14817,12 +15060,12 @@
     },
     {
       "id": "services_calculations_cash_analysis_rationale_1",
-      "label": "Deterministic historical cash analysis for the first demo.",
+      "label": "Deterministic historical cash analysis and burn rate calculations.",
       "_origin": "ast",
       "community": 220,
       "community_name": "calculate_cash_analysis",
       "file_type": "rationale",
-      "norm_label": "deterministic historical cash analysis for the first demo.",
+      "norm_label": "deterministic historical cash analysis and burn rate calculations.",
       "source_file": "services/calculations/cash_analysis.py",
       "source_location": "L1"
     },
@@ -14838,100 +15081,40 @@
       "source_location": "L31"
     },
     {
-      "id": "agent_skills_earnings_analysis_references_workflow_phase_2_analysis_2_3_hours",
-      "label": "Phase 2: Analysis (2-3 hours)",
+      "id": "agent_skills_earnings_analysis_references_report_structure_pages_6_7_updated_investment_thesis",
+      "label": "PAGES 6-7: UPDATED INVESTMENT THESIS",
       "_origin": "ast",
       "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "community_name": "PAGES 6-7: UPDATED INVESTMENT THESIS",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "phase 2: analysis (2-3 hours)",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L247"
+      "norm_label": "pages 6-7: updated investment thesis",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L180"
     },
     {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_10_update_valuation_price_target",
-      "label": "Step 10: Update Valuation & Price Target",
+      "id": "agent_skills_earnings_analysis_references_report_structure_risks_update_0_5_pages",
+      "label": "Risks Update (0.5 pages)",
       "_origin": "ast",
       "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "community_name": "PAGES 6-7: UPDATED INVESTMENT THESIS",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "step 10: update valuation & price target",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L333"
+      "norm_label": "risks update (0.5 pages)",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L204"
     },
     {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_11_assess_rating_impact",
-      "label": "Step 11: Assess Rating Impact",
+      "id": "agent_skills_earnings_analysis_references_report_structure_thesis_impact_assessment_1_2_pages",
+      "label": "Thesis Impact Assessment (1-2 pages)",
       "_origin": "ast",
       "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
+      "community_name": "PAGES 6-7: UPDATED INVESTMENT THESIS",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "step 11: assess rating impact",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L346"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_5_beat_miss_analysis",
-      "label": "Step 5: Beat/Miss Analysis",
-      "_origin": "ast",
-      "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 5: beat/miss analysis",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L249"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_6_segment_geographic_product_analysis",
-      "label": "Step 6: Segment/Geographic/Product Analysis",
-      "_origin": "ast",
-      "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 6: segment/geographic/product analysis",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L278"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_7_margin_analysis",
-      "label": "Step 7: Margin Analysis",
-      "_origin": "ast",
-      "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 7: margin analysis",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L292"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_8_guidance_analysis",
-      "label": "Step 8: Guidance Analysis",
-      "_origin": "ast",
-      "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 8: guidance analysis",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L300"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_9_update_financial_model",
-      "label": "Step 9: Update Financial Model",
-      "_origin": "ast",
-      "community": 221,
-      "community_name": "Phase 2: Analysis (2-3 hours)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 9: update financial model",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L312"
+      "norm_label": "thesis impact assessment (1-2 pages)",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L182"
     },
     {
       "id": "services_blockchain_init",
@@ -15264,33 +15447,11 @@
       "source_location": "L1"
     },
     {
-      "id": "api_main",
-      "label": "main.py",
-      "_origin": "ast",
-      "community": 224,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "main.py",
-      "source_file": "api/main.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "api_main_py_get",
-      "label": "get",
-      "_origin": "ast",
-      "community": 224,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "get",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "api_routes_actions",
       "label": "actions.py",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "actions.py",
       "source_file": "api/routes/actions.py",
@@ -15301,7 +15462,7 @@
       "label": "get",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "get",
       "source_file": "",
@@ -15312,7 +15473,7 @@
       "label": "post",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "post",
       "source_file": "",
@@ -15323,29 +15484,150 @@
       "label": "StagedActionIntent",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "code",
       "norm_label": "stagedactionintent",
       "source_file": "",
       "source_location": ""
     },
     {
-      "id": "api_main_rationale_1",
-      "label": "FastAPI Main Application Entrypoint. Configures CORS, Security Headers, and\u2026",
+      "id": "services_security_init",
+      "label": "services/security/__init__.py",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
-      "file_type": "rationale",
-      "norm_label": "fastapi main application entrypoint. configures cors, security headers, and...",
-      "source_file": "api/main.py",
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "services/security/__init__.py",
+      "source_file": "services/security/__init__.py",
       "source_location": "L1"
+    },
+    {
+      "id": "services_security_staging_ledger",
+      "label": "staging_ledger.py",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "staging_ledger.py",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "services_security_staging_ledger_py_basemodel",
+      "label": "BaseModel",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "basemodel",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_staging_ledger_py_enum",
+      "label": "Enum",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "enum",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_staging_ledger_py_exception",
+      "label": "Exception",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "exception",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_staging_ledger_py_str",
+      "label": "str",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "str",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_three_tier_gate",
+      "label": "three_tier_gate.py",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "three_tier_gate.py",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "services_security_three_tier_gate_py_basemodel",
+      "label": "BaseModel",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "basemodel",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_three_tier_gate_py_enum",
+      "label": "Enum",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "enum",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_three_tier_gate_py_str",
+      "label": "str",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "str",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "tests_unit_test_security_gate",
+      "label": "test_security_gate.py",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "test_security_gate.py",
+      "source_file": "tests/unit/test_security_gate.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "tests_unit_test_security_gate_py_fixture",
+      "label": "fixture",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "fixture",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "api_routes_actions_rationale_1",
       "label": "FastAPI router for Three-Tier Security Gate and Staged Action Intents. Manages\u2026",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "fastapi router for three-tier security gate and staged action intents. manages...",
       "source_file": "api/routes/actions.py",
@@ -15356,7 +15638,7 @@
       "label": "Stages an action proposal in Tier 2. No funds or commitments move.",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "stages an action proposal in tier 2. no funds or commitments move.",
       "source_file": "api/routes/actions.py",
@@ -15367,7 +15649,7 @@
       "label": "Lists staged proposals awaiting review or historical execution records.",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "lists staged proposals awaiting review or historical execution records.",
       "source_file": "api/routes/actions.py",
@@ -15378,7 +15660,7 @@
       "label": "Retrieves a specific staged action intent.",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "retrieves a specific staged action intent.",
       "source_file": "api/routes/actions.py",
@@ -15389,7 +15671,7 @@
       "label": "Executes a staged proposal. Tier 3 irreversible actions require a valid\u2026",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "executes a staged proposal. tier 3 irreversible actions require a valid...",
       "source_file": "api/routes/actions.py",
@@ -15400,51 +15682,51 @@
       "label": "Rejects a staged proposal.",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "rejects a staged proposal.",
       "source_file": "api/routes/actions.py",
       "source_location": "L69"
     },
     {
-      "id": "services_security_staging_ledger_rationale_30",
-      "label": "Raised when an intent ID does not exist in the ledger.",
+      "id": "services_security_staging_ledger_rationale_1",
+      "label": "In-memory staging ledger for Tier 2 proposal staging and Tier 3 Human-in-the-\u2026",
       "_origin": "ast",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
-      "norm_label": "raised when an intent id does not exist in the ledger.",
+      "norm_label": "in-memory staging ledger for tier 2 proposal staging and tier 3 human-in-the-...",
       "source_file": "services/security/staging_ledger.py",
-      "source_location": "L30"
-    },
-    {
-      "id": "tests_unit_test_security_gate_py_fixture",
-      "label": "fixture",
-      "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
-      "file_type": "code",
-      "norm_label": "fixture",
-      "source_file": "",
-      "source_location": ""
+      "source_location": "L1"
     },
     {
       "id": "services_security_staging_ledger_rationale_101",
       "label": "Executes a staged intent. Enforces Tier 3 Human-in-the-Loop check: requires\u2026",
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "executes a staged intent. enforces tier 3 human-in-the-loop check: requires...",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L101"
     },
     {
+      "id": "services_security_staging_ledger_rationale_129",
+      "label": "Rejects a staged intent.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "rejects a staged intent.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L129"
+    },
+    {
       "id": "services_security_staging_ledger_rationale_145",
       "label": "Clears all intents (used for testing).",
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "clears all intents (used for testing).",
       "source_file": "services/security/staging_ledger.py",
@@ -15454,30 +15736,85 @@
       "id": "services_security_staging_ledger_rationale_151",
       "label": "Validates the physical authorization token before executing Tier 3 intents.\u2026",
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "validates the physical authorization token before executing tier 3 intents....",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L151"
     },
     {
+      "id": "services_security_staging_ledger_rationale_26",
+      "label": "Base exception for staging ledger errors.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "base exception for staging ledger errors.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L26"
+    },
+    {
+      "id": "services_security_staging_ledger_rationale_30",
+      "label": "Raised when an intent ID does not exist in the ledger.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "raised when an intent id does not exist in the ledger.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L30"
+    },
+    {
+      "id": "services_security_staging_ledger_rationale_34",
+      "label": "Raised when an action is performed on an intent in an invalid state.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "raised when an action is performed on an intent in an invalid state.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L34"
+    },
+    {
+      "id": "services_security_staging_ledger_rationale_38",
+      "label": "Raised when Tier 3 action lacks a valid biometric or 2FA confirmation token.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "raised when tier 3 action lacks a valid biometric or 2fa confirmation token.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L38"
+    },
+    {
       "id": "services_security_staging_ledger_rationale_60",
       "label": "Thread-safe in-memory staging ledger for autonomous agent financial actions.",
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "thread-safe in-memory staging ledger for autonomous agent financial actions.",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L60"
     },
     {
+      "id": "services_security_staging_ledger_rationale_67",
+      "label": "Stages an action proposal in Tier 2. No money moves.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "stages an action proposal in tier 2. no money moves.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L67"
+    },
+    {
       "id": "services_security_staging_ledger_rationale_85",
       "label": "Retrieves a staged intent by ID.",
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "retrieves a staged intent by id.",
       "source_file": "services/security/staging_ledger.py",
@@ -15487,12 +15824,81 @@
       "id": "services_security_staging_ledger_rationale_93",
       "label": "Lists staged action intents, optionally filtered by tenant.",
       "_origin": "ast",
-      "community": 225,
-      "community_name": "StagingLedger",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "file_type": "rationale",
       "norm_label": "lists staged action intents, optionally filtered by tenant.",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L93"
+    },
+    {
+      "id": "services_security_three_tier_gate_rationale_1",
+      "label": "Three-Tier Security Gate and Action Intent Staging. Aligns with\u2026",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "three-tier security gate and action intent staging. aligns with...",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "services_security_three_tier_gate_rationale_32",
+      "label": "Evaluates whether an action requires Tier 3 physical biometric confirmation.",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "evaluates whether an action requires tier 3 physical biometric confirmation.",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L32"
+    },
+    {
+      "id": "tests_unit_test_security_gate_rationale_1",
+      "label": "Unit tests for the Three-Tier Security Gate and Staging Ledger. Verifies\u2026",
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "unit tests for the three-tier security gate and staging ledger. verifies...",
+      "source_file": "tests/unit/test_security_gate.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_report_structure_pages_8_10_valuation_estimates",
+      "label": "PAGES 8-10: VALUATION & ESTIMATES",
+      "_origin": "ast",
+      "community": 225,
+      "community_name": "PAGES 8-10: VALUATION & ESTIMATES",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "pages 8-10: valuation & estimates",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L215"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_report_structure_updated_estimates_detail",
+      "label": "Updated Estimates Detail",
+      "_origin": "ast",
+      "community": 225,
+      "community_name": "PAGES 8-10: VALUATION & ESTIMATES",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "updated estimates detail",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L246"
+    },
+    {
+      "id": "agent_skills_earnings_analysis_references_report_structure_updated_valuation_1_2_pages",
+      "label": "Updated Valuation (1-2 pages)",
+      "_origin": "ast",
+      "community": 225,
+      "community_name": "PAGES 8-10: VALUATION & ESTIMATES",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "updated valuation (1-2 pages)",
+      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
+      "source_location": "L217"
     },
     {
       "id": "agent_skills_earnings_analysis_references_best_practices_accuracy_checklist",
@@ -15721,66 +16127,6 @@
       "norm_label": "phase 5: quality check & delivery (30 minutes)",
       "source_file": ".agent/skills/earnings-analysis/SKILL.md",
       "source_location": "L172"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_phase_1_earnings_data_collection_30_60_minutes",
-      "label": "Phase 1: Earnings Data Collection (30-60 minutes)",
-      "_origin": "ast",
-      "community": 229,
-      "community_name": "Phase 1: Earnings Data Collection (30-60 minutes)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "phase 1: earnings data collection (30-60 minutes)",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L17"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_1_identify_the_latest_earnings_period",
-      "label": "Step 1: Identify the Latest Earnings Period",
-      "_origin": "ast",
-      "community": 229,
-      "community_name": "Phase 1: Earnings Data Collection (30-60 minutes)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 1: identify the latest earnings period",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L19"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_2_gather_earnings_materials",
-      "label": "Step 2: Gather Earnings Materials",
-      "_origin": "ast",
-      "community": 229,
-      "community_name": "Phase 1: Earnings Data Collection (30-60 minutes)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 2: gather earnings materials",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L132"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_3_extract_key_metrics",
-      "label": "Step 3: Extract Key Metrics",
-      "_origin": "ast",
-      "community": 229,
-      "community_name": "Phase 1: Earnings Data Collection (30-60 minutes)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 3: extract key metrics",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L216"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_workflow_step_4_identify_key_themes_from_call",
-      "label": "Step 4: Identify Key Themes from Call",
-      "_origin": "ast",
-      "community": 229,
-      "community_name": "Phase 1: Earnings Data Collection (30-60 minutes)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "step 4: identify key themes from call",
-      "source_file": ".agent/skills/earnings-analysis/references/workflow.md",
-      "source_location": "L238"
     },
     {
       "id": "agent_agents_1_agentic_orchestration_workflow_orchestrator",
@@ -16037,160 +16383,6 @@
       "norm_label": "integration/__init__.py",
       "source_file": "tests/integration/__init__.py",
       "source_location": "L1"
-    },
-    {
-      "id": "tests_integration_test_backbone_apis",
-      "label": "test_backbone_apis.py",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_backbone_apis.py",
-      "source_file": "tests/integration/test_backbone_apis.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "tests_security_test_invariants",
-      "label": "test_invariants.py",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "code",
-      "norm_label": "test_invariants.py",
-      "source_file": "tests/security/test_invariants.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "tests_integration_test_backbone_apis_rationale_1",
-      "label": "Integration tests for new Backbone APIs: - Tier 2/3 Action Staging and\u2026",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "rationale",
-      "norm_label": "integration tests for new backbone apis: - tier 2/3 action staging and...",
-      "source_file": "tests/integration/test_backbone_apis.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "tests_security_test_invariants_rationale_1",
-      "label": "Security Invariant Verification Tests. Verifies Type Boundaries, PII Redaction,\u2026",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "rationale",
-      "norm_label": "security invariant verification tests. verifies type boundaries, pii redaction,...",
-      "source_file": "tests/security/test_invariants.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "tests_security_test_invariants_rationale_46",
-      "label": "Verify money transfers and loan commitments mandate Tier 3 biometric signatures.",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "rationale",
-      "norm_label": "verify money transfers and loan commitments mandate tier 3 biometric signatures.",
-      "source_file": "tests/security/test_invariants.py",
-      "source_location": "L46"
-    },
-    {
-      "id": "tests_security_test_invariants_rationale_54",
-      "label": "Verify API boots and reports active system invariants.",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "file_type": "rationale",
-      "norm_label": "verify api boots and reports active system invariants.",
-      "source_file": "tests/security/test_invariants.py",
-      "source_location": "L54"
-    },
-    {
-      "id": "tests_unit_test_security_gate",
-      "label": "test_security_gate.py",
-      "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
-      "file_type": "code",
-      "norm_label": "test_security_gate.py",
-      "source_file": "tests/unit/test_security_gate.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_67",
-      "label": "Stages an action proposal in Tier 2. No money moves.",
-      "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
-      "file_type": "rationale",
-      "norm_label": "stages an action proposal in tier 2. no money moves.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L67"
-    },
-    {
-      "id": "tests_unit_test_security_gate_rationale_1",
-      "label": "Unit tests for the Three-Tier Security Gate and Staging Ledger. Verifies\u2026",
-      "_origin": "ast",
-      "community": 236,
-      "community_name": "test_security_gate.py",
-      "file_type": "rationale",
-      "norm_label": "unit tests for the three-tier security gate and staging ledger. verifies...",
-      "source_file": "tests/unit/test_security_gate.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_security_staging_ledger_py_exception",
-      "label": "Exception",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
-      "file_type": "code",
-      "norm_label": "exception",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_129",
-      "label": "Rejects a staged intent.",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
-      "file_type": "rationale",
-      "norm_label": "rejects a staged intent.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L129"
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_26",
-      "label": "Base exception for staging ledger errors.",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
-      "file_type": "rationale",
-      "norm_label": "base exception for staging ledger errors.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L26"
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_34",
-      "label": "Raised when an action is performed on an intent in an invalid state.",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
-      "file_type": "rationale",
-      "norm_label": "raised when an action is performed on an intent in an invalid state.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L34"
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_38",
-      "label": "Raised when Tier 3 action lacks a valid biometric or 2FA confirmation token.",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "IntentStateError",
-      "file_type": "rationale",
-      "norm_label": "raised when tier 3 action lacks a valid biometric or 2fa confirmation token.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L38"
     },
     {
       "id": "api_routes_underwrite",
@@ -18545,78 +18737,6 @@
       "source_location": "L11"
     },
     {
-      "id": "agent_skills_earnings_analysis_references_report_structure_1_page_1_requirements",
-      "label": "1. Page 1 Requirements",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "1. page 1 requirements",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L307"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_2_all_tables_requirements",
-      "label": "2. All Tables Requirements",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2. all tables requirements",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L313"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_3_all_charts_requirements",
-      "label": "3. All Charts Requirements",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "3. all charts requirements",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L318"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_4_year_notation",
-      "label": "4. Year Notation",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4. year notation",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L323"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_5_writing_style",
-      "label": "5. Writing Style",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5. writing style",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L327"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_6_hyperlink_requirements",
-      "label": "6. Hyperlink Requirements \u2b50\u2b50\u2b50",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "6. hyperlink requirements \u2b50\u2b50\u2b50",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L333"
-    },
-    {
       "id": "agent_skills_earnings_analysis_references_report_structure_business_metrics_1_page",
       "label": "Business Metrics (1 page)",
       "_origin": "ast",
@@ -18641,18 +18761,6 @@
       "source_location": "L291"
     },
     {
-      "id": "agent_skills_earnings_analysis_references_report_structure_citation_examples_for_specific_content",
-      "label": "Citation Examples for Specific Content",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "citation examples for specific content",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L340"
-    },
-    {
       "id": "agent_skills_earnings_analysis_references_report_structure_complete_report_structure",
       "label": "Complete Report Structure",
       "_origin": "ast",
@@ -18675,54 +18783,6 @@
       "norm_label": "detailed quarterly models (if space allows)",
       "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
       "source_location": "L286"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_for_beat_miss_analysis",
-      "label": "For Beat/Miss Analysis:",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "for beat/miss analysis:",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L342"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_for_guidance",
-      "label": "For Guidance:",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "for guidance:",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L350"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_for_key_metrics",
-      "label": "For Key Metrics:",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "for key metrics:",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L360"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_formatting_requirements",
-      "label": "FORMATTING REQUIREMENTS",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "formatting requirements",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L305"
     },
     {
       "id": "agent_skills_earnings_analysis_references_report_structure_guidance_outlook_1_page",
@@ -18785,30 +18845,6 @@
       "source_location": "L137"
     },
     {
-      "id": "agent_skills_earnings_analysis_references_report_structure_pages_6_7_updated_investment_thesis",
-      "label": "PAGES 6-7: UPDATED INVESTMENT THESIS",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "pages 6-7: updated investment thesis",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L180"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_pages_8_10_valuation_estimates",
-      "label": "PAGES 8-10: VALUATION & ESTIMATES",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "pages 8-10: valuation & estimates",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L215"
-    },
-    {
       "id": "agent_skills_earnings_analysis_references_report_structure_peer_comparison_if_peers_have_reported",
       "label": "Peer Comparison (if peers have reported)",
       "_origin": "ast",
@@ -18855,54 +18891,6 @@
       "norm_label": "revenue analysis (1 page)",
       "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
       "source_location": "L92"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_risks_update_0_5_pages",
-      "label": "Risks Update (0.5 pages)",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "risks update (0.5 pages)",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L204"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_thesis_impact_assessment_1_2_pages",
-      "label": "Thesis Impact Assessment (1-2 pages)",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "thesis impact assessment (1-2 pages)",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L182"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_updated_estimates_detail",
-      "label": "Updated Estimates Detail",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "updated estimates detail",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L246"
-    },
-    {
-      "id": "agent_skills_earnings_analysis_references_report_structure_updated_valuation_1_2_pages",
-      "label": "Updated Valuation (1-2 pages)",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Report Structure and Templates",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "updated valuation (1-2 pages)",
-      "source_file": ".agent/skills/earnings-analysis/references/report-structure.md",
-      "source_location": "L217"
     },
     {
       "id": "agent_skills_subagent_catalog_search",
@@ -24871,11 +24859,71 @@
       "type": "external"
     },
     {
+      "id": "pytest",
+      "label": "pytest",
+      "_origin": "semantic",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "pytest",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "fastapi",
+      "label": "fastapi",
+      "_origin": "semantic",
+      "community": 195,
+      "community_name": "analyze.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "fastapi",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "fastapi_middleware_cors",
+      "label": "fastapi_middleware_cors",
+      "_origin": "semantic",
+      "community": 195,
+      "community_name": "analyze.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "fastapi_middleware_cors",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "fastapi_responses",
+      "label": "fastapi_responses",
+      "_origin": "semantic",
+      "community": 195,
+      "community_name": "analyze.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "fastapi_responses",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "os",
+      "label": "os",
+      "_origin": "semantic",
+      "community": 195,
+      "community_name": "analyze.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "os",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "pydantic",
       "label": "pydantic",
       "_origin": "semantic",
       "community": 195,
-      "community_name": "pydantic",
+      "community_name": "analyze.py",
       "external": true,
       "file_type": "concept",
       "norm_label": "pydantic",
@@ -24891,6 +24939,18 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "csv",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "decimal",
+      "label": "decimal",
+      "_origin": "semantic",
+      "community": 200,
+      "community_name": "csv_parser.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "decimal",
       "source_file": "",
       "type": "external"
     },
@@ -24919,50 +24979,14 @@
       "type": "external"
     },
     {
-      "id": "uuid",
-      "label": "uuid",
+      "id": "fastapi_testclient",
+      "label": "fastapi_testclient",
       "_origin": "semantic",
-      "community": 204,
-      "community_name": "staging_ledger.py",
+      "community": 209,
+      "community_name": "test_analyze_api.py",
       "external": true,
       "file_type": "concept",
-      "norm_label": "uuid",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "fastapi_responses",
-      "label": "fastapi_responses",
-      "_origin": "semantic",
-      "community": 216,
-      "community_name": "analyze.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "fastapi_responses",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "os",
-      "label": "os",
-      "_origin": "semantic",
-      "community": 216,
-      "community_name": "analyze.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "os",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "typing",
-      "label": "typing",
-      "_origin": "semantic",
-      "community": 216,
-      "community_name": "analyze.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "typing",
+      "norm_label": "fastapi_testclient",
       "source_file": "",
       "type": "external"
     },
@@ -24979,18 +25003,6 @@
       "type": "external"
     },
     {
-      "id": "decimal",
-      "label": "decimal",
-      "_origin": "semantic",
-      "community": 220,
-      "community_name": "calculate_cash_analysis",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "decimal",
-      "source_file": "",
-      "type": "external"
-    },
-    {
       "id": "hashlib",
       "label": "hashlib",
       "_origin": "semantic",
@@ -24999,18 +25011,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "hashlib",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "pytest",
-      "label": "pytest",
-      "_origin": "semantic",
-      "community": 222,
-      "community_name": "invoice_hasher.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "pytest",
       "source_file": "",
       "type": "external"
     },
@@ -25042,8 +25042,8 @@
       "id": "datetime",
       "label": "datetime",
       "_origin": "semantic",
-      "community": 223,
-      "community_name": "test_matcher.py",
+      "community": 224,
+      "community_name": "staging_ledger.py",
       "external": true,
       "file_type": "concept",
       "norm_label": "datetime",
@@ -25051,38 +25051,26 @@
       "type": "external"
     },
     {
-      "id": "fastapi",
-      "label": "fastapi",
+      "id": "typing",
+      "label": "typing",
       "_origin": "semantic",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "external": true,
       "file_type": "concept",
-      "norm_label": "fastapi",
+      "norm_label": "typing",
       "source_file": "",
       "type": "external"
     },
     {
-      "id": "fastapi_middleware_cors",
-      "label": "fastapi_middleware_cors",
+      "id": "uuid",
+      "label": "uuid",
       "_origin": "semantic",
       "community": 224,
-      "community_name": "actions.py",
+      "community_name": "staging_ledger.py",
       "external": true,
       "file_type": "concept",
-      "norm_label": "fastapi_middleware_cors",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "fastapi_testclient",
-      "label": "fastapi_testclient",
-      "_origin": "semantic",
-      "community": 235,
-      "community_name": "test_invariants.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "fastapi_testclient",
+      "norm_label": "uuid",
       "source_file": "",
       "type": "external"
     },
@@ -26369,7 +26357,7 @@
       "confidence_score": 1.0,
       "context": "decorator",
       "source_file": "api/main.py",
-      "source_location": "L38",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -26646,6 +26634,18 @@
       "context": "import",
       "source_file": ".agent/skills/dcf-model/scripts/validate_dcf.py",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "api_main",
+      "target": "os",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "api/main.py",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -41953,7 +41953,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L107",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -41964,7 +41964,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L113",
+      "source_location": "L107",
       "weight": 1.0
     },
     {
@@ -41975,7 +41975,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L122",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -41986,7 +41986,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L130",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -41997,7 +41997,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L68",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -42008,7 +42008,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L82",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -42019,7 +42019,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L91",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -42030,7 +42030,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L99",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -42052,7 +42052,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L143",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -42063,7 +42063,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L163",
+      "source_location": "L157",
       "weight": 1.0
     },
     {
@@ -42075,17 +42075,6 @@
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
       "source_location": "L34",
-      "weight": 1.0
-    },
-    {
-      "source": "agents_sme_finance_copilot_ai_agents_task_routing_engine",
-      "target": "agents_1_multi_agent_operating_model_hierarchy_matrix_40",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -42107,7 +42096,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L66",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -42118,7 +42107,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/main.py",
-      "source_location": "L39",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -49337,29 +49326,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_3_backend_platform_fastapi_developer",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L100",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_3_backend_platform_backend_developer",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L101",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_3_backend_platform_api_designer",
+      "target": "agent_agents_4_frontend_dashboard_nextjs_developer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49370,7 +49337,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_3_backend_platform_auth_integration_engineer",
+      "target": "agent_agents_4_frontend_dashboard_react_specialist",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49381,7 +49348,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_3_backend_platform_postgres_pro",
+      "target": "agent_agents_4_frontend_dashboard_ui_designer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49392,7 +49359,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_3_backend_platform_database_optimizer",
+      "target": "agent_agents_4_frontend_dashboard_websocket_engineer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49403,7 +49370,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_4_frontend_dashboard_nextjs_developer",
+      "target": "agent_agents_5_security_qa_three_tier_security_gatekeeper",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49414,7 +49381,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_4_frontend_dashboard_react_specialist",
+      "target": "agent_agents_5_security_qa_security_auditor",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49425,7 +49392,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_4_frontend_dashboard_ui_designer",
+      "target": "agent_agents_5_security_qa_compliance_auditor",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49436,7 +49403,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_4_frontend_dashboard_websocket_engineer",
+      "target": "agent_agents_5_security_qa_architect_reviewer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49447,57 +49414,13 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_5_security_qa_three_tier_security_gatekeeper",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L114",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_5_security_qa_security_auditor",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L115",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_5_security_qa_compliance_auditor",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L116",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_5_security_qa_architect_reviewer",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L117",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
       "target": "agent_agents_5_security_qa_qa_expert",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L118",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -49508,7 +49431,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L119",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -49519,7 +49442,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L120",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -49530,7 +49453,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L123",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -49541,7 +49464,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L124",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -49552,7 +49475,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L125",
+      "source_location": "L119",
       "weight": 1.0
     },
     {
@@ -49563,7 +49486,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L126",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -49574,7 +49497,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L127",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -49585,7 +49508,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L128",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -49596,7 +49519,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L131",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -49607,7 +49530,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L132",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -49618,7 +49541,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L133",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -49629,7 +49552,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L134",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -49640,7 +49563,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L135",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -49651,7 +49574,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L136",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -49662,7 +49585,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L137",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -49673,7 +49596,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L138",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -49684,7 +49607,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L139",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -49728,6 +49651,72 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_0_global_specialists_agentic_architect",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_0_global_specialists_systems_architect",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_0_global_specialists_frontend_craft_engineer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_0_global_specialists_security_guardian",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_0_global_specialists_qa_verifier",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_0_global_specialists_code_reviewer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
       "source_location": "L69",
       "weight": 1.0
     },
@@ -49755,7 +49744,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_agentic_architect",
+      "target": "agent_agents_0_global_specialists_code_optimizer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49766,7 +49755,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_systems_architect",
+      "target": "agent_agents_0_global_specialists_prompt_engineer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49777,7 +49766,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_frontend_craft_engineer",
+      "target": "agent_agents_0_global_specialists_technical_writer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49788,7 +49777,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_security_guardian",
+      "target": "agent_agents_0_global_specialists_cross_platform_engineer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49799,7 +49788,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_qa_verifier",
+      "target": "agent_agents_0_global_specialists_penetration_tester",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49810,29 +49799,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_code_reviewer",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L75",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_0_global_specialists_code_optimizer",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L76",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_0_global_specialists_prompt_engineer",
+      "target": "agent_agents_1_agentic_orchestration_workflow_orchestrator",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49843,7 +49810,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_technical_writer",
+      "target": "agent_agents_1_agentic_orchestration_multi_agent_coordinator",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49854,7 +49821,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_cross_platform_engineer",
+      "target": "agent_agents_1_agentic_orchestration_llm_architect",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49876,7 +49843,7 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_0_global_specialists_penetration_tester",
+      "target": "agent_agents_1_agentic_orchestration_copilot_prompt_engineer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49887,57 +49854,13 @@
     },
     {
       "source": "agents",
-      "target": "agent_agents_1_agentic_orchestration_workflow_orchestrator",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L83",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_1_agentic_orchestration_multi_agent_coordinator",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L84",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_1_agentic_orchestration_llm_architect",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L85",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
-      "target": "agent_agents_1_agentic_orchestration_copilot_prompt_engineer",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L86",
-      "weight": 1.0
-    },
-    {
-      "source": "agents",
       "target": "agent_agents_1_agentic_orchestration_mcp_developer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L87",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -49948,7 +49871,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L88",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -49959,7 +49882,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L89",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -49970,7 +49893,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L92",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -49981,7 +49904,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L93",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -49992,7 +49915,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L94",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -50003,7 +49926,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L95",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -50014,7 +49937,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L96",
+      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -50025,7 +49948,73 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_3_backend_platform_fastapi_developer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_3_backend_platform_backend_developer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_3_backend_platform_api_designer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_3_backend_platform_auth_integration_engineer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
       "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_3_backend_platform_postgres_pro",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "agents",
+      "target": "agent_agents_3_backend_platform_database_optimizer",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -51043,5 +51032,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2c412c3f104f62e2c4f72ce6a6d9bc1dfaa43a9f"
+  "built_at_commit": "608feb2da61a503d535caa0f6358116ba7236fdb"
 }
