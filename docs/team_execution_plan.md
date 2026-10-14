@@ -2,7 +2,7 @@
 
 **Purpose:** a practical, agent-friendly plan for the first integrated demo. It is the target contract; current implementation status must be verified in source and tests. Older architecture documents are design proposals, not proof that their features exist. [`AGENTS.md`](../AGENTS.md) tracks current verified status. The user’s explicit scope takes precedence; otherwise ask the team lead about unresolved contract conflicts.
 
-> **Status checked 2026-10-14:** `POST /api/v1/analyze` and the CSV review UI are implemented. `pytest -q` passes 25 tests; a clean temporary frontend install with `npm ci`, `npm run type-check`, and `npm run build` passes. The browser upload flow was tested against a locally running API, including rejected-row reporting and calculated results. The UI calls `NEXT_PUBLIC_API_BASE_URL` or defaults to `http://localhost:8000`; production origins/deployment remain unconfigured. This is a synthetic-data demo, not a live bank or authenticated finance platform.
+> **Status checked 2026-10-14:** `POST /api/v1/analyze`, `/api/v1/underwrite`, and `/api/v1/actions` routes and the CSV review UI are implemented. `pytest -q` passes 45 tests (including first-demo analyze route, underwriting dossier matcher, staging ledger, and consortium invoice hasher backbones); a clean temporary frontend install with `npm ci`, `npm run type-check`, and `npm run build` passes. The browser upload flow was tested against a locally running API, including rejected-row reporting and calculated results. The UI calls `NEXT_PUBLIC_API_BASE_URL` or defaults to `http://localhost:8000`; production origins/deployment remain unconfigured. This is a synthetic-data demo, not a live bank or authenticated finance platform.
 
 
 ## The demo we are building first

@@ -1,4 +1,4 @@
-"""First-demo CSV analysis endpoint; it performs no external calls or writes."""
+"""Bank statement CSV analysis endpoint; processes transactions in-memory without persistent writes."""
 
 from __future__ import annotations
 

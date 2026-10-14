@@ -8,6 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes.health import router as health_router
 from api.routes.analyze import router as analyze_router
+from api.routes.actions import router as actions_router
+from api.routes.underwrite import router as underwrite_router
 
 app = FastAPI(
     title="SME Finance Copilot API",
@@ -17,10 +19,19 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS configuration locked to frontend origins
+import os
+
+# CORS configuration configurable via environment variable with local defaults
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+origins = (
+    [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+    if allowed_origins_env
+    else ["http://localhost:3000", "http://127.0.0.1:3000"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -29,13 +40,15 @@ app.add_middleware(
 # Include API Routers
 app.include_router(health_router)
 app.include_router(analyze_router)
+app.include_router(actions_router)
+app.include_router(underwrite_router)
 
 
 @app.get("/")
 async def root():
     return {
         "project": "SME Finance Copilot",
-        "competition": "FinTechathon 2026 Topic E (Tsinghua PBCSF & WeBank)",
+        "description": "Autonomous AI CFO & Financial Participant for Small & Medium Enterprises",
         "docs": "/docs",
         "health": "/api/v1/health"
     }

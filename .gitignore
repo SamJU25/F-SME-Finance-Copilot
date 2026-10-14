@@ -50,6 +50,7 @@ Thumbs.db
 tmp/
 temp/
 *.lock
+.freebuff/
 
 # Internal Team Notes & Informal Materials
 TEAM_CHEAT_SHEET*

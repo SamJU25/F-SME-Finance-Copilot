@@ -1,4 +1,4 @@
-"""CSV parsing for the synthetic, read-only first-demo analysis flow."""
+"""Bank statement CSV data ingestion and sanitization service."""
 
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ def parse_bank_records(records: list[dict[str, Any]], tenant_id: str) -> list[No
 
 
 def parse_bank_csv(content: bytes) -> IngestionResult:
-    """Parse the exact demo CSV schema, preserving row numbers and safe reason codes."""
+    """Parse standard bank statement CSV schema, preserving row numbers and safe reason codes."""
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
@@ -105,7 +105,7 @@ def parse_bank_csv(content: bytes) -> IngestionResult:
     except (StopIteration, csv.Error) as exc:
         raise CSVIngestionError("INVALID_HEADER", "CSV header is missing or malformed.") from exc
     if header != EXPECTED_HEADER:
-        raise CSVIngestionError("INVALID_HEADER", "CSV header does not match the required demo schema.")
+        raise CSVIngestionError("INVALID_HEADER", "CSV header does not match required schema: " + ",".join(EXPECTED_HEADER))
 
     accepted: list[DemoTransaction] = []
     rejected: list[RejectedRow] = []

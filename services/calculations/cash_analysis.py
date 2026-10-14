@@ -1,4 +1,4 @@
-"""Deterministic historical cash analysis for the first demo."""
+"""Deterministic historical cash analysis and burn rate calculations."""
 
 from __future__ import annotations
 

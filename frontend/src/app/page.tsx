@@ -59,12 +59,12 @@ export default function HomePage() {
     <div className="shell">
       <header className="topbar">
         <div className="brand"><span className="brand-mark" aria-hidden="true">$</span><span>Cash review</span></div>
-        <span className="demo-tag">Synthetic-data demo</span>
+        <span className="demo-tag">Local privacy mode</span>
       </header>
       <main>
-        <div className="eyebrow">Working capital · first demo</div>
+        <div className="eyebrow">Working capital · Cash Flow Review</div>
         <h1>A clearer read on your cash movement.</h1>
-        <p className="lede">Import a synthetic bank CSV to review recent transactions, current balance and an explainable historical-average runway indicator.</p>
+        <p className="lede">Import a bank statement CSV to review recent transactions, current balance, and an explainable historical-average runway indicator.</p>
 
         <div className="content-grid">
           <section className="panel" aria-labelledby="upload-title">
@@ -80,7 +80,7 @@ export default function HomePage() {
                 <input
                   id="csv-file"
                   className="file-input"
-                  aria-label="Choose synthetic bank CSV file"
+                  aria-label="Choose bank statement CSV file"
                   type="file"
                   accept=".csv,text/csv"
                   onChange={(event) => {
@@ -127,8 +127,8 @@ export default function HomePage() {
 
           <aside className="panel" aria-labelledby="steps-title">
             <h2 id="steps-title">What this review does</h2>
-            <p className="panel-intro">A small, transparent starting point. No live accounts or financial actions.</p>
-            <p className="panel-intro">Try a <a href="/synthetic-statement.csv" download>synthetic sample CSV</a> to see accepted and rejected row handling.</p>
+            <p className="panel-intro">A transparent starting point. No live accounts or financial actions.</p>
+            <p className="panel-intro">Try a <a href="/synthetic-statement.csv" download>sample statement CSV</a> to see accepted and rejected row handling.</p>
             <div className="side-note"><span className="note-index">01</span><div><strong>Checks the rows</strong><p>Malformed dates, amounts, duplicate IDs and mixed currencies are reported safely.</p></div></div>
             <div className="side-note"><span className="note-index">02</span><div><strong>Shows the arithmetic</strong><p>Money is parsed and calculated with exact decimal values before formatting for display.</p></div></div>
             <div className="side-note"><span className="note-index">03</span><div><strong>Uses your threshold</strong><p>Choose the number of days that defines your low-runway indicator.</p></div></div>
@@ -136,7 +136,7 @@ export default function HomePage() {
             <code className="file-name">{CSV_HEADER}</code>
           </aside>
         </div>
-        <p className="footer">Demo only · use synthetic data · files are not persisted</p>
+        <p className="footer">Privacy-first · files are processed locally in-memory and never persisted</p>
       </main>
     </div>
   );
