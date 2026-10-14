@@ -1,4 +1,4 @@
-﻿# SME Finance Copilot â€” Complete Master Architecture & Beginner's Guide
+﻿# SME Finance Copilot — Complete Master Architecture & Beginner's Guide
 
 This document combines the **complete technical system architecture, security specifications, and code blueprints** with **plain-English real-world business examples** in one place.
 
@@ -22,13 +22,13 @@ Small and Medium Enterprises (SMEs) account for over 90% of global businesses an
 
 ### The Coffee Roastery Scenario
 
-Imagine you operate **Sarahâ€™s Artisan Coffee Roastery**:
+Imagine you operate **Sarah’s Artisan Coffee Roastery**:
 
 ```
 Day 1:  Buy green coffee beans in bulk       -$20,000  (Cash: $20,000 left)
 Day 15: Pay staff wages                      -$15,000  (Cash:  $5,000 left)
 Day 20: Pay roastery warehouse rent          -$5,000   (Cash:      $0 left)
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+────────────────────────────────────────────────────────────────────────────
 Total Operating Expenses Paid: -$40,000
 
 Day 25: A regional supermarket chain orders $60,000 of packaged coffee!
@@ -96,30 +96,30 @@ flowchart TD
 The software is constructed across five decoupled layers:
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚ 1. PRESENTATION LAYER (Next.js 14 App Router)                          â”‚
-â”‚    Responsive Dashboard Â· Monospace Tabular Numerals Â· WebAuthn Modal  â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚ HTTP / JSON
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚ 2. API GATEWAY LAYER (FastAPI ASGI Service)                            â”‚
-â”‚    Route Adapters Â· Pydantic v2 Type Boundary Â· 1 MiB Upload Limit     â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                    â”‚
-         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-         â–¼                                                     â–¼
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚ 3. QUANTITATIVE ENGINE            â”‚ â”‚ 4. SECURITY GATE & GOVERNANCE    â”‚
-â”‚    Cash Runway & Burn Math        â”‚ â”‚    Staging Ledger (Tier 2 Queue) â”‚
-â”‚    WeBank DAB & NSF Scoring       â”‚ â”‚    Biometric Gate (Tier 3 FIDO2) â”‚
-â”‚    Truth-in-Lending APR Matcher   â”‚ â”‚    Presidio / Regex PII Masking  â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                                                       â”‚
-                                      â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                                      â”‚ 5. CONSORTIUM BLOCKCHAIN         â”‚
-                                      â”‚    Canonical SHA-256 Hasher      â”‚
-                                      â”‚    FISCO BCOS InvoiceRegistry    â”‚
-                                      â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. PRESENTATION LAYER (Next.js 14 App Router)                          │
+│    Responsive Dashboard · Monospace Tabular Numerals · WebAuthn Modal  │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / JSON
+┌───────────────────────────────────▼────────────────────────────────────┐
+│ 2. API GATEWAY LAYER (FastAPI ASGI Service)                            │
+│    Route Adapters · Pydantic v2 Type Boundary · 1 MiB Upload Limit     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+         ┌──────────────────────────┴──────────────────────────┐
+         ▼                                                     ▼
+┌───────────────────────────────────┐ ┌──────────────────────────────────┐
+│ 3. QUANTITATIVE ENGINE            │ │ 4. SECURITY GATE & GOVERNANCE    │
+│    Cash Runway & Burn Math        │ │    Staging Ledger (Tier 2 Queue) │
+│    WeBank DAB & NSF Scoring       │ │    Biometric Gate (Tier 3 FIDO2) │
+│    Truth-in-Lending APR Matcher   │ │    Presidio / Regex PII Masking  │
+└───────────────────────────────────┘ └────────────────┬─────────────────┘
+                                                       │
+                                      ┌────────────────▼─────────────────┐
+                                      │ 5. CONSORTIUM BLOCKCHAIN         │
+                                      │    Canonical SHA-256 Hasher      │
+                                      │    FISCO BCOS InvoiceRegistry    │
+                                      └──────────────────────────────────┘
 ```
 
 1. **Presentation Layer** ([`frontend/src/app/page.tsx`](../frontend/src/app/page.tsx)):
@@ -214,10 +214,10 @@ The Copilot adopts the **WeBank transactional underwriting approach**: instead o
 flowchart LR
     CSV["Daily Bank Transactions"] --> Calc["DAB Calculation Engine"]
     Calc --> Eval{"DAB >= $10k & 0 NSF?"}
-    Eval -->|YES| Prime["PRIME TIER<br>â€¢ Credit Limit: 3.0x DAB<br>â€¢ Working Capital Line (12.5% APR)"]
+    Eval -->|YES| Prime["PRIME TIER<br>• Credit Limit: 3.0x DAB<br>• Working Capital Line (12.5% APR)"]
     Eval -->|NO| Near{"DAB >= $3k & <= 2 NSF?"}
-    Near -->|YES| NearPrime["NEAR-PRIME TIER<br>â€¢ Credit Limit: 1.5x DAB<br>â€¢ Invoice Factoring (30.4% APR)"]
-    Near -->|NO| HighRisk["HIGH-RISK TIER<br>â€¢ Credit Limit: 0.5x DAB<br>â€¢ Secured Factoring Only"]
+    Near -->|YES| NearPrime["NEAR-PRIME TIER<br>• Credit Limit: 1.5x DAB<br>• Invoice Factoring (30.4% APR)"]
+    Near -->|NO| HighRisk["HIGH-RISK TIER<br>• Credit Limit: 0.5x DAB<br>• Secured Factoring Only"]
 ```
 
 ### The "Loan Shark Trap": Factor Rates vs. True APR
@@ -249,9 +249,9 @@ Sarah takes the \$60,000 invoice to a lender. The lender gives Sarah \$54,000 im
 Because lenders don't share internal customer lists, what stops a dishonest business from emailing the exact same \$60,000 invoice to **Bank A** for \$54,000 and then emailing it to **Bank B** for another \$54,000?
 
 ```
-                     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€> Bank A ($54,000 cash disbursed)
-Invoice #INV-2026-01 â”¤
-                     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€> Bank B ($54,000 cash disbursed - DOUBLE FINANCING FRAUD!)
+                     ┌───────────────> Bank A ($54,000 cash disbursed)
+Invoice #INV-2026-01 ┤
+                     └───────────────> Bank B ($54,000 cash disbursed - DOUBLE FINANCING FRAUD!)
 ```
 
 ### The Consortium Blockchain Solution (FISCO BCOS)
@@ -296,47 +296,47 @@ Every capability in this document is backed by working, verified code and automa
 
 ```
 f:\SME Finance Copilot
-â”œâ”€â”€ api/
-â”‚   â”œâ”€â”€ main.py                     # ASGI application, CORS isolation, router mounts
-â”‚   â””â”€â”€ routes/
-â”‚       â”œâ”€â”€ health.py               # Verifiable system invariant health status
-â”‚       â”œâ”€â”€ analyze.py              # POST /api/v1/analyze (CSV cash runway & daily burn)
-â”‚       â”œâ”€â”€ underwrite.py           # POST /api/v1/underwrite (DAB scoring & pre-qualified credit)
-â”‚       â””â”€â”€ actions.py              # POST /api/v1/actions/stage & /execute (Tier 2/3 gate)
-â”œâ”€â”€ services/
-â”‚   â”œâ”€â”€ ingestion/
-â”‚   â”‚   â””â”€â”€ csv_parser.py           # Strict CSV parser with row-level error provenance
-â”‚   â”œâ”€â”€ calculations/
-â”‚   â”‚   â”œâ”€â”€ cash_analysis.py        # Deterministic runway and half-up daily burn math
-â”‚   â”‚   â””â”€â”€ runway.py               # Pure Decimal cash formulas (DAB, DSCR, Runway)
-â”‚   â”œâ”€â”€ matcher/
-â”‚   â”‚   â””â”€â”€ liquidity_matcher.py    # WeBank underwriting tiers and factor-rate APR converter
-â”‚   â”œâ”€â”€ security/
-â”‚   â”‚   â”œâ”€â”€ three_tier_gate.py      # Tier 1/2/3 permission enum and rule definitions
-â”‚   â”‚   â””â”€â”€ staging_ledger.py       # Thread-safe Tier 2 proposal queue & WebAuthn gate
-â”‚   â””â”€â”€ blockchain/
-â”‚       â””â”€â”€ invoice_hasher.py       # Canonical SHA-256 invoice hasher & double-pledge defense
-â”œâ”€â”€ contracts/
-â”‚   â””â”€â”€ InvoiceRegistry.sol         # FISCO BCOS Solidity consortium invoice registry
-â”œâ”€â”€ frontend/src/
-â”‚   â”œâ”€â”€ app/
-â”‚   â”‚   â”œâ”€â”€ page.tsx                # Accessible Next.js 14 review screen
-â”‚   â”‚   â””â”€â”€ globals.css             # High-craft typography and tabular numbers
-â”‚   â””â”€â”€ types/
-â”‚       â””â”€â”€ api.ts                  # Shared TypeScript contracts matching backend models
-â””â”€â”€ tests/ (45 Passed Assertions)
-    â”œâ”€â”€ integration/
-    â”‚   â”œâ”€â”€ test_analyze_api.py     # 4 tests: CSV upload, decimal strings, 413 limits
-    â”‚   â””â”€â”€ test_backbone_apis.py   # 4 tests: Tier 2 staging, Tier 3 403 checks, underwriting
-    â”œâ”€â”€ security/
-    â”‚   â””â”€â”€ test_invariants.py      # 4 tests: Pydantic rust parsing, PII masking, 2FA rules
-    â””â”€â”€ unit/
-        â”œâ”€â”€ test_calculations.py    # 7 tests: Burn, runway, DAB, DSCR decimal precision
-        â”œâ”€â”€ test_cash_analysis.py   # 5 tests: Inclusive periods, burn rounding, threshold statuses
-        â”œâ”€â”€ test_ingestion_demo.py  # 5 tests: Row numbering, duplicate IDs, out-of-order dates
-        â”œâ”€â”€ test_matcher.py         # 6 tests: APR conversions, WeBank risk tiers, predatory flags
-        â”œâ”€â”€ test_blockchain_registry.py # 4 tests: Canonical hashing, double-pledge reverts
-        â””â”€â”€ test_security_gate.py   # 6 tests: Staging queue, WebAuthn token verification
+├── api/
+│   ├── main.py                     # ASGI application, CORS isolation, router mounts
+│   └── routes/
+│       ├── health.py               # Verifiable system invariant health status
+│       ├── analyze.py              # POST /api/v1/analyze (CSV cash runway & daily burn)
+│       ├── underwrite.py           # POST /api/v1/underwrite (DAB scoring & pre-qualified credit)
+│       └── actions.py              # POST /api/v1/actions/stage & /execute (Tier 2/3 gate)
+├── services/
+│   ├── ingestion/
+│   │   └── csv_parser.py           # Strict CSV parser with row-level error provenance
+│   ├── calculations/
+│   │   ├── cash_analysis.py        # Deterministic runway and half-up daily burn math
+│   │   └── runway.py               # Pure Decimal cash formulas (DAB, DSCR, Runway)
+│   ├── matcher/
+│   │   └── liquidity_matcher.py    # WeBank underwriting tiers and factor-rate APR converter
+│   ├── security/
+│   │   ├── three_tier_gate.py      # Tier 1/2/3 permission enum and rule definitions
+│   │   └── staging_ledger.py       # Thread-safe Tier 2 proposal queue & WebAuthn gate
+│   └── blockchain/
+│       └── invoice_hasher.py       # Canonical SHA-256 invoice hasher & double-pledge defense
+├── contracts/
+│   └── InvoiceRegistry.sol         # FISCO BCOS Solidity consortium invoice registry
+├── frontend/src/
+│   ├── app/
+│   │   ├── page.tsx                # Accessible Next.js 14 review screen
+│   │   └── globals.css             # High-craft typography and tabular numbers
+│   └── types/
+│       └── api.ts                  # Shared TypeScript contracts matching backend models
+└── tests/ (45 Passed Assertions)
+    ├── integration/
+    │   ├── test_analyze_api.py     # 4 tests: CSV upload, decimal strings, 413 limits
+    │   └── test_backbone_apis.py   # 4 tests: Tier 2 staging, Tier 3 403 checks, underwriting
+    ├── security/
+    │   └── test_invariants.py      # 4 tests: Pydantic rust parsing, PII masking, 2FA rules
+    └── unit/
+        ├── test_calculations.py    # 7 tests: Burn, runway, DAB, DSCR decimal precision
+        ├── test_cash_analysis.py   # 5 tests: Inclusive periods, burn rounding, threshold statuses
+        ├── test_ingestion_demo.py  # 5 tests: Row numbering, duplicate IDs, out-of-order dates
+        ├── test_matcher.py         # 6 tests: APR conversions, WeBank risk tiers, predatory flags
+        ├── test_blockchain_registry.py # 4 tests: Canonical hashing, double-pledge reverts
+        └── test_security_gate.py   # 6 tests: Staging queue, WebAuthn token verification
 ```
 
 ### Verified Terminal Proof
@@ -737,4 +737,3 @@ Follow this 5-step checklist when combining work across team boundaries:
 3. **Local Testing**: Each member runs their own unit or integration test suite before requesting a review.
 4. **Full Test Suite Run**: Run `pytest -q` across all 45 test assertions to confirm zero regressions across the codebase.
 5. **AST Synchronization**: After modifying Python code, run `python -m graphify update .` to update the knowledge graph.
-
