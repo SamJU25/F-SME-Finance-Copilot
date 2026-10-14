@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791982715.3108065,
-    "seen": 1791982734.1665304,
-    "ast_hash": "969e9c6e0c1f4ea44a786e71616b3983",
+    "mtime": 1791998916.3334627,
+    "seen": 1791999460.960502,
+    "ast_hash": "0e629aeed562f45fea3d425d5e7b687b",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "docs/team_execution_plan.md": {
-    "mtime": 1791980779.6386993,
-    "seen": 1791982734.1689534,
-    "ast_hash": "12c9b49c479ba40c001a0af4a45851bf",
+    "mtime": 1791998954.3406973,
+    "seen": 1791999460.963282,
+    "ast_hash": "ab971c1cd09066f5799908fc6b46211f",
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
@@ -1398,9 +1398,9 @@
     "semantic_hash": ""
   },
   "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
-    "mtime": 1791983339.819174,
-    "seen": 1791998728.4079945,
-    "ast_hash": "c6852b07cb83a7cbdfad709074ba3b49",
+    "mtime": 1791999434.6463265,
+    "seen": 1791999460.9610527,
+    "ast_hash": "8dd88bc2dd669d26c22b2208c45d1565",
     "semantic_hash": ""
   },
   "tests/e2e/__init__.py": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
-    "mtime": 1791983339.8186657,
-    "seen": 1791998728.4079893,
-    "ast_hash": "7f7268f597fa9b33942fe707bb964b56",
+    "mtime": 1791999038.9781897,
+    "seen": 1791999460.9609382,
+    "ast_hash": "ed5eb091eb523763d938fb1238d10c4e",
     "semantic_hash": ""
   },
   "docker-compose.yml": {

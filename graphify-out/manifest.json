@@ -1134,9 +1134,9 @@
     "semantic_hash": ""
   },
   "api/main.py": {
-    "mtime": 1791980579.9949663,
-    "seen": 1791980632.687096,
-    "ast_hash": "f077f70bd95ff647a8823aef8e2cd5fb",
+    "mtime": 1792000404.9511354,
+    "seen": 1792000497.1942985,
+    "ast_hash": "dfc2deeb33ef5d9d95e8470ef12e59c4",
     "semantic_hash": ""
   },
   "api/routes/__init__.py": {
@@ -1437,6 +1437,42 @@
     "mtime": 1791998524.1797614,
     "seen": 1791998728.407992,
     "ast_hash": "dea613647001d787bb79bd86b883e875",
+    "semantic_hash": ""
+  },
+  "api/routes/agent.py": {
+    "mtime": 1792000390.8295357,
+    "seen": 1792000497.1946073,
+    "ast_hash": "cf2ab14b461d9418d48cebbe39163062",
+    "semantic_hash": ""
+  },
+  "services/agent/__init__.py": {
+    "mtime": 1792000323.9534326,
+    "seen": 1792000497.1960216,
+    "ast_hash": "e037cd8bdd3a094a494b90ba646852f0",
+    "semantic_hash": ""
+  },
+  "services/agent/schema.py": {
+    "mtime": 1792000335.33569,
+    "seen": 1792000497.1960232,
+    "ast_hash": "168cd3f933d8d0a22e8dab8ac01c7edc",
+    "semantic_hash": ""
+  },
+  "services/agent/supervisor.py": {
+    "mtime": 1792000383.913254,
+    "seen": 1792000497.1960244,
+    "ast_hash": "d235b02ad8f9ef4aaa2ed21eb0e03dbd",
+    "semantic_hash": ""
+  },
+  "services/agent/tools.py": {
+    "mtime": 1792000444.6547973,
+    "seen": 1792000497.1960256,
+    "ast_hash": "cd2e60420126670807a54965efcfc828",
+    "semantic_hash": ""
+  },
+  "tests/integration/test_agent_api.py": {
+    "mtime": 1792000472.0331063,
+    "seen": 1792000497.1976776,
+    "ast_hash": "c1db04a54eead7aa20c406c8fb9bbde9",
     "semantic_hash": ""
   }
 }
