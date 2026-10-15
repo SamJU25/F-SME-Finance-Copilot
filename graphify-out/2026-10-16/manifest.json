@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792088176.017538,
-    "seen": 1792088223.1700995,
-    "ast_hash": "3c6e95e03e92d15b5b6898961b46ff7b",
+    "mtime": 1792089093.393408,
+    "seen": 1792089111.6630063,
+    "ast_hash": "19c07e89c8dcc81391ed40bd07a38558",
     "semantic_hash": ""
   },
   "next-env.d.ts": {

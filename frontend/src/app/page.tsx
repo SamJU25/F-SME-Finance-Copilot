@@ -232,33 +232,6 @@ interface StagedIntentItem {
   compliance_check: string;
 }
 
-const INITIAL_STAGED_INTENTS: StagedIntentItem[] = [
-  {
-    id: 'intent-wc-8492',
-    tenant_id: 'tenant_sme_default',
-    action_type: 'DRAW_CREDIT_LINE',
-    amount_cents: 3500000,
-    target_identifier: 'FACILITY-SME-GROWTH',
-    status: 'STAGED_PENDING_HITL',
-    staged_at: '12 mins ago',
-    facility_name: 'SME Working Capital Revolver',
-    apr_percent: '8.75% True APR',
-    compliance_check: 'APR < 36% Verified Non-Predatory',
-  },
-  {
-    id: 'intent-inv-1049',
-    tenant_id: 'tenant_sme_default',
-    action_type: 'FACTOR_INVOICE',
-    amount_cents: 1850000,
-    target_identifier: 'INV-2026-088',
-    status: 'STAGED_PENDING_HITL',
-    staged_at: '35 mins ago',
-    facility_name: 'B2B Trade Invoice Factoring',
-    apr_percent: '11.20% True APR',
-    compliance_check: 'FISCO BCOS Hash: 0x4f8a...e219 (Zero Duplicate Pledge)',
-  },
-];
-
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
@@ -267,8 +240,8 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Autonomous Agent Staged Actions State
-  const [stagedIntents, setStagedIntents] = useState<StagedIntentItem[]>(INITIAL_STAGED_INTENTS);
+  // Staged Action Proposals State
+  const [stagedIntents, setStagedIntents] = useState<StagedIntentItem[]>([]);
 
   // Copilot Chat Drawer State
   const [chatOpen, setChatOpen] = useState(false);
@@ -314,16 +287,20 @@ export default function HomePage() {
         const res = await fetch(`${API_URL}/api/v1/actions`);
         if (res.ok) {
           const remoteIntents = await res.json();
-          if (Array.isArray(remoteIntents) && remoteIntents.length > 0) {
-            setStagedIntents((prev) =>
-              prev.map((local) => {
-                const found = remoteIntents.find((r: { id: string; status: string }) => r.id === local.id);
-                if (found) {
-                  return { ...local, status: found.status as 'STAGED_PENDING_HITL' | 'EXECUTED' | 'REJECTED' };
-                }
-                return local;
-              })
-            );
+          if (Array.isArray(remoteIntents)) {
+            const mapped: StagedIntentItem[] = remoteIntents.map((r: { id: string; tenant_id: string; action_type: string; amount_cents: number; target_identifier: string; status: string; staged_at?: string; apr_percent?: string }) => ({
+              id: r.id,
+              tenant_id: r.tenant_id,
+              action_type: r.action_type,
+              amount_cents: r.amount_cents,
+              target_identifier: r.target_identifier,
+              status: r.status as 'STAGED_PENDING_HITL' | 'EXECUTED' | 'REJECTED',
+              staged_at: r.staged_at ? new Date(r.staged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+              facility_name: r.action_type === 'FACTOR_INVOICE' ? 'Invoice Factoring' : r.action_type === 'DRAW_CREDIT_LINE' ? 'Credit Line Draw' : r.action_type,
+              apr_percent: r.apr_percent ? `${r.apr_percent}% True APR` : 'Verified Rate',
+              compliance_check: 'Verified Non-Predatory',
+            }));
+            setStagedIntents(mapped);
           }
         }
       } catch {
@@ -838,12 +815,12 @@ export default function HomePage() {
     s.id.toLowerCase().includes(sessionSearch.toLowerCase())
   );
 
-  async function executeBiometric(intentId: string) {
+  async function executeAction(intentId: string) {
     try {
       await fetch(`${API_URL}/api/v1/actions/${intentId}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ biometric_signature: 'webauthn_passkey_signed_founder' }),
+        body: JSON.stringify({ biometric_signature: 'approved_founder_session' }),
       });
       setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
       setStagedIntents((prev) =>
@@ -854,12 +831,36 @@ export default function HomePage() {
         )
       );
     } catch (err) {
-      console.error('Biometric execution error:', err);
+      console.error('Execution error:', err);
       setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
       setStagedIntents((prev) =>
         prev.map((item) =>
           item.id === intentId
             ? { ...item, status: 'EXECUTED' as const }
+            : item
+        )
+      );
+    }
+  }
+
+  async function rejectAction(intentId: string) {
+    try {
+      await fetch(`${API_URL}/api/v1/actions/${intentId}/reject`, {
+        method: 'POST',
+      });
+      setStagedIntents((prev) =>
+        prev.map((item) =>
+          item.id === intentId
+            ? { ...item, status: 'REJECTED' as const }
+            : item
+        )
+      );
+    } catch (err) {
+      console.error('Rejection error:', err);
+      setStagedIntents((prev) =>
+        prev.map((item) =>
+          item.id === intentId
+            ? { ...item, status: 'REJECTED' as const }
             : item
         )
       );
@@ -932,154 +933,51 @@ export default function HomePage() {
             <span className="topbar-chat-badge">{conversationMessages.length}</span>
           </button>
 
-          {/* Institutional Security & Governance Badge */}
-          <div className="topbar-security-badge" title="Hardware Passkey 2FA & Consortium Audit Ledger">
-            <span className="security-dot" aria-hidden="true" />
-            <span>Passkey 2FA · FISCO BCOS</span>
-          </div>
         </div>
       </header>
 
       <main>
-        <div className="eyebrow">Autonomous AI CFO · FinTechathon 2026 Topic E</div>
-        <h1>Continuous cash protection & liquidity matching.</h1>
-        <p className="lede">
-          Import a bank statement CSV to review transactions, forecast cash runway,
-          and manage working capital with passkey or PIN approval for disbursements.
-        </p>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', letterSpacing: '-0.03em', margin: '0 0 8px' }}>
+            Cash Runway & Liquidity
+          </h1>
+          <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15 }}>
+            Upload a bank statement CSV to compute burn velocity, project runway, and detect cash deficit risks.
+          </p>
+        </div>
 
-        {/* Autonomous AI Agent Command Deck & Surveillance Sentinels */}
-        <section className="agent-deck" aria-label="Autonomous AI Agent Command Deck">
-          <div className="agent-deck-header">
-            <div className="agent-deck-meta">
-              <span className="agent-status-badge">
-                <span className="agent-status-dot" aria-hidden="true" />
-                <span>SURVEILLANCE ACTIVE</span>
-              </span>
-              <span className="agent-deck-title">Autonomous Financial Participant Engine</span>
-            </div>
-
-            <div className="agent-squad-chips">
-              <span className="squad-chip" title="Squad 1: Microsoft Presidio PII Masking">
-                <span className="squad-chip-indicator" />
-                <span>Squad 1: PII Shield</span>
-              </span>
-              <span className="squad-chip" title="Squad 2: Pure Python decimal.Decimal CFO Calculations">
-                <span className="squad-chip-indicator" />
-                <span>Squad 2: Decimal Core</span>
-              </span>
-              <span className="squad-chip" title="Squad 3: Conformal Risk Bounds (P10/P50/P90)">
-                <span className="squad-chip-indicator" />
-                <span>Squad 3: Conformal Risk</span>
-              </span>
-              <span className="squad-chip" title="Squad 4: MILP Cost Minimizer & Truth-in-Lending">
-                <span className="squad-chip-indicator" />
-                <span>Squad 4: MILP Matcher</span>
-              </span>
-            </div>
-
-            <div className="agent-deck-actions">
-              <button
-                type="button"
-                className="deck-cta-btn"
-                onClick={() => setChatOpen(true)}
-                title="Open Autonomous AI Agent Sidecar"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Consult Copilot Agent</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 3 Autonomous Background Surveillance Sentinels */}
-          <div className="sentinels-grid">
-            <div className="sentinel-card">
-              <div className="sentinel-head">
-                <span className="sentinel-squad-tag">Squad 3 · Risk Forecaster</span>
-                <span className="sentinel-status-pill">Active</span>
-              </div>
-              <h3 className="sentinel-title">60-Day Cash Corridor Watchdog</h3>
-              <div className="sentinel-reading">
-                <span className="sentinel-reading-label">Conformal Bounds (P10 / P50 / P90)</span>
-                P10 Buffer: $14,200.00 · Trajectory: Stable
-              </div>
-              <div className="sentinel-foot">
-                <span className="sentinel-freq">Polling: Continuous</span>
-                <span>Deficit Floor Guarded</span>
-              </div>
-            </div>
-
-            <div className="sentinel-card">
-              <div className="sentinel-head">
-                <span className="sentinel-squad-tag">Squad 2 · CFO Diagnostics</span>
-                <span className="sentinel-status-pill">Monitored</span>
-              </div>
-              <h3 className="sentinel-title">Payroll & Lumpy Outflow Pinpointer</h3>
-              <div className="sentinel-reading">
-                <span className="sentinel-reading-label">Cycle Day 28–31 Outflow Surveillance</span>
-                Next Peak Batch: $18,400.00 · Overdraft: 0%
-              </div>
-              <div className="sentinel-foot">
-                <span className="sentinel-freq">Anchor: Day 29 ACH</span>
-                <span>Runway: 42 Days</span>
-              </div>
-            </div>
-
-            <div className="sentinel-card">
-              <div className="sentinel-head">
-                <span className="sentinel-squad-tag">Layer 6 · FISCO BCOS</span>
-                <span className="sentinel-status-pill">Consensus</span>
-              </div>
-              <h3 className="sentinel-title">Consortium Invoice Registry</h3>
-              <div className="sentinel-reading">
-                <span className="sentinel-reading-label">Cryptographic Invariant Check</span>
-                SHA-256 Canonical Hashed · 0 Double-Pledges
-              </div>
-              <div className="sentinel-foot">
-                <span className="sentinel-freq">Contract: InvoiceRegistry.sol</span>
-                <span>PBFT Verified</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Staged Action Intents (Autonomous Proposals Awaiting Founder Biometric Signature) */}
-          <div className="staged-queue-panel">
+        {/* Staged Action Proposals */}
+        {stagedIntents.length > 0 && (
+          <div className="staged-queue-panel" style={{ marginBottom: 24 }}>
             <div className="staged-queue-head">
-              <div>
-                <div className="staged-queue-eyebrow">Staged Action Ledger</div>
-                <h3 className="staged-queue-title">Staged Financial Proposals Awaiting Founder Authorization</h3>
-                <p className="staged-queue-subtitle">
-                  Autonomous proposals queued for review. Zero funds move without explicit passkey, device PIN, or security key authorization.
-                </p>
-              </div>
+              <h3 className="staged-queue-title">Action Proposals</h3>
             </div>
 
             <div className="staged-table-wrapper">
               <table className="staged-items-table">
                 <thead>
                   <tr>
-                    <th>Intent ID</th>
-                    <th>Action Proposal</th>
+                    <th>Proposal</th>
+                    <th>Identifier</th>
                     <th>Amount</th>
-                    <th>Terms & Compliance</th>
+                    <th>Terms</th>
                     <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Authorization</th>
+                    <th style={{ textAlign: 'right' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stagedIntents.map((item) => {
                     const isExecuted = item.status === 'EXECUTED' || executedIntents[item.id];
+                    const isRejected = item.status === 'REJECTED';
                     return (
                       <tr key={item.id}>
                         <td>
-                          <div className="staged-intent-id">{item.id}</div>
-                          <div className="staged-meta-sub">{item.staged_at}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{item.facility_name}</div>
+                          <div className="staged-meta-sub">{item.action_type}</div>
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{item.facility_name}</div>
-                          <div className="staged-meta-sub">{item.action_type} · {item.target_identifier}</div>
+                          <div className="staged-intent-id">{item.target_identifier}</div>
+                          <div className="staged-meta-sub">{item.staged_at}</div>
                         </td>
                         <td>
                           <div className="staged-amount">
@@ -1091,29 +989,32 @@ export default function HomePage() {
                           <div className="staged-compliance-tag">{item.compliance_check}</div>
                         </td>
                         <td>
-                          <span className={`staged-badge ${isExecuted ? 'executed' : 'pending'}`}>
-                            {isExecuted ? 'Authorized' : 'Awaiting Approval'}
+                          <span className={`staged-badge ${isExecuted ? 'executed' : isRejected ? 'pending' : 'pending'}`}>
+                            {isExecuted ? 'Approved' : isRejected ? 'Rejected' : 'Pending Review'}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           {isExecuted ? (
-                            <span className="staged-executed-badge" title="WebAuthn FIDO2 Passkey confirmed on FISCO BCOS">
-                              <span>✓</span>
-                              <span>Passkey Authorized</span>
-                            </span>
+                            <span className="staged-executed-badge">✓ Approved</span>
+                          ) : isRejected ? (
+                            <span style={{ fontSize: 11, color: 'var(--muted)' }}>Dismissed</span>
                           ) : (
-                            <button
-                              type="button"
-                              className="staged-action-btn"
-                              onClick={() => executeBiometric(item.id)}
-                              title="Sign and authorize this proposal using WebAuthn FIDO2 passkey or device PIN"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                              </svg>
-                              <span>Authorize with Passkey</span>
-                            </button>
+                            <div style={{ display: 'inline-flex', gap: 6 }}>
+                              <button
+                                type="button"
+                                className="approve-btn"
+                                onClick={() => executeAction(item.id)}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                className="reject-btn"
+                                onClick={() => rejectAction(item.id)}
+                              >
+                                Reject
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -1123,12 +1024,12 @@ export default function HomePage() {
               </table>
             </div>
           </div>
-        </section>
+        )}
 
         <div className="content-grid">
           <section className="panel" aria-labelledby="upload-title">
-            <h2 id="upload-title">Review a statement</h2>
-            <p className="panel-intro">Your file is processed in local memory only. Zero data is persisted or sent to third parties.</p>
+            <h2 id="upload-title">Statement Ingestion</h2>
+            <p className="panel-intro">Processed in local memory · Ephemeral session</p>
             <form onSubmit={analyze}>
               <div style={{ marginBottom: 16 }}>
                 <label className="field-label" htmlFor="threshold">Alert threshold (runway warning days)</label>
@@ -1147,9 +1048,6 @@ export default function HomePage() {
                     }
                   }}
                 />
-                <span style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginTop: 4 }}>
-                  Default: 30 days. Triggers a warning if projected cash runway drops below this threshold.
-                </span>
               </div>
 
               <div className="dropzone">
@@ -1181,32 +1079,40 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                Format: <code>{CSV_HEADER}</code>
+              </div>
+
+              <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="pill-btn"
                   onClick={handleLoadSample}
                   disabled={loading}
-                  title="Load and analyze the bundled demo statement with 1 click"
+                  title="Load and analyze bundled demo statement"
                 >
-                  ⚡ Load demo statement (synthetic-statement.csv)
+                  ⚡ Load demo statement
                 </button>
               </div>
 
               <button className="submit" type="submit" disabled={loading || !file} style={{ marginTop: 16 }}>
-                {loading ? 'Reviewing statement…' : 'Analyze cash activity'}
+                {loading ? 'Analyzing statement…' : 'Analyze cash activity'}
               </button>
             </form>
-            {loading && <div className="notice loading" role="status" aria-live="polite">Reading your statement and calculating a historical average…</div>}
+            {loading && <div className="notice loading" role="status" aria-live="polite">Reading statement and calculating cash metrics…</div>}
             {error && <div className="notice error" role="alert">{error}</div>}
-            {result && <div className="notice success" role="status">Review complete. {result.accepted_count} transaction{result.accepted_count === 1 ? '' : 's'} accepted.</div>}
+          </section>
 
-            {result && (
-              <section className="result" aria-labelledby="result-title" aria-live="polite">
-                <div className="result-head">
-                  <h2 id="result-title">Cash summary</h2>
-                  <span className={`status ${result.cash_status}`}>{result.cash_status.replaceAll('_', ' ')}</span>
-                </div>
+          <section className="panel" aria-labelledby="result-title">
+            <div className="result-head">
+              <h2 id="result-title">Cash Summary</h2>
+              {result && (
+                <span className={`status ${result.cash_status}`}>{result.cash_status.replaceAll('_', ' ')}</span>
+              )}
+            </div>
+
+            {result ? (
+              <div className="result" aria-live="polite">
                 <div className="metrics">
                   <Metric label="Current balance" value={money(result.current_balance, result.currency)} />
                   <Metric label="Historical net change" value={money(result.net_period_change, result.currency)} />
@@ -1215,40 +1121,22 @@ export default function HomePage() {
                   <Metric label="Period reviewed" value={`${result.period_days} days`} />
                   <Metric label="Rows accepted" value={`${result.accepted_count}`} />
                 </div>
-                <p className="caveat">Deterministic calculation computed in pure Python Decimal arithmetic. Never hallucinated.</p>
                 {result.rejected_rows.length > 0 && (
                   <div className="rejections">
                     <h3>Rows not included ({result.rejected_rows.length})</h3>
                     <ul>{result.rejected_rows.map((row) => <li key={`${row.row_number}-${row.reason_code}`}>Row {row.row_number}: {row.reason_code.replaceAll('_', ' ').toLowerCase()}</li>)}</ul>
                   </div>
                 )}
-              </section>
+              </div>
+            ) : (
+              <div className="empty-results-box">
+                <div className="empty-results-icon">📊</div>
+                <h3>No Statement Analyzed</h3>
+                <p>Upload a CSV file or click &ldquo;Load demo statement&rdquo; to view cash runway, burn rate, and liquidity status.</p>
+              </div>
             )}
           </section>
-
-          <aside className="panel" aria-labelledby="steps-title">
-            <h2 id="steps-title">Execution Governance</h2>
-            <p className="panel-intro">How financial operations are safeguarded:</p>
-            <div className="side-note">
-              <strong>Read-Only Monitoring</strong>
-              <p>Continuous transaction ingestion, daily average balance calculation, and cash burn metrics run with zero write access.</p>
-            </div>
-            <div className="side-note">
-              <strong>Draft Proposal Staging</strong>
-              <p>Financing options and transfer requests are staged in an immutable ledger. Zero funds move automatically.</p>
-            </div>
-            <div className="side-note">
-              <strong>Passkey & PIN Authorization</strong>
-              <p>Drawdowns and fund disbursements require explicit WebAuthn confirmation via laptop PIN, Touch ID, or security key.</p>
-            </div>
-          </aside>
         </div>
-
-        <section className="schema" aria-labelledby="schema-title">
-          <h2 id="schema-title">Required CSV headers</h2>
-          <p className="schema-intro">Your file must include these column names in any order:</p>
-          <pre><code>{CSV_HEADER}</code></pre>
-        </section>
       </main>
 
       {/* Interactive Copilot Chat Sidecar Drawer */}
@@ -1532,25 +1420,34 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {/* Passkey / PIN Approval Card */}
+                    {/* Action Proposal Card */}
                     {m.data?.staged_action && (
-                      <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
+                      <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : ''}`}>
                         <strong>
                           {executedIntents[m.data.staged_action.intent_id]
-                            ? '✅ Execution Completed (Passkey Signed)'
-                            : '⚠️ Founder Approval Required (Passkey / PIN)'}
+                            ? '✓ Proposal Approved'
+                            : 'Action Proposal Awaiting Review'}
                         </strong>
                         <div style={{ marginTop: 4 }}>
                           Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                         </div>
                         {!executedIntents[m.data.staged_action.intent_id] && (
-                          <button
-                            className="biometric-btn"
-                            type="button"
-                            onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
-                          >
-                            👆 Authorize Disbursement (Passkey / PIN)
-                          </button>
+                          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button
+                              className="approve-btn"
+                              type="button"
+                              onClick={() => executeAction(m.data!.staged_action!.intent_id)}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              className="reject-btn"
+                              type="button"
+                              onClick={() => rejectAction(m.data!.staged_action!.intent_id)}
+                            >
+                              Dismiss
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}

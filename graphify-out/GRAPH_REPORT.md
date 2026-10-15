@@ -1,7 +1,7 @@
 # Graph Report - SME Finance Copilot  (2026-10-16)
 
 ## Corpus Check
-- 262 files · ~149,533 words
+- 262 files · ~149,116 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 11 file(s) not represented in the graph (top: (none) 6, .example 1, .backend 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `55b645d2`
+- Built from commit: `a6db6252`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -332,7 +332,7 @@
 4. `SessionStore` - 24 edges
 5. `DemoTransaction` - 23 edges
 6. `parse_bank_csv()` - 22 edges
-7. `HomePage()` - 20 edges
+7. `HomePage()` - 21 edges
 8. `Comparable Company Analysis` - 20 edges
 9. `CopilotResponse` - 19 edges
 10. `calculate_cash_analysis()` - 19 edges
@@ -1156,7 +1156,7 @@ Nodes (9): Copy-Ready AI Prompt for Member 2, Key Starter Code Backbone, Member 
 
 ### Community 218 - "api.ts"
 Cohesion: 0.05
-Nodes (43): DEFAULT_WELCOME_MESSAGE, formatSessionTime(), FormattedChatBubble(), getEngineDisplayName(), HomePage(), analyze(), executeAnalysis(), fetchModels() (+35 more)
+Nodes (42): DEFAULT_WELCOME_MESSAGE, formatSessionTime(), FormattedChatBubble(), getEngineDisplayName(), HomePage(), analyze(), executeAnalysis(), fetchModels() (+34 more)
 
 ### Community 219 - "Equity Research Earnings Update"
 Cohesion: 0.18
@@ -1363,7 +1363,7 @@ Cohesion: 0.50
 Nodes (4): 6. Consortium Blockchain & Double-Financing Defense, The Consortium Blockchain Solution (FISCO BCOS), The Fraud Problem (Invoice Double-Financing), What is Invoice Factoring?
 
 ## Knowledge Gaps
-- **1315 isolated node(s):** `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE`, `SUBAGENT_CATALOG_REPO_URL`, `metadata` (+1310 more)
+- **1314 isolated node(s):** `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE`, `SUBAGENT_CATALOG_REPO_URL`, `metadata` (+1309 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1789 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **59 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1383,4 +1383,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 7 inferred relationships involving `SessionStore` (e.g. with `ChatHistoryItem` and `clean_sessions()`) actually correct?**
   _`SessionStore` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE` to the rest of the system?**
-  _1315 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1314 weakly-connected nodes found - possible documentation gaps or missing edges._

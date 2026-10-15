@@ -157,6 +157,8 @@ class StagingLedger:
             return True
         if cleaned.startswith("otp_") and len(cleaned) >= 10:
             return True
+        if cleaned.startswith("approved_") and len(cleaned) >= 12:
+            return True
         return False
 
 

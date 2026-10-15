@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792088918.504085,
-    "seen": 1792088964.1103814,
-    "ast_hash": "baa4cb59a32b12214304232b251d9836",
+    "mtime": 1792089825.1315744,
+    "seen": 1792089860.2310753,
+    "ast_hash": "450314f289528778dce74feea33892be",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1368,9 +1368,9 @@
     "semantic_hash": ""
   },
   "services/security/staging_ledger.py": {
-    "mtime": 1791980352.4556327,
-    "seen": 1791980414.904705,
-    "ast_hash": "28391e130cbbab28f75061be05dafdce",
+    "mtime": 1792089487.8792613,
+    "seen": 1792089860.2388012,
+    "ast_hash": "54a0f97980a1d34147632b8b11a73937",
     "semantic_hash": ""
   },
   "tests/integration/test_backbone_apis.py": {
