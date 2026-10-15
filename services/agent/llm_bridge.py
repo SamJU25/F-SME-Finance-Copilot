@@ -4,7 +4,7 @@ Supports:
 1. Native Gemini API (Google AI)
 2. Native Anthropic Messages API
 3. Native OpenAI Chat Completions API
-4. DeepSeek, Groq, and Ollama (OpenAI-compatible)
+4. DeepSeek and Groq (OpenAI-compatible)
 5. Custom OpenAI-compatible endpoints (Base URL + Key + Model)
 6. Offline Local Deterministic fallback (0 external keys)
 7. Pre-flight PII redaction and deterministic calculation grounding
@@ -86,7 +86,7 @@ def _resolve_endpoint(provider: str, base_url: Optional[str], model: Optional[st
         base = (base_url or defaults.get("url", "")).rstrip("/")
         return f"{base}/models/{model_name}:generateContent", model_name
 
-    if p_lower in ["openai", "deepseek", "groq", "ollama"]:
+    if p_lower in ["openai", "deepseek", "groq"]:
         if base_url:
             raw_url = base_url.rstrip("/")
             if not raw_url.endswith("/chat/completions"):
@@ -167,7 +167,7 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
                 }
                 res = client.post(endpoint, headers=headers, json=payload)
 
-            else:  # OpenAI, DeepSeek, Groq, Ollama, Custom
+            else:  # OpenAI, DeepSeek, Groq, Custom
                 headers = {"content-type": "application/json"}
                 if req.api_key:
                     headers["Authorization"] = f"Bearer {req.api_key}"
@@ -448,7 +448,7 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
                             message=f"Discovered {len(models_list)} live Anthropic models.",
                         )
 
-            else:  # OpenAI, DeepSeek, Groq, Ollama, Custom
+            else:  # OpenAI, DeepSeek, Groq, Custom
                 base = req.base_url
                 if not base:
                     if provider == "openai":
@@ -457,8 +457,6 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
                         base = "https://api.deepseek.com/v1"
                     elif provider == "groq":
                         base = "https://api.groq.com/openai/v1"
-                    elif provider == "ollama":
-                        base = "http://localhost:11434/v1"
                     else:
                         base = "https://api.openai.com/v1"
 
