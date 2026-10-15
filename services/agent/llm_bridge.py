@@ -235,8 +235,9 @@ def query_external_llm(
     prompt: str,
     system_instruction: str,
     config: Optional[LLMConfig],
+    history: Optional[List[Any]] = None,
 ) -> Optional[str]:
-    """Queries configured external LLM with PII redaction and graceful fallback."""
+    """Queries configured external LLM with PII redaction, multi-turn history, and graceful fallback."""
     if not config or (config.provider or "offline").lower() == "offline":
         return None
 
@@ -250,8 +251,19 @@ def query_external_llm(
                 if not config.api_key:
                     return None
                 url = f"{endpoint}?key={config.api_key}"
+                history_text = ""
+                if history:
+                    h_parts = []
+                    for h in history[-6:]:
+                        role_str = "Assistant" if getattr(h, "role", "") == "agent" else "User"
+                        txt = getattr(h, "text", "")
+                        if txt:
+                            h_parts.append(f"{role_str}: {mask_pii(txt)}")
+                    if h_parts:
+                        history_text = "Conversation History:\n" + "\n".join(h_parts) + "\n\n"
+
                 payload = {
-                    "contents": [{"parts": [{"text": f"System Directive: {system_instruction}\n\nUser Context:\n{sanitized_prompt}"}]}],
+                    "contents": [{"parts": [{"text": f"System Directive: {system_instruction}\n\n{history_text}Current User Context:\n{sanitized_prompt}"}]}],
                     "generationConfig": {"temperature": 0.2, "maxOutputTokens": 800},
                 }
                 res = client.post(url, json=payload)
@@ -267,11 +279,20 @@ def query_external_llm(
                     "anthropic-version": "2023-06-01",
                     "content-type": "application/json",
                 }
+                anthropic_msgs = []
+                if history:
+                    for h in history[-6:]:
+                        h_role = "assistant" if getattr(h, "role", "") == "agent" else "user"
+                        txt = getattr(h, "text", "")
+                        if txt:
+                            anthropic_msgs.append({"role": h_role, "content": mask_pii(txt)})
+                anthropic_msgs.append({"role": "user", "content": sanitized_prompt})
+
                 payload = {
                     "model": model,
                     "max_tokens": 800,
                     "system": system_instruction,
-                    "messages": [{"role": "user", "content": sanitized_prompt}],
+                    "messages": anthropic_msgs,
                     "temperature": 0.2,
                 }
                 res = client.post(endpoint, headers=headers, json=payload)
@@ -283,12 +304,18 @@ def query_external_llm(
                 headers = {"content-type": "application/json"}
                 if config.api_key:
                     headers["Authorization"] = f"Bearer {config.api_key}"
+                openai_msgs = [{"role": "system", "content": system_instruction}]
+                if history:
+                    for h in history[-6:]:
+                        h_role = "assistant" if getattr(h, "role", "") == "agent" else "user"
+                        txt = getattr(h, "text", "")
+                        if txt:
+                            openai_msgs.append({"role": h_role, "content": mask_pii(txt)})
+                openai_msgs.append({"role": "user", "content": sanitized_prompt})
+
                 payload = {
                     "model": model,
-                    "messages": [
-                        {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": sanitized_prompt},
-                    ],
+                    "messages": openai_msgs,
                     "max_tokens": 800,
                     "temperature": 0.2,
                 }

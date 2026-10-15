@@ -40,7 +40,7 @@ def inspect_for_prompt_injection(text: str) -> bool:
     return bool(INJECTION_PATTERN.search(text))
 
 
-from services.agent.semantic_router import semantic_classify
+from services.agent.semantic_router import semantic_classify, semantic_classify_sub_intent
 
 
 def detect_intent(message: str, request: AgentChatRequest) -> str:
@@ -69,7 +69,8 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     # 3. Contextual Follow-up from History or Loaded Statement
     if request.csv_content and any(k in msg_lower for k in [
         "explain", "what does this mean", "tell me more", "summary", "summarize",
-        "details", "status", "overview", "what now", "help me understand"
+        "details", "status", "overview", "what now", "help me understand",
+        "what should i do", "what next", "next steps", "recommendation", "advice", "what to do"
     ]):
         return "CASH_DIAGNOSTIC"
 
@@ -99,13 +100,14 @@ def run_copilot_supervisor(
         sys_directive = (
             "You are the executive AI copilot for an SME finance team. "
             f"Here are the verified calculation outputs from our internal financial engine: '{base_reply}'. "
-            "Explain and contextualize these metrics directly to the business owner. "
+            "Explain and contextualize these metrics directly to the business owner in a clear, executive, concise manner. "
             "Never contradict or hallucinate different financial numbers."
         )
         ai_reply = query_external_llm(
             prompt=request.message,
             system_instruction=sys_directive,
             config=effective_config,
+            history=request.history,
         )
         return ai_reply if ai_reply else base_reply
 
@@ -321,32 +323,43 @@ def run_copilot_supervisor(
         if cash_result.get("cash_conversion_cycle_days") is not None:
             wc_snippet = f" Working Capital: Cash Conversion Cycle is {cash_result['cash_conversion_cycle_days']} days ({cash_result.get('working_capital_status')}). {cash_result.get('working_capital_rationale', '')}"
 
-        msg_clean = request.message.lower().strip()
-        is_runway_or_days = (
-            "runway" in msg_clean
-            or any(k in msg_clean for k in ["how many days", "days left", "how long", "time left", "when will i run out", "when do i run out", "run out"])
-        )
-        is_balance_only = (
-            not is_runway_or_days
-            and any(k in msg_clean for k in ["how much money", "how much cash", "what is my balance", "balance", "how much do i have", "money left", "cash left"])
-        )
-        is_burn_only = (
-            not is_runway_or_days
-            and any(k in msg_clean for k in ["what is my burn", "burn rate", "how much am i spending", "spending", "expenses", "daily burn"])
-        )
-        is_advice_question = (
-            not is_runway_or_days
-            and any(k in msg_clean for k in ["what should i do", "advice", "is my business healthy", "am i safe", "recommendation", "how to fix"])
-        )
+        sub_intent = semantic_classify_sub_intent(request.message)
 
-        if is_runway_or_days:
+        if sub_intent == "RUNWAY":
             headline = f"You have {runway_desc} of cash runway remaining at an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day (current balance: ${float(cash_result['current_balance']):,.2f}, Status: {cash_result['cash_status']})."
-        elif is_balance_only:
+        elif sub_intent == "BALANCE":
             headline = f"Your current cash balance is ${float(cash_result['current_balance']):,.2f} {cash_result['currency']} (net change across reviewed period: ${float(cash_result['net_period_change']):,.2f})."
-        elif is_burn_only:
-            headline = f"Your average daily burn rate is ${float(cash_result['average_daily_burn']):,.2f}/day (gross outflows: ${float(cash_result['gross_outflows']):,.2f} vs inflows: ${float(cash_result['gross_inflows']):,.2f})."
-        elif is_advice_question:
-            headline = f"Financial Health Assessment: Your cash status is {cash_result['cash_status']} with {runway_desc} of runway."
+        elif sub_intent == "BURN":
+            headline = f"Your average daily burn rate is ${float(cash_result['average_daily_burn']):,.2f}/day (gross outflows: ${float(cash_result['gross_outflows']):,.2f} vs inflows: ${float(cash_result['gross_inflows']):,.2f}), providing {runway_desc} of cash runway remaining (Status: {cash_result['cash_status']})."
+        elif sub_intent == "ADVICE":
+            if cash_result.get("has_projected_deficit"):
+                headline = (
+                    f"Financial Health Assessment: Your cash status is {cash_result['cash_status']} with {runway_desc} of runway. "
+                    f"A cash shortfall of ${cash_result.get('projected_shortfall_amount', '0.00')} is projected on {cash_result.get('projected_deficit_date', 'upcoming dates')} "
+                    f"due to {cash_result.get('primary_deficit_trigger', 'recurring commitments')}. "
+                    f"Recommended action: Stage a working capital bridge facility of ${cash_result.get('recommended_bridge_amount', '25,000.00')} to protect operating continuity."
+                )
+            elif cash_result.get("cash_status") == "WATCH":
+                headline = (
+                    f"Financial Health Assessment: Your cash status is WATCH with {runway_desc} of runway. "
+                    f"While current cash of ${float(cash_result['current_balance']):,.2f} covers near-term needs, "
+                    f"net daily outflows of ${float(cash_result['average_daily_burn']):,.2f}/day will deplete liquidity in approximately {cash_result['runway_days']} days. "
+                    "Recommended action: Accelerate invoice collections and evaluate a pre-qualified working capital credit line."
+                )
+            else:
+                headline = (
+                    f"Financial Health Assessment: Your cash status is HEALTHY with {runway_desc} of runway. "
+                    f"Current balance of ${float(cash_result['current_balance']):,.2f} provides strong operational buffer against daily burn."
+                )
+        elif sub_intent == "DEFICIT":
+            if cash_result.get("has_projected_deficit"):
+                headline = (
+                    f"Deficit Early-Warning: Projected shortfall of ${cash_result.get('projected_shortfall_amount', '0.00')} in {cash_result.get('days_until_deficit', 'N/A')} days "
+                    f"({cash_result.get('projected_deficit_date', 'N/A')}). Severity is {cash_result.get('deficit_severity', 'WARNING')}. "
+                    f"Primary driver: {cash_result.get('primary_deficit_trigger', 'operational burn')}."
+                )
+            else:
+                headline = f"No immediate deficit detected over the projected horizon. Your cash runway stands at {runway_desc} (Status: {cash_result['cash_status']})."
         else:
             headline = f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} (Threshold: {cash_result['alert_threshold_days']} days)."
 

@@ -441,6 +441,54 @@ def test_agent_chat_contextual_history_followup():
     assert response.json()["intent_detected"] == "CREDIT_UNDERWRITING"
 
 
+def test_agent_chat_sub_intent_burn_rate():
+    """Verify semantic sub-intent router correctly isolates burn rate queries."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "what is our daily burn rate and spending?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "average daily burn rate is $100.00/day" in data["reply"]
+    assert "gross outflows: $3,500.00 vs inflows: $2,000.00" in data["reply"]
+
+
+def test_agent_chat_sub_intent_cfo_advice():
+    """Verify strategic CFO advice is generated dynamically without hardcoded keywords."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "what should I do next to protect my cash flow?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Financial Health Assessment" in data["reply"]
+    assert "Recommended action" in data["reply"]
+
+
+def test_agent_chat_sub_intent_deficit_warning():
+    """Verify deficit query cleanly triggers early-warning check."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "will we have an overdraft or upcoming cash shortfall?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "runway stands at 75 days" in data["reply"] or "Deficit Early-Warning" in data["reply"]
+
+
+
 
 
 

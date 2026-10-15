@@ -29,6 +29,11 @@ INTENT_ANCHORS: Dict[str, List[str]] = {
         "predict our cash position and runway",
         "what is our cash conversion cycle and working capital",
         "will I run out of cash next month",
+        "is my business in trouble or danger",
+        "how is our business financial health",
+        "cfo financial health recommendations and advice",
+        "what actions should we take to protect our cash",
+        "what should we do to improve our cash flow",
     ],
     "CREDIT_UNDERWRITING": [
         "what loans or credit lines can I qualify for",
@@ -67,6 +72,61 @@ INTENT_ANCHORS: Dict[str, List[str]] = {
     ],
 }
 
+# Sub-intent centroids for Cash Diagnostic to eliminate internal keyword guessing
+SUB_INTENT_ANCHORS: Dict[str, List[str]] = {
+    "RUNWAY": [
+        "how many days left",
+        "what is my cash runway and daily burn rate",
+        "when will our money run out",
+        "how long can my business survive",
+        "days remaining of cash",
+        "will I run out of cash next month",
+        "can my business survive next month",
+        "when do I run out",
+        "how long do we have",
+    ],
+    "BALANCE": [
+        "what is my cash balance",
+        "how much money do i have left",
+        "current bank balance on hand",
+        "how much cash do we have right now",
+        "available funds in our account",
+        "how much do i have",
+        "cash balance total",
+        "what is our current balance",
+    ],
+    "BURN": [
+        "what is our daily burn rate",
+        "how much am i spending every day",
+        "daily expenses and cash outflow",
+        "average daily burn rate",
+        "spending velocity",
+        "how much are our daily costs",
+        "gross outflows versus inflows",
+    ],
+    "ADVICE": [
+        "what should i do next",
+        "give me strategic advice for our business",
+        "is my company healthy or in danger",
+        "how do we fix our cash flow",
+        "financial health assessment and recommendations",
+        "cfo advice for our business",
+        "recommendation to improve runway",
+        "what actions should we take",
+        "how to survive",
+        "am i safe",
+    ],
+    "DEFICIT": [
+        "will we overdraft",
+        "when is our next cash shortfall",
+        "upcoming deficit dates",
+        "cash crunch risk warning",
+        "overdraft early warning",
+        "payroll shortfall risk",
+        "check for upcoming shortfalls",
+    ],
+}
+
 
 class SemanticRouter:
     """Singleton Vector Router backed by FastEmbed ONNX embeddings."""
@@ -76,6 +136,7 @@ class SemanticRouter:
     def __init__(self) -> None:
         self._model = None
         self._centroids: Dict[str, np.ndarray] = {}
+        self._sub_centroids: Dict[str, np.ndarray] = {}
         self._initialized = False
 
     @classmethod
@@ -101,11 +162,51 @@ class SemanticRouter:
                     centroid = np.mean(norm_embs, axis=0)
                     self._centroids[intent] = centroid / np.linalg.norm(centroid)
 
+            # Pre-compute normalized centroid vectors for each sub-intent
+            for sub, utterances in SUB_INTENT_ANCHORS.items():
+                embs = list(self._model.embed(utterances))
+                norm_embs = [e / np.linalg.norm(e) for e in embs if np.linalg.norm(e) > 0]
+                if norm_embs:
+                    centroid = np.mean(norm_embs, axis=0)
+                    self._sub_centroids[sub] = centroid / np.linalg.norm(centroid)
+
             self._initialized = True
-            logger.info("SemanticRouter initialized with %d intent centroids", len(self._centroids))
+            logger.info("SemanticRouter initialized with %d intent centroids and %d sub-centroids", len(self._centroids), len(self._sub_centroids))
         except Exception as exc:
             logger.warning("FastEmbed initialization failed: %s. Fallback mode enabled.", exc)
             self._initialized = False
+
+    def classify_sub_intent(self, text: str) -> str:
+        """Classify a query into cash diagnostic sub-intent without keyword guessing."""
+        if not text or not text.strip():
+            return "GENERAL"
+
+        clean_text = text.strip()
+        self._ensure_initialized()
+
+        if not self._initialized or not self._model or not self._sub_centroids:
+            return "GENERAL"
+
+        try:
+            q_emb = list(self._model.embed([clean_text]))[0]
+            norm = np.linalg.norm(q_emb)
+            if norm == 0:
+                return "GENERAL"
+            q_norm = q_emb / norm
+
+            best_sub = "GENERAL"
+            best_score = -1.0
+
+            for sub, centroid in self._sub_centroids.items():
+                score = float(np.dot(q_norm, centroid))
+                if score > best_score:
+                    best_score = score
+                    best_sub = sub
+
+            return best_sub if best_score >= 0.65 else "GENERAL"
+        except Exception as exc:
+            logger.warning("Sub-intent classification error: %s", exc)
+            return "GENERAL"
 
     def classify(self, text: str, threshold: float = 0.55) -> Tuple[str, float]:
         """Classify a user query into an intent using cosine similarity against centroids.
@@ -154,3 +255,8 @@ class SemanticRouter:
 def semantic_classify(text: str, threshold: float = 0.55) -> Tuple[str, float]:
     """Convenience helper to classify intent via singleton SemanticRouter."""
     return SemanticRouter.get_instance().classify(text, threshold=threshold)
+
+
+def semantic_classify_sub_intent(text: str) -> str:
+    """Convenience helper to classify cash diagnostic sub-intent without keyword guessing."""
+    return SemanticRouter.get_instance().classify_sub_intent(text)
