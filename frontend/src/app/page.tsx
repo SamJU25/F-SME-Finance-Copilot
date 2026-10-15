@@ -291,6 +291,23 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [chatOpen]);
 
+  // Lock background homepage scrolling when drawer is open
+  useEffect(() => {
+    if (chatOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalPaddingRight = document.body.style.paddingRight;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.paddingRight = originalPaddingRight;
+      };
+    }
+  }, [chatOpen]);
+
   useEffect(() => {
     async function syncStagingLedger() {
       try {
@@ -1235,9 +1252,24 @@ export default function HomePage() {
           <div
             className="chat-backdrop"
             onClick={() => setChatOpen(false)}
+            onWheel={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onTouchMove={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             aria-hidden="true"
           />
-          <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Sidecar">
+          <div
+            className="chat-drawer"
+            role="complementary"
+            aria-label="Autonomous AI Copilot Sidecar"
+            onWheel={(e) => {
+              e.stopPropagation();
+            }}
+          >
           <div className="chat-header">
             <div className="chat-header-left">
               <div className="session-combobox-container" ref={sessionMenuRef}>
