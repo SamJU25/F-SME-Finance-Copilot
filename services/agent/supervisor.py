@@ -48,11 +48,11 @@ def inspect_for_prompt_injection(text: str) -> bool:
     return bool(INJECTION_PATTERN.search(text))
 
 
-from services.agent.semantic_router import semantic_classify, semantic_classify_sub_intent
+from services.agent.dynamic_router import classify_intent_dynamic, classify_sub_intent_dynamic
 
 
-def detect_intent(message: str, request: AgentChatRequest) -> str:
-    """Classifies user chat message into structured financial intent categories using in-process Vector Routing."""
+def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMConfig] = None) -> str:
+    """Classifies user chat message into structured financial intent categories dynamically using LLM routing."""
     if inspect_for_prompt_injection(message):
         return "SECURITY_DEFENSE_TRIGGERED"
 
@@ -66,39 +66,13 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     ):
         return "CASH_DIAGNOSTIC"
 
-    # 2. In-Process Semantic Vector Router (FastEmbed bge-small ONNX)
-    # Computes semantic cosine similarity against intent centroids without keyword guessing
-    vector_intent, score = semantic_classify(message)
-    if vector_intent != "GENERAL_ASSISTANCE":
-        return vector_intent
-
-    # 3. Contextual Dialogue Disambiguation via History Vector Routing
-    if request.history:
-        is_direct_general = bool(
-            re.search(
-                r"^\s*(who\s+are\s+you|who\s+is\s+this|what\s+(are\s+you|do\s+you\s+do)|tell\s+me\s+about\s+yourself|hi|hello|hey|good\s+(morning|afternoon|evening)|help)\b",
-                message,
-                re.IGNORECASE,
-            )
-        )
-        if not is_direct_general:
-            last_entry = request.history[-1]
-            last_text = getattr(last_entry, "text", "") if hasattr(last_entry, "text") else (last_entry.get("text", "") if isinstance(last_entry, dict) else "")
-            if last_text and len(message.split()) <= 6:
-                ctx_intent, ctx_score = semantic_classify(f"{last_text} {message}")
-                if ctx_intent != "GENERAL_ASSISTANCE":
-                    return ctx_intent
-
-    # 4. Contextual Disambiguation when Financial Statement is Loaded
-    if request.csv_content:
-        sub_intent = semantic_classify_sub_intent(message)
-        if sub_intent != "GENERAL":
-            return "CASH_DIAGNOSTIC"
-        stmt_intent, stmt_score = semantic_classify(f"financial statement analysis {message}")
-        if stmt_intent != "GENERAL_ASSISTANCE":
-            return stmt_intent
-
-    return "GENERAL_ASSISTANCE"
+    # 2. Dynamic LLM Intent Routing (without hardcoded sentence catalogs)
+    return classify_intent_dynamic(
+        message=message,
+        history=request.history,
+        has_csv=bool(request.csv_content),
+        config=config,
+    )
 
 
 def run_copilot_supervisor(
@@ -107,7 +81,6 @@ def run_copilot_supervisor(
     llm_config: Optional[LLMConfig] = None,
 ) -> CopilotResponse:
     """Core reasoning supervisor dispatching requests to deterministic tools and formatting responses."""
-    intent = detect_intent(request.message, request)
     effective_tenant = tenant_id or request.tenant_id or "SME-DEFAULT"
     effective_config = llm_config or request.llm_config
 
@@ -121,6 +94,8 @@ def run_copilot_supervisor(
         and LocalSLMEngine.get_instance().is_available()
     ):
         effective_config = LLMConfig(provider="offline", model_name="llama-3.2-1b-instruct-onnx")
+
+    intent = detect_intent(request.message, request, config=effective_config)
 
     is_local = (
         effective_config
@@ -457,7 +432,7 @@ def run_copilot_supervisor(
         if cash_result.get("cash_conversion_cycle_days") is not None:
             wc_snippet = f" Working Capital: Cash Conversion Cycle is {cash_result['cash_conversion_cycle_days']} days ({cash_result.get('working_capital_status')}). {cash_result.get('working_capital_rationale', '')}"
 
-        sub_intent = semantic_classify_sub_intent(request.message)
+        sub_intent = classify_sub_intent_dynamic(request.message)
 
         if sub_intent == "RUNWAY":
             headline = f"You have {runway_desc} of cash runway remaining at an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day (current balance: ${float(cash_result['current_balance']):,.2f}, Status: {cash_result['cash_status']})."
