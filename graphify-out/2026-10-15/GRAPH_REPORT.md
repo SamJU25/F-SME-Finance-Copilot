@@ -1,17 +1,17 @@
 # Graph Report - SME Finance Copilot  (2026-10-15)
 
 ## Corpus Check
-- 244 files · ~126,079 words
+- 244 files · ~126,334 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 11 file(s) not represented in the graph (top: (none) 6, .example 1, .backend 1)
 
 ## Summary
-- 2366 nodes · 2841 edges · 261 communities (237 shown, 24 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.95)
+- 2366 nodes · 2846 edges · 262 communities (238 shown, 24 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 60 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4d6fee63`
+- Built from commit: `4c5f3775`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -269,6 +269,7 @@
 - Docker Patterns for SME Finance Copilot
 - End-to-End (E2E) Testing for SME Finance Copilot
 - agent/__init__.py
+- 2. Squad Role, Tools, and Security Invariant Specifications
 - 8. Four-Person Team Roles, Ownership & Step-by-Step Guides
 - e2e/__init__.py
 - 2. What is an AI Financial Participant?
@@ -278,7 +279,7 @@
 2. `DemoTransaction` - 23 edges
 3. `parse_bank_csv()` - 21 edges
 4. `Comparable Company Analysis` - 20 edges
-5. `calculate_cash_analysis()` - 18 edges
+5. `calculate_cash_analysis()` - 19 edges
 6. `calculate_predictive_cash()` - 18 edges
 7. `run_copilot_supervisor()` - 17 edges
 8. `underwrite_sme_transactions()` - 17 edges
@@ -290,17 +291,17 @@
   docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md → api/routes/actions.py
 - `2. Squad 1: Ingestion & Privacy Squad` --references--> `parse_bank_csv()`  [INFERRED]
   docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md → services/ingestion/csv_parser.py
+- `5. Squad 4: Underwriting & Matching Squad` --references--> `convert_factor_rate_to_apr()`  [INFERRED]
+  docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md → services/matcher/liquidity_matcher.py
 - `What Was Already Built & Tested for You (The Implemented Backbone)` --references--> `UnderwritingDossierResponse`  [INFERRED]
   docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → api/routes/underwrite.py
 - `What Was Already Built & Tested for You (The Implemented Backbone)` --references--> `UnderwritingDossierResponse`  [INFERRED]
   SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → api/routes/underwrite.py
-- `What You Build Next on Top of This Backbone` --references--> `ConsortiumInvoiceRegistry`  [INFERRED]
-  docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → services/blockchain/invoice_hasher.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (261 total, 24 thin omitted)
+## Communities (262 total, 24 thin omitted)
 
 ### Community 0 - "DCF Model Troubleshooting Guide"
 Cohesion: 0.17
@@ -359,8 +360,8 @@ Cohesion: 0.08
 Nodes (24): 0. Project Truth & Engineering Documentation, 1.1 Knowledge Graph Synchronization (`graphify`), 1.2 Internet Research Routing (`agent-reach`), 1.3 Anti-Slop & Writing Discipline (`antislop` & `no-ai-slop`), 1.4 Senior Developer Ladder (`ponytail`), 1.5 Domain Alignment & ADR Protocol (`domain-alignment`), 1.6 Frontend Design Engineering (`frontend-craft`), 1.7 ADHD-Friendly Communication Protocol (`i-have-adhd`) (+16 more)
 
 ### Community 14 - "2. Subagent Suites Directory (57 Specialized Subagents)"
-Cohesion: 0.12
-Nodes (16): 0. Project Truth, Instruction Precedence & Current Baseline, 1. Multi-Agent Operating Model & Hierarchy Matrix, 2. Subagent Suites Directory (57 Specialized Subagents), 3. Dynamic Task Routing Matrix (Scenario-to-Squad Mapping), 4. Antigravity Agent Execution Protocol, Master Documentation & Operational Protocols:, SME Finance Copilot — AI Agents & Task Routing Engine, Suite 0: Global Governance Specialists (`.agent/agents/0-global-specialists/`) (+8 more)
+Cohesion: 0.13
+Nodes (15): 0. Project Truth, Instruction Precedence & Current Baseline, 1. Multi-Agent Operating Model & Hierarchy Matrix, 2. Subagent Suites Directory (57 Specialized Subagents), 3. Dynamic Task Routing Matrix (Scenario-to-Squad Mapping), 4. Antigravity Agent Execution Protocol, Master Documentation & Operational Protocols:, SME Finance Copilot — AI Agents & Task Routing Engine, Suite 0: Global Governance Specialists (`.agent/agents/0-global-specialists/`) (+7 more)
 
 ### Community 15 - "视频/播客"
 Cohesion: 0.20
@@ -1108,7 +1109,7 @@ Nodes (6): High-Level Workflow, Phase 1: Data Collection (30-60 minutes), Phase 
 
 ### Community 218 - "api.ts"
 Cohesion: 0.07
-Nodes (28): HomePage(), Metric(), money(), PRESETS, ActionStatus, ActionType, AgentActionProposal, AgentMetricsSummary (+20 more)
+Nodes (30): HomePage(), fetchModels(), handleTestConnection(), Metric(), money(), PRESETS, ActionStatus, ActionType (+22 more)
 
 ### Community 219 - "Equity Research Earnings Update"
 Cohesion: 0.22
@@ -1123,8 +1124,8 @@ Cohesion: 0.05
 Nodes (48): Copy-Ready AI Prompt for Member 3, Key Starter Code Backbone, Member 3: Ingestion & Blockchain QA Engineer, Owned Directories & Files, Plain-English Role, Stop-Ship Rules, Verification & Test Commands, What Was Already Built & Tested for You (The Implemented Backbone) (+40 more)
 
 ### Community 223 - "test_matcher.py"
-Cohesion: 0.07
-Nodes (57): FinancingOptionResponse, _format_money(), BaseModel, Decimal, JSONResponse, post, UploadFile, FastAPI router for Digital Transactional Underwriting and Financing Options… (+49 more)
+Cohesion: 0.09
+Nodes (49): Verified repository baseline (checked 2026-10-15), FinancingOptionResponse, _format_money(), BaseModel, Decimal, JSONResponse, post, UploadFile (+41 more)
 
 ### Community 224 - "StagingLedger"
 Cohesion: 0.14
@@ -1242,6 +1243,10 @@ Nodes (3): 1. Multi-Stage Architecture, 2. Invariants & Rules, Docker Patterns f
 Cohesion: 0.50
 Nodes (3): 1. Core User Flow Coverage, 2. Testing Invariants, End-to-End (E2E) Testing for SME Finance Copilot
 
+### Community 258 - "2. Squad Role, Tools, and Security Invariant Specifications"
+Cohesion: 0.20
+Nodes (9): 1. Lead Orchestrator (Supervisor), 1. Runtime Topology Matrix, 2. Squad 1: Ingestion & Privacy Squad, 2. Squad Role, Tools, and Security Invariant Specifications, 3. Squad 2: Diagnostic CFO Engine, 4. Squad 3: Risk Forecasting & Alerting Squad, 5. Squad 4: Underwriting & Matching Squad, 6. The Three-Tier Security Gatekeeper (The Enforcer) (+1 more)
+
 ### Community 259 - "8. Four-Person Team Roles, Ownership & Step-by-Step Guides"
 Cohesion: 0.67
 Nodes (3): 8. Four-Person Team Roles, Ownership & Step-by-Step Guides, Cross-Team Integration Protocol, Team Ownership Matrix
@@ -1251,24 +1256,24 @@ Cohesion: 0.50
 Nodes (4): 2. What is an AI Financial Participant?, The Multi-Agent Office Team Analogy, The Specialist Agents Explained, Why Simple Chatbots (like ChatGPT) Cannot Be Trusted with Money
 
 ## Knowledge Gaps
-- **1311 isolated node(s):** `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE`, `SUBAGENT_CATALOG_REPO_URL`, `metadata` (+1306 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1613 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **1310 isolated node(s):** `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE`, `SUBAGENT_CATALOG_REPO_URL`, `metadata` (+1305 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1610 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Four-Person Team Execution Plan` connect `Four-Person Team Execution Plan` to `AGENTS.md`, `csv_parser.py`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **Why does `Shared contract — agree before implementation` connect `csv_parser.py` to `DemoTransaction`, `Four-Person Team Execution Plan`?**
-  _High betweenness centrality (0.082) - this node is a cross-community bridge._
-- **Why does `DemoTransaction` connect `DemoTransaction` to `parse_bank_csv`, `test_matcher.py`, `csv_parser.py`, `calculate_cash_analysis`, `test_predictive_cash.py`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+- **Why does `SME Finance Copilot — AI Agents & Task Routing Engine` connect `2. Subagent Suites Directory (57 Specialized Subagents)` to `AGENTS.md`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
 - **Are the 11 inferred relationships involving `DemoTransaction` (e.g. with `Shared contract — agree before implementation` and `calculate_cash_analysis()`) actually correct?**
   _`DemoTransaction` has 11 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 4 inferred relationships involving `calculate_cash_analysis()` (e.g. with `What Was Already Built & Tested for You (The Implemented Backbone)` and `DemoTransaction`) actually correct?**
-  _`calculate_cash_analysis()` has 4 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 5 inferred relationships involving `calculate_cash_analysis()` (e.g. with `Verified repository baseline (checked 2026-10-15)` and `What Was Already Built & Tested for You (The Implemented Backbone)`) actually correct?**
+  _`calculate_cash_analysis()` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE` to the rest of the system?**
-  _1311 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1310 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DCF Process Workflow` be split into smaller, more focused modules?**
   _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._

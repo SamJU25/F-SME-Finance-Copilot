@@ -1750,7 +1750,7 @@
       "file_type": "code",
       "norm_label": "analyze()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L202"
+      "source_location": "L221"
     },
     {
       "id": "frontend_src_app_page_homepage_executebiometric",
@@ -1762,7 +1762,7 @@
       "file_type": "code",
       "norm_label": "executebiometric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L269"
+      "source_location": "L288"
     },
     {
       "id": "frontend_src_app_page_homepage_fetchmodels",
@@ -1786,7 +1786,7 @@
       "file_type": "code",
       "norm_label": "handlesavesettings()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L191"
+      "source_location": "L210"
     },
     {
       "id": "frontend_src_app_page_homepage_handletestconnection",
@@ -1798,7 +1798,7 @@
       "file_type": "code",
       "norm_label": "handletestconnection()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L169"
+      "source_location": "L185"
     },
     {
       "id": "frontend_src_app_page_homepage_sendchatmessage",
@@ -1810,7 +1810,7 @@
       "file_type": "code",
       "norm_label": "sendchatmessage()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L229"
+      "source_location": "L248"
     },
     {
       "id": "frontend_src_app_page_metric",
@@ -1822,7 +1822,7 @@
       "file_type": "code",
       "norm_label": "metric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L773"
+      "source_location": "L827"
     },
     {
       "id": "frontend_src_app_page_money",
@@ -2662,7 +2662,7 @@
       "file_type": "code",
       "norm_label": "test_agent_cash_diagnostic_dynamic_custom_days()",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L303"
+      "source_location": "L304"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_cash_diagnostic_flow",
@@ -2686,7 +2686,7 @@
       "file_type": "code",
       "norm_label": "test_agent_cash_diagnostic_predictive_early_warning()",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L280"
+      "source_location": "L281"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_chat_horizon_capped_at_365_days",
@@ -2698,7 +2698,7 @@
       "file_type": "code",
       "norm_label": "test_agent_chat_horizon_capped_at_365_days()",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L342"
+      "source_location": "L343"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_chat_target_horizon_field_in_request",
@@ -2710,7 +2710,7 @@
       "file_type": "code",
       "norm_label": "test_agent_chat_target_horizon_field_in_request()",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L323"
+      "source_location": "L324"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_chat_with_header_llm_config",
@@ -2734,7 +2734,7 @@
       "file_type": "code",
       "norm_label": "test_agent_chat_working_capital_cycle_detection()",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L363"
+      "source_location": "L364"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_credit_underwriting_flow",
@@ -7187,18 +7187,6 @@
       "norm_label": "suite 7: research & intelligence squad (`.agent/agents/7-research-intelligence/`)",
       "source_file": "AGENTS.md",
       "source_location": "L124"
-    },
-    {
-      "id": "agents_verified_repository_baseline_checked_2026_10_15",
-      "label": "Verified repository baseline (checked 2026-10-15)",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "2. Subagent Suites Directory (57 Specialized Subagents)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "verified repository baseline (checked 2026-10-15)",
-      "source_file": "AGENTS.md",
-      "source_location": "L23"
     },
     {
       "id": "agent_skills_mcp_builder_skill",
@@ -16635,124 +16623,16 @@
       "source_location": "L1"
     },
     {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup",
-      "label": "SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "sme_finance_copilot_runtime_subagents_setup.md",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_1_lead_orchestrator_supervisor",
-      "label": "1. Lead Orchestrator (Supervisor)",
+      "id": "agents_verified_repository_baseline_checked_2026_10_15",
+      "label": "Verified repository baseline (checked 2026-10-15)",
       "_origin": "ast",
       "community": 223,
       "community_name": "test_matcher.py",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "1. lead orchestrator (supervisor)",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L49"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_1_runtime_topology_matrix",
-      "label": "1. Runtime Topology Matrix",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "1. runtime topology matrix",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L9"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_2_squad_1_ingestion_privacy_squad",
-      "label": "2. Squad 1: Ingestion & Privacy Squad",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2. squad 1: ingestion & privacy squad",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L54"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_2_squad_role_tools_and_security_invariant_specifications",
-      "label": "2. Squad Role, Tools, and Security Invariant Specifications",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2. squad role, tools, and security invariant specifications",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L47"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_3_squad_2_diagnostic_cfo_engine",
-      "label": "3. Squad 2: Diagnostic CFO Engine",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "3. squad 2: diagnostic cfo engine",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L59"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_4_squad_3_risk_forecasting_alerting_squad",
-      "label": "4. Squad 3: Risk Forecasting & Alerting Squad",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "4. squad 3: risk forecasting & alerting squad",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L64"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_5_squad_4_underwriting_matching_squad",
-      "label": "5. Squad 4: Underwriting & Matching Squad",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "5. squad 4: underwriting & matching squad",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L69"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_6_the_three_tier_security_gatekeeper_the_enforcer",
-      "label": "6. The Three-Tier Security Gatekeeper (The Enforcer)",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "6. the three-tier security gatekeeper (the enforcer)",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L74"
-    },
-    {
-      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_runtime_subagent_topology_communication_contract",
-      "label": "Runtime Subagent Topology & Communication Contract",
-      "_origin": "ast",
-      "community": 223,
-      "community_name": "test_matcher.py",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "runtime subagent topology & communication contract",
-      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
-      "source_location": "L1"
+      "norm_label": "verified repository baseline (checked 2026-10-15)",
+      "source_file": "AGENTS.md",
+      "source_location": "L23"
     },
     {
       "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_487",
@@ -19309,23 +19189,23 @@
     },
     {
       "id": "tests_integration_test_agent_api_rationale_256",
-      "label": "Verify missing API key returns fallback models gracefully without server\u2026",
+      "label": "Verify missing API key returns empty models list without hardcoded fallback.",
       "_origin": "ast",
       "community": 250,
       "community_name": "test_agent_api.py",
       "file_type": "rationale",
-      "norm_label": "verify missing api key returns fallback models gracefully without server...",
+      "norm_label": "verify missing api key returns empty models list without hardcoded fallback.",
       "source_file": "tests/integration/test_agent_api.py",
       "source_location": "L256"
     },
     {
       "id": "tests_integration_test_agent_api_rationale_269",
-      "label": "Verify custom provider without base URL returns fallback gracefully.",
+      "label": "Verify custom provider without base URL returns empty models list.",
       "_origin": "ast",
       "community": 250,
       "community_name": "test_agent_api.py",
       "file_type": "rationale",
-      "norm_label": "verify custom provider without base url returns fallback gracefully.",
+      "norm_label": "verify custom provider without base url returns empty models list.",
       "source_file": "tests/integration/test_agent_api.py",
       "source_location": "L269"
     },
@@ -19341,7 +19221,7 @@
       "source_location": "L28"
     },
     {
-      "id": "tests_integration_test_agent_api_rationale_281",
+      "id": "tests_integration_test_agent_api_rationale_282",
       "label": "Verify agent cash diagnostic surfaces forward-looking deficit metrics and\u2026",
       "_origin": "ast",
       "community": 250,
@@ -19349,10 +19229,10 @@
       "file_type": "rationale",
       "norm_label": "verify agent cash diagnostic surfaces forward-looking deficit metrics and...",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L281"
+      "source_location": "L282"
     },
     {
-      "id": "tests_integration_test_agent_api_rationale_304",
+      "id": "tests_integration_test_agent_api_rationale_305",
       "label": "Verify natural language query asking for arbitrary days (e.g. 42 days) computes\u2026",
       "_origin": "ast",
       "community": 250,
@@ -19360,10 +19240,10 @@
       "file_type": "rationale",
       "norm_label": "verify natural language query asking for arbitrary days (e.g. 42 days) computes...",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L304"
+      "source_location": "L305"
     },
     {
-      "id": "tests_integration_test_agent_api_rationale_324",
+      "id": "tests_integration_test_agent_api_rationale_325",
       "label": "Verify explicit target_horizon_days in payload overrides or sets dynamic\u2026",
       "_origin": "ast",
       "community": 250,
@@ -19371,10 +19251,10 @@
       "file_type": "rationale",
       "norm_label": "verify explicit target_horizon_days in payload overrides or sets dynamic...",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L324"
+      "source_location": "L325"
     },
     {
-      "id": "tests_integration_test_agent_api_rationale_343",
+      "id": "tests_integration_test_agent_api_rationale_344",
       "label": "Verify chat request asking for days beyond 365 is capped with advisory note.",
       "_origin": "ast",
       "community": 250,
@@ -19382,10 +19262,10 @@
       "file_type": "rationale",
       "norm_label": "verify chat request asking for days beyond 365 is capped with advisory note.",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L343"
+      "source_location": "L344"
     },
     {
-      "id": "tests_integration_test_agent_api_rationale_364",
+      "id": "tests_integration_test_agent_api_rationale_365",
       "label": "Verify chat agent detects customer DSO and vendor DPO to compute CCC.",
       "_origin": "ast",
       "community": 250,
@@ -19393,7 +19273,7 @@
       "file_type": "rationale",
       "norm_label": "verify chat agent detects customer dso and vendor dpo to compute ccc.",
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L364"
+      "source_location": "L365"
     },
     {
       "id": "tests_integration_test_agent_api_rationale_43",
@@ -19852,6 +19732,126 @@
       "file_type": "rationale",
       "norm_label": "autonomous ai copilot agent package for sme finance.",
       "source_file": "services/agent/__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup",
+      "label": "SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "sme_finance_copilot_runtime_subagents_setup.md",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_1_lead_orchestrator_supervisor",
+      "label": "1. Lead Orchestrator (Supervisor)",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "1. lead orchestrator (supervisor)",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L49"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_1_runtime_topology_matrix",
+      "label": "1. Runtime Topology Matrix",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "1. runtime topology matrix",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L9"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_2_squad_1_ingestion_privacy_squad",
+      "label": "2. Squad 1: Ingestion & Privacy Squad",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "2. squad 1: ingestion & privacy squad",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L54"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_2_squad_role_tools_and_security_invariant_specifications",
+      "label": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "2. squad role, tools, and security invariant specifications",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_3_squad_2_diagnostic_cfo_engine",
+      "label": "3. Squad 2: Diagnostic CFO Engine",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "3. squad 2: diagnostic cfo engine",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L59"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_4_squad_3_risk_forecasting_alerting_squad",
+      "label": "4. Squad 3: Risk Forecasting & Alerting Squad",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "4. squad 3: risk forecasting & alerting squad",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L64"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_5_squad_4_underwriting_matching_squad",
+      "label": "5. Squad 4: Underwriting & Matching Squad",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "5. squad 4: underwriting & matching squad",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L69"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_6_the_three_tier_security_gatekeeper_the_enforcer",
+      "label": "6. The Three-Tier Security Gatekeeper (The Enforcer)",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "6. the three-tier security gatekeeper (the enforcer)",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "docs_archive_sme_finance_copilot_runtime_subagents_setup_runtime_subagent_topology_communication_contract",
+      "label": "Runtime Subagent Topology & Communication Contract",
+      "_origin": "ast",
+      "community": 258,
+      "community_name": "2. Squad Role, Tools, and Security Invariant Specifications",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "runtime subagent topology & communication contract",
+      "source_file": "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md",
       "source_location": "L1"
     },
     {
@@ -29239,7 +29239,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L377",
+      "source_location": "L396",
       "weight": 1.0
     },
     {
@@ -29251,7 +29251,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L377",
+      "source_location": "L396",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_app_page_homepage_handletestconnection",
+      "target": "frontend_src_app_page_homepage_fetchmodels",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "frontend/src/app/page.tsx",
+      "source_location": "L197",
       "weight": 1.0
     },
     {
@@ -30955,7 +30967,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L229",
+      "source_location": "L248",
       "weight": 1.0
     },
     {
@@ -30967,7 +30979,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L269",
+      "source_location": "L288",
       "weight": 1.0
     },
     {
@@ -51822,17 +51834,6 @@
     },
     {
       "source": "frontend_src_app_page",
-      "target": "frontend_src_app_page_metric",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L773",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_app_page",
       "target": "frontend_src_app_page_homepage",
       "relation": "contains",
       "_origin": "ast",
@@ -51843,6 +51844,17 @@
       "weight": 1.0
     },
     {
+      "source": "frontend_src_app_page",
+      "target": "frontend_src_app_page_metric",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/page.tsx",
+      "source_location": "L827",
+      "weight": 1.0
+    },
+    {
       "source": "frontend_src_app_page_homepage",
       "target": "frontend_src_app_page_homepage_handletestconnection",
       "relation": "contains",
@@ -51850,7 +51862,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L169",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
@@ -51861,7 +51873,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L191",
+      "source_location": "L210",
       "weight": 1.0
     },
     {
@@ -51872,7 +51884,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L202",
+      "source_location": "L221",
       "weight": 1.0
     },
     {
@@ -54886,7 +54898,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L280",
+      "source_location": "L281",
       "weight": 1.0
     },
     {
@@ -54897,7 +54909,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L303",
+      "source_location": "L304",
       "weight": 1.0
     },
     {
@@ -54908,7 +54920,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L323",
+      "source_location": "L324",
       "weight": 1.0
     },
     {
@@ -54919,7 +54931,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L342",
+      "source_location": "L343",
       "weight": 1.0
     },
     {
@@ -54930,7 +54942,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L363",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -58012,58 +58024,58 @@
       "weight": 1.0
     },
     {
-      "source": "tests_integration_test_agent_api_rationale_281",
+      "source": "tests_integration_test_agent_api_rationale_282",
       "target": "tests_integration_test_agent_api_test_agent_cash_diagnostic_predictive_early_warning",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L281",
+      "source_location": "L282",
       "weight": 1.0
     },
     {
-      "source": "tests_integration_test_agent_api_rationale_304",
+      "source": "tests_integration_test_agent_api_rationale_305",
       "target": "tests_integration_test_agent_api_test_agent_cash_diagnostic_dynamic_custom_days",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L304",
+      "source_location": "L305",
       "weight": 1.0
     },
     {
-      "source": "tests_integration_test_agent_api_rationale_324",
+      "source": "tests_integration_test_agent_api_rationale_325",
       "target": "tests_integration_test_agent_api_test_agent_chat_target_horizon_field_in_request",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L324",
+      "source_location": "L325",
       "weight": 1.0
     },
     {
-      "source": "tests_integration_test_agent_api_rationale_343",
+      "source": "tests_integration_test_agent_api_rationale_344",
       "target": "tests_integration_test_agent_api_test_agent_chat_horizon_capped_at_365_days",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L343",
+      "source_location": "L344",
       "weight": 1.0
     },
     {
-      "source": "tests_integration_test_agent_api_rationale_364",
+      "source": "tests_integration_test_agent_api_rationale_365",
       "target": "tests_integration_test_agent_api_test_agent_chat_working_capital_cycle_detection",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
-      "source_location": "L364",
+      "source_location": "L365",
       "weight": 1.0
     },
     {
@@ -60109,6 +60121,18 @@
       "weight": 1.0
     },
     {
+      "source": "agents_verified_repository_baseline_checked_2026_10_15",
+      "target": "services_calculations_cash_analysis_calculate_cash_analysis",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "calculate_cash_analysis",
+      "source_file": "AGENTS.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
       "source": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_676",
       "target": "services_calculations_cash_analysis_calculate_cash_analysis",
       "relation": "references",
@@ -60130,6 +60154,42 @@
       "context": "calculate_cash_analysis()",
       "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
       "source_location": "L680",
+      "weight": 1.0
+    },
+    {
+      "source": "agents_verified_repository_baseline_checked_2026_10_15",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "calculate_cash_conversion_cycle",
+      "source_file": "AGENTS.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "agents_verified_repository_baseline_checked_2026_10_15",
+      "target": "services_matcher_liquidity_matcher_calculate_dab_from_transactions",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "calculate_dab_from_transactions",
+      "source_file": "AGENTS.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "agents_verified_repository_baseline_checked_2026_10_15",
+      "target": "services_matcher_liquidity_matcher_calculate_inflow_volatility",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "calculate_inflow_volatility",
+      "source_file": "AGENTS.md",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -60680,5 +60740,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4d6fee63859eaf0375633e43972b91af72853992"
+  "built_at_commit": "4c5f37752062d1d96d09db6eb3e37426fcabd1bd"
 }

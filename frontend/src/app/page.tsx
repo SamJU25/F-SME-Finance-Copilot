@@ -323,6 +323,14 @@ export default function HomePage() {
               {llmConfig.provider.toUpperCase()}
             </span>
           </button>
+          <button
+            className="settings-btn"
+            onClick={() => setChatOpen((prev) => !prev)}
+            type="button"
+            title="Toggle Copilot Chat"
+          >
+            <span>💬 Copilot Chat</span>
+          </button>
           <span className="demo-tag">Autonomous AI Participant</span>
         </div>
       </header>
@@ -438,13 +446,13 @@ export default function HomePage() {
 
       {/* Floating Copilot Button */}
       <button
-        className="copilot-fab"
+        className="chat-toggle-btn"
         onClick={() => setChatOpen(!chatOpen)}
         type="button"
         aria-label="Toggle Autonomous AI Copilot Drawer"
       >
         <span>🤖</span>
-        <span>Ask AI Copilot</span>
+        <span>{chatOpen ? 'Close Copilot' : 'Ask AI Copilot'}</span>
       </button>
 
       {/* Interactive Copilot Chat Drawer */}
@@ -452,9 +460,11 @@ export default function HomePage() {
         <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Chat Drawer">
           <div className="chat-header">
             <div>
-              <h3>AI Finance Copilot</h3>
-              <div className="chat-provider-tag">
-                Provider: {llmConfig.provider.toUpperCase()} ({llmConfig.model_name || 'deterministic'})
+              <h3>🤖 AI Finance Copilot</h3>
+              <div style={{ marginTop: 4 }}>
+                <span className="badge">
+                  {llmConfig.provider.toUpperCase()} · {llmConfig.model_name || 'deterministic'}
+                </span>
               </div>
             </div>
             <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
@@ -462,10 +472,10 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="chat-messages">
+          <div className="chat-body">
             {messages.map((m, idx) => (
               <div key={idx} className={`chat-msg ${m.role}`}>
-                <div>{m.text}</div>
+                <div className="chat-bubble">{m.text}</div>
 
                 {/* Predictive Early-Warning Alert Card */}
                 {m.data?.metrics?.has_projected_deficit && (
@@ -537,27 +547,34 @@ export default function HomePage() {
                 )}
               </div>
             ))}
-            {chatLoading && <div className="chat-msg agent">Analyzing with Three-Tier Security Gate…</div>}
+            {chatLoading && (
+              <div className="chat-msg agent">
+                <div className="chat-bubble">Analyzing with Three-Tier Security Gate…</div>
+              </div>
+            )}
           </div>
 
           {/* Quick Action Suggestion Pills */}
-          <div className="chat-suggestions">
-            <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Quick Prompts:</span>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ padding: '8px 16px', background: '#fafbf9', borderTop: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4, fontWeight: 600 }}>Quick Prompts:</span>
+            <div className="chat-pills">
               <button
                 className="pill-btn"
+                type="button"
                 onClick={() => sendChatMessage('What is my current runway and daily burn rate?')}
               >
                 📊 Check Runway
               </button>
               <button
                 className="pill-btn"
+                type="button"
                 onClick={() => sendChatMessage('What loan or credit line options can my business qualify for?')}
               >
                 💼 Match Credit Facilities
               </button>
               <button
                 className="pill-btn"
+                type="button"
                 onClick={() => sendChatMessage('Please stage an application to draw line of $25,000 for working capital')}
               >
                 ⚡ Stage $25k Loan
