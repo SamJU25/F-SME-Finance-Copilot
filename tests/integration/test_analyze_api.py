@@ -211,4 +211,24 @@ def test_analyze_api_multi_account_portfolio_consolidation_and_contra_transfer()
     assert body["operational_outflows"] == "500.00"
 
 
+def test_analyze_api_with_multiple_csv_files_under_file_field():
+    f1 = b"Date,Description,Amount,Running Bal.\n2026-10-01,Dep1,1000.00,5000.00\n"
+    f2 = b"Date,Description,Amount,Running Bal.\n2026-10-02,Dep2,2000.00,7000.00\n"
+
+    response = client.post(
+        "/api/v1/analyze",
+        data={"alert_threshold_days": "30"},
+        files=[
+            ("file", ("statement_a.csv", f1, "text/csv")),
+            ("file", ("statement_b.csv", f2, "text/csv")),
+        ],
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted_count"] == 2
+    assert body["accounts_breakdown"] is not None
+    assert len(body["accounts_breakdown"]) == 2
+
+
+
 

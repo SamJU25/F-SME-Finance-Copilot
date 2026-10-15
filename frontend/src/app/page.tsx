@@ -511,6 +511,7 @@ export default function HomePage() {
   const [result, setResult] = useState<CashAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState<'pulse' | 'portfolio' | 'flows' | 'working_capital'>('pulse');
   const dynamicAlertDate = computeAlertBoundaryDate(result?.end_date, threshold) || result?.alert_boundary_date;
 
@@ -881,11 +882,16 @@ export default function HomePage() {
       if (Array.isArray(targetFile)) {
         if (targetFile.length === 1) {
           data.append('file', targetFile[0]);
+          data.append('files', targetFile[0]);
         } else {
-          targetFile.forEach((f) => data.append('files', f));
+          targetFile.forEach((f) => {
+            data.append('files', f);
+            data.append('file', f);
+          });
         }
       } else {
         data.append('file', targetFile);
+        data.append('files', targetFile);
       }
       data.append('alert_threshold_days', effectiveDays);
       const headers: Record<string, string> = {};
@@ -913,56 +919,130 @@ export default function HomePage() {
     }
   }
 
+  async function loadAllFilesText(files: File[], activeSessionId: string): Promise<string> {
+    if (files.length === 0) {
+      setCsvText(null);
+      return '';
+    }
+    const texts = await Promise.all(
+      files.map((f) =>
+        typeof f.text === 'function'
+          ? f.text()
+          : new Promise<string>((resolve) => {
+              const r = new FileReader();
+              r.onload = () => resolve((r.result as string) || '');
+              r.readAsText(f);
+            })
+      )
+    );
+    const combined = texts.join('\n');
+    setCsvText(combined);
+    try {
+      localStorage.setItem(`sme_copilot_csv_${activeSessionId}`, combined);
+      localStorage.setItem('sme_copilot_csv_text', combined);
+    } catch {
+      // LocalStorage fallback
+    }
+    return combined;
+  }
+
+  async function handleAddFiles(newFiles: File[]) {
+    if (newFiles.length === 0) return;
+
+    // Deduplicate incoming files against current filesList by name + size
+    const existing = [...filesList];
+    const map = new Map<string, File>();
+    existing.forEach((f) => map.set(`${f.name}_${f.size}`, f));
+    newFiles.forEach((f) => map.set(`${f.name}_${f.size}`, f));
+    const merged = Array.from(map.values());
+
+    setFilesList(merged);
+    setFile(merged[0] || null);
+
+    const activeSession = sessionId || `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    if (!sessionId) {
+      setSessionId(activeSession);
+    }
+
+    await loadAllFilesText(merged, activeSession);
+    executeAnalysis(merged, threshold);
+
+    const fileTitle =
+      merged.length > 1
+        ? `${merged.length} Statements (${merged[0].name.replace(/\.[^/.]+$/, '')} +${merged.length - 1})`
+        : deriveSessionTitle(undefined, merged[0].name);
+
+    setSessions((prev) => {
+      const idx = prev.findIndex((s) => s.id === activeSession);
+      if (idx >= 0) {
+        const current = prev[idx];
+        const isGeneric =
+          current.title.startsWith('Session ') ||
+          current.title === 'Current Session' ||
+          current.title === 'New Session' ||
+          current.title === 'New Conversation';
+        if (isGeneric) {
+          const next = [...prev];
+          next[idx] = { ...current, title: fileTitle, updatedAt: new Date().toISOString() };
+          try {
+            localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(next));
+          } catch {
+            // LocalStorage fallback
+          }
+          return next;
+        }
+      }
+      return prev;
+    });
+  }
+
+  async function handleRemoveSingleFile(indexToRemove: number) {
+    const next = filesList.filter((_, idx) => idx !== indexToRemove);
+    setFilesList(next);
+    if (next.length === 0) {
+      handleRemoveCsv();
+    } else {
+      setFile(next[0]);
+      await loadAllFilesText(next, sessionId);
+      executeAnalysis(next, threshold);
+    }
+  }
+
   function handleFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     const pickedList = event.target.files ? Array.from(event.target.files) : [];
-    if (pickedList.length === 0) {
-      setFile(null);
-      setFilesList([]);
-      setCsvText(null);
-      return;
+    if (pickedList.length > 0) {
+      handleAddFiles(pickedList);
     }
-    const picked = pickedList[0];
-    setFile(picked);
-    setFilesList(pickedList);
-    setResult(null);
-    setError(null);
-    if (picked) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = (e.target?.result as string) || '';
-        setCsvText(content);
-        try {
-          localStorage.setItem(`sme_copilot_csv_${sessionId}`, content);
-          localStorage.setItem('sme_copilot_csv_text', content);
-        } catch {
-          // LocalStorage fallback
-        }
-      };
-      reader.readAsText(picked);
-      executeAnalysis(pickedList.length > 1 ? pickedList : picked, threshold);
-      const fileTitle = pickedList.length > 1
-        ? `${pickedList.length} Statements (${picked.name.replace(/\.[^/.]+$/, '')} +${pickedList.length - 1})`
-        : deriveSessionTitle(undefined, picked.name);
-      setSessions((prev) => {
-        const idx = prev.findIndex((s) => s.id === sessionId);
-        if (idx >= 0) {
-          const current = prev[idx];
-          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session' || current.title === 'New Conversation';
-          if (isGeneric) {
-            const next = [...prev];
-            next[idx] = { ...current, title: fileTitle, updatedAt: new Date().toISOString() };
-            try {
-              localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(next));
-            } catch {
-              // LocalStorage fallback
-            }
-            return next;
-          }
-        }
-        return prev;
-      });
-    } else {
-      setCsvText(null);
+    if (event.target) {
+      event.target.value = '';
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const dropped = Array.from(e.dataTransfer.files).filter(
+        (f) => f.name.endsWith('.csv') || f.type === 'text/csv' || f.type.includes('csv')
+      );
+      if (dropped.length > 0) {
+        handleAddFiles(dropped);
+      } else {
+        setError('Please drop CSV bank statement files.');
+      }
     }
   }
 
@@ -1007,7 +1087,7 @@ export default function HomePage() {
     if (filesList.length > 1) {
       await executeAnalysis(filesList, threshold);
     } else {
-      const targetFile = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+      const targetFile = filesList[0] || file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
       await executeAnalysis(targetFile, threshold);
     }
   }
@@ -1511,87 +1591,114 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {file || filesList.length > 0 || csvText ? (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      id="csv-file"
-                      className="file-input"
-                      aria-label="Choose bank statement CSV files"
-                      type="file"
-                      accept=".csv,text/csv"
-                      multiple
-                      style={{ display: 'none' }}
-                      onChange={handleFileInputChange}
-                    />
-                    <div className="uploaded-file-card" role="region" aria-label="Active uploaded bank statement">
-                      <div className="uploaded-file-info">
-                        <span className="uploaded-file-icon" aria-hidden="true">
-                          {filesList.length > 1 ? '📚' : '📄'}
+                {/* Drag & Drop Zone */}
+                <div
+                  className={`dropzone ${isDragging ? 'dragging' : ''}`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Upload CSV statements dropzone"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                >
+                  <span className="upload-icon" aria-hidden="true">↑</span>
+                  <label className="field-label" htmlFor="csv-file" style={{ cursor: 'pointer', margin: '4px 0' }}>
+                    {isDragging ? 'Drop CSV statements here' : 'Drop CSV statements here, or click to browse'}
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    id="csv-file"
+                    className="file-input"
+                    aria-label="Choose bank statement CSV file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleFileInputChange}
+                  />
+                  <div className="file-name" style={{ marginTop: 4 }}>
+                    Universal format · Multi-file & multi-bank supported · Max 1 MB
+                  </div>
+                </div>
+
+                {/* Multi-Statement Staging Queue */}
+                {filesList.length > 0 && (
+                  <div className="statement-queue-container">
+                    <div className="statement-queue-header">
+                      <div className="statement-queue-title">
+                        <span>📚 Queued Statements ({filesList.length})</span>
+                        <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>
+                          · {(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB total
                         </span>
-                        <div className="uploaded-file-meta">
-                          <span className="uploaded-file-name">
-                            {filesList.length > 1
-                              ? `${filesList.length} Statements (Consolidated Treasury)`
-                              : file
-                              ? file.name
-                              : 'Active_Statement.csv'}
-                          </span>
-                          <span className="uploaded-file-size">
-                            {filesList.length > 1
-                              ? `${filesList.map((f) => f.name).join(', ')} · ${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
-                              : file
-                              ? `${(file.size / 1024).toFixed(1)} KB · Active in Session`
-                              : csvText
-                              ? `${(csvText.length / 1024).toFixed(1)} KB · Active in Session`
-                              : 'Statement Loaded'}
-                          </span>
-                        </div>
                       </div>
-                      <div className="uploaded-file-actions">
-                        <button
-                          type="button"
-                          className="change-csv-btn"
-                          onClick={handleChangeCsv}
-                          title="Replace with another CSV statement"
-                        >
-                          Change
-                        </button>
-                        <button
-                          type="button"
-                          className="remove-csv-btn"
-                          onClick={handleRemoveCsv}
-                          title="Remove statement from active session"
-                        >
-                          <span aria-hidden="true">✕</span> Remove
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="add-more-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        <span>+ Add Another Statement</span>
+                      </button>
                     </div>
-                  </>
-                ) : (
-                  <div className="dropzone">
-                    <span className="upload-icon" aria-hidden="true">↑</span>
-                    <label className="field-label" htmlFor="csv-file">Choose CSV statements (single or multiple)</label>
-                    <input
-                      ref={fileInputRef}
-                      id="csv-file"
-                      className="file-input"
-                      aria-label="Choose bank statement CSV file"
-                      type="file"
-                      accept=".csv,text/csv"
-                      multiple
-                      onChange={handleFileInputChange}
-                    />
-                    <div className="file-name">Universal format · Multi-file supported · Max 1 MB</div>
+
+                    <div className="statement-queue-items">
+                      {filesList.map((f, idx) => (
+                        <div key={`${f.name}_${idx}`} className="statement-queue-item">
+                          <div className="statement-queue-item-info">
+                            <span aria-hidden="true">📄</span>
+                            <span className="statement-queue-item-name">{f.name}</span>
+                            <span className="statement-queue-item-size">{(f.size / 1024).toFixed(1)} KB</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="statement-queue-item-remove"
+                            onClick={() => handleRemoveSingleFile(idx)}
+                            title={`Remove ${f.name}`}
+                          >
+                            ✕ Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="statement-queue-actions">
+                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                        {filesList.length === 1
+                          ? '1 statement queued. You can add more statements from other banks or months to consolidate treasury.'
+                          : `${filesList.length} statements queued for consolidated multi-account treasury analysis.`}
+                      </span>
+                      <button
+                        type="button"
+                        className="remove-csv-btn"
+                        onClick={handleRemoveCsv}
+                        style={{ fontSize: 11.5, padding: '4px 10px' }}
+                      >
+                        Clear All
+                      </button>
+                    </div>
                   </div>
                 )}
 
-                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+                <div style={{ marginTop: 12, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
                   Universal Ingestion: Compatible with CSV exports from any financial institution, bank, payment gateway, or accounting system worldwide. Automatically resolves column layouts, date formats, currencies, and multi-account portfolios.
                 </div>
 
-                <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
-                  {loading ? 'Analyzing statement…' : 'Analyze cash activity'}
+                <button className="submit" type="submit" disabled={loading || (filesList.length === 0 && !file && !csvText)} style={{ marginTop: 16 }}>
+                  {loading
+                    ? 'Analyzing statements…'
+                    : filesList.length > 1
+                    ? `Analyze ${filesList.length} Consolidated Statements`
+                    : 'Analyze cash activity'}
                 </button>
               </form>
               {loading && <div className="notice loading" role="status" aria-live="polite">Reading statement and calculating cash metrics…</div>}
@@ -1668,8 +1775,8 @@ export default function HomePage() {
                           className={`threshold-quick-pill ${isSelected ? 'active' : ''}`}
                           onClick={() => {
                             setThreshold(preset.days);
-                            if (file || csvText) {
-                              const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                            if (filesList.length > 0 || file || csvText) {
+                              const target = filesList.length > 0 ? filesList : (file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' }));
                               executeAnalysis(target, preset.days);
                             }
                           }}
@@ -1695,21 +1802,81 @@ export default function HomePage() {
                 <button
                   type="button"
                   className="context-action-btn"
-                  onClick={handleChangeCsv}
-                  title="Upload another statement"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Add another statement to consolidate treasury"
                 >
-                  <span>+ New Statement</span>
+                  <span style={{ fontWeight: 700, color: 'var(--green)' }}>+</span>
+                  <span>Add Statement</span>
                 </button>
                 <button
                   type="button"
                   className="context-action-btn danger"
                   onClick={handleRemoveCsv}
-                  title="Remove statement"
+                  title="Reset workspace"
                 >
-                  <span aria-hidden="true">✕</span> Remove
+                  <span aria-hidden="true">✕</span> Reset
                 </button>
               </div>
             </div>
+
+            {/* Active Statements Tag Bar if multiple statements */}
+            {filesList.length > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>
+                  Consolidated ({filesList.length}):
+                </span>
+                {filesList.map((f, idx) => (
+                  <span
+                    key={`${f.name}_${idx}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '3px 8px',
+                      background: 'white',
+                      border: '1px solid var(--line)',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: 'var(--ink)',
+                    }}
+                  >
+                    <span>📄 {f.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSingleFile(idx)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        fontSize: 11,
+                        color: 'var(--muted)',
+                        lineHeight: 1,
+                      }}
+                      title={`Remove ${f.name} from consolidated analysis`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    background: 'none',
+                    border: '1px dashed #97aca0',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    fontSize: 11.5,
+                    color: 'var(--green)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  + Add Another
+                </button>
+              </div>
+            )}
 
             {/* 3-Card Verdict Strip */}
             <div className="verdict-strip">

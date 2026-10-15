@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal, Optional
 
-from fastapi import APIRouter, File, Form, Header, UploadFile
+from fastapi import APIRouter, File, Form, Header, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
@@ -19,6 +19,7 @@ from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv, par
 
 router = APIRouter(prefix="/api/v1", tags=["Cash analysis"])
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_ANALYSIS_UPLOAD_BYTES", "1048576"))
+
 
 
 class RejectedRowResponse(BaseModel):
@@ -81,6 +82,7 @@ class CashAnalysisResponse(BaseModel):
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
 async def analyze_csv(
+    request: Request,
     file: UploadFile | None = File(None),
     files: list[UploadFile] | None = File(None),
     alert_threshold_days: int = Form(30, gt=0),
@@ -102,10 +104,20 @@ async def analyze_csv(
             pass
 
     upload_list: list[UploadFile] = []
-    if files:
-        upload_list.extend(files)
-    if file:
-        upload_list.append(file)
+    try:
+        form = await request.form()
+        for key in ("files", "file"):
+            for item in form.getlist(key):
+                if hasattr(item, "filename") and hasattr(item, "read"):
+                    upload_list.append(item)
+    except Exception:
+        pass
+
+    if not upload_list:
+        if files:
+            upload_list.extend(files)
+        if file:
+            upload_list.append(file)
 
     if not upload_list:
         return JSONResponse(
