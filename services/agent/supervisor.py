@@ -27,8 +27,22 @@ from services.agent.tools import (
 from services.ingestion.csv_parser import CSVIngestionError
 
 
+INJECTION_PATTERN = re.compile(
+    r"(ignore\s+(all\s+)?previous\s+instructions|system\s+override|disregard\s+security|you\s+are\s+now\s+an?\s+unrestricted|bypass\s+(2fa|biometric|security))",
+    re.IGNORECASE,
+)
+
+
+def inspect_for_prompt_injection(text: str) -> bool:
+    """Detects adversarial prompt injection and jailbreak override attempts."""
+    return bool(INJECTION_PATTERN.search(text))
+
+
 def detect_intent(message: str, request: AgentChatRequest) -> str:
     """Classifies user chat message into structured financial intent categories."""
+    if inspect_for_prompt_injection(message):
+        return "SECURITY_DEFENSE_TRIGGERED"
+
     msg_lower = message.lower()
 
     if request.staged_action_type or any(k in msg_lower for k in ["apply for", "stage", "draw line", "draw credit", "commit transfer", "pledge invoice"]):
@@ -40,9 +54,22 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     return "GENERAL_ASSISTANCE"
 
 
-def run_copilot_supervisor(request: AgentChatRequest) -> CopilotResponse:
+def run_copilot_supervisor(request: AgentChatRequest, tenant_id: Optional[str] = None) -> CopilotResponse:
     """Core reasoning supervisor dispatching requests to deterministic tools and formatting responses."""
     intent = detect_intent(request.message, request)
+    effective_tenant = tenant_id or request.tenant_id or "SME-DEFAULT"
+
+    # 0. Prompt Injection Defense Barrier
+    if intent == "SECURITY_DEFENSE_TRIGGERED":
+        return CopilotResponse(
+            reply=(
+                "Security Alert: Adversarial prompt injection pattern detected. "
+                "System execution remains strictly constrained by the Three-Tier Security Gate. "
+                "No unauthorized state changes or covenant modifications are permitted."
+            ),
+            intent_detected="SECURITY_DEFENSE_TRIGGERED",
+            requires_biometric_hitl=False,
+        )
 
     # 1. Action Staging Flow (Tier 2 Proposal Creation)
     if intent == "ACTION_STAGING":
@@ -62,7 +89,7 @@ def run_copilot_supervisor(request: AgentChatRequest) -> CopilotResponse:
                 pass
 
         staged = tool_stage_financial_action(
-            tenant_id=request.tenant_id,
+            tenant_id=effective_tenant,
             action_type=action_type,
             amount_cents=amount_cents,
             target_identifier=target,

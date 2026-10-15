@@ -75,3 +75,34 @@ export interface UnderwriteApiResponse {
   dossier: UnderwritingDossier;
   matched_options: FinancingOption[];
 }
+
+// Autonomous Agent Copilot Chat Types
+export interface AgentMetricsSummary {
+  current_balance?: string;
+  net_period_change?: string;
+  average_daily_burn?: string;
+  runway_days?: number | null;
+  cash_status?: string;
+  daily_average_balance?: string;
+  risk_tier?: string;
+  max_qualified_limit?: string;
+}
+
+export interface AgentActionProposal {
+  intent_id: string;
+  action_type: string;
+  amount_cents: number;
+  target_identifier: string;
+  status: string;
+  biometric_required: boolean;
+}
+
+export interface CopilotResponse {
+  reply: string;
+  intent_detected: string;
+  metrics?: AgentMetricsSummary | null;
+  matched_options: FinancingOption[];
+  staged_action?: AgentActionProposal | null;
+  requires_biometric_hitl: boolean;
+}
+
