@@ -293,6 +293,7 @@ export default function HomePage() {
         },
         body: JSON.stringify({
           message: textToSend,
+          history: messages.slice(-6).map((m) => ({ role: m.role, text: m.text })),
           csv_content: csvText,
           alert_threshold_days: Number(threshold) || 30,
           llm_config: llmConfig,

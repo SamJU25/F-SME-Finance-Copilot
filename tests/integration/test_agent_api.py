@@ -381,6 +381,67 @@ def test_agent_chat_working_capital_cycle_detection():
     assert "trapped in working capital" in data["reply"].lower()
 
 
+def test_agent_chat_handles_natural_followup_days_left():
+    """Verify natural phrasing 'how many days left' routes to cash diagnostic and answers runway."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "how many days left",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "75 days" in data["reply"]
+    assert "cash runway remaining" in data["reply"]
+
+
+def test_agent_chat_handles_natural_followup_balance_and_borrowing():
+    """Verify natural phrasing for balance and borrowing limits."""
+    # Balance query
+    r_bal = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "how much money do I have left?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert r_bal.status_code == 200
+    assert r_bal.json()["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "$7,500.00" in r_bal.json()["reply"]
+
+    # Borrow query
+    r_borrow = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "can I get a loan?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert r_borrow.status_code == 200
+    assert r_borrow.json()["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Underwriting evaluation complete" in r_borrow.json()["reply"]
+
+
+def test_agent_chat_contextual_history_followup():
+    """Verify supervisor uses conversation history to resolve contextual follow-ups."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "and what about the options?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+            "history": [
+                {"role": "user", "text": "What is my cash runway?"},
+                {"role": "agent", "text": "Your runway is 75 days. You can also review credit options and loan facilities."},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["intent_detected"] == "CREDIT_UNDERWRITING"
+
+
+
 
 
 

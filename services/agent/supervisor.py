@@ -45,23 +45,60 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     if inspect_for_prompt_injection(message):
         return "SECURITY_DEFENSE_TRIGGERED"
 
-    msg_lower = message.lower()
+    msg_lower = message.lower().strip()
 
-    if request.staged_action_type or any(k in msg_lower for k in ["apply for", "stage", "draw line", "draw credit", "commit transfer", "pledge invoice"]):
+    # 1. Action Staging (Tier 2 intent creation)
+    action_keywords = [
+        "apply for", "stage", "draw line", "draw credit", "draw money",
+        "commit transfer", "pledge invoice", "take the loan", "sign contract",
+        "execute draw", "draw funds"
+    ]
+    if request.staged_action_type or any(k in msg_lower for k in action_keywords):
         return "ACTION_STAGING"
-    if any(k in msg_lower for k in ["loan", "financing", "credit", "underwrite", "lender", "factor rate", "apr", "facility"]):
+
+    # 2. Credit Underwriting & Loan Options
+    underwrite_keywords = [
+        "loan", "financing", "credit", "underwrite", "lender", "factor rate",
+        "apr", "facility", "borrow", "can i get a loan", "qualify", "need money",
+        "need funding", "need cash", "working capital loan", "borrowing limit"
+    ]
+    if any(k in msg_lower for k in underwrite_keywords):
         return "CREDIT_UNDERWRITING"
+
+    # 3. Cash Flow Diagnostics & Runway Questions
+    cash_keywords = [
+        "runway", "burn", "balance", "cash flow", "cash position", "deficit",
+        "survive", "overdraft", "forecast", "shortfall", "working capital",
+        "cash conversion", "ccc", "dso", "dpo",
+        # Natural language follow-up phrases
+        "how many days", "days left", "how long", "time left", "when will i run out",
+        "when do i run out", "run out", "how much money", "how much cash",
+        "money left", "cash left", "how much do i have", "spending", "expenses",
+        "outflow", "inflow", "healthy", "am i safe", "what should i do",
+        "what can i spend", "afford", "daily burn"
+    ]
     if (
         request.target_horizon_days is not None
         or request.dso_days is not None
         or request.dpo_days is not None
-        or any(k in msg_lower for k in [
-            "runway", "burn", "balance", "cash flow", "cash position", "deficit",
-            "survive", "overdraft", "forecast", "shortfall", "working capital",
-            "cash conversion", "ccc", "dso", "dpo"
-        ])
+        or any(k in msg_lower for k in cash_keywords)
     ):
         return "CASH_DIAGNOSTIC"
+
+    # 4. Contextual Follow-up from History or Loaded Statement
+    if request.csv_content and any(k in msg_lower for k in [
+        "explain", "what does this mean", "tell me more", "summary", "summarize",
+        "details", "status", "overview", "what now", "help me understand"
+    ]):
+        return "CASH_DIAGNOSTIC"
+
+    if request.history:
+        recent_text = " ".join(h.text.lower() for h in request.history[-2:])
+        if any(k in recent_text for k in ["loan", "credit", "apr", "facility", "financing"]) and any(k in msg_lower for k in ["which one", "best option", "recommend", "apply", "how", "option", "options", "what about"]):
+            return "CREDIT_UNDERWRITING"
+        if any(k in recent_text for k in ["runway", "burn", "balance", "deficit"]) and any(k in msg_lower for k in ["days", "how long", "when", "how much", "why"]):
+            return "CASH_DIAGNOSTIC"
+
     return "GENERAL_ASSISTANCE"
 
 
@@ -303,12 +340,36 @@ def run_copilot_supervisor(
         if cash_result.get("cash_conversion_cycle_days") is not None:
             wc_snippet = f" Working Capital: Cash Conversion Cycle is {cash_result['cash_conversion_cycle_days']} days ({cash_result.get('working_capital_status')}). {cash_result.get('working_capital_rationale', '')}"
 
-        reply = (
-            f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} "
-            f"with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. "
-            f"Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} "
-            f"(Threshold: {cash_result['alert_threshold_days']} days).{pred_snippet}{target_snippet}{wc_snippet}"
+        msg_clean = request.message.lower().strip()
+        is_runway_or_days = (
+            "runway" in msg_clean
+            or any(k in msg_clean for k in ["how many days", "days left", "how long", "time left", "when will i run out", "when do i run out", "run out"])
         )
+        is_balance_only = (
+            not is_runway_or_days
+            and any(k in msg_clean for k in ["how much money", "how much cash", "what is my balance", "balance", "how much do i have", "money left", "cash left"])
+        )
+        is_burn_only = (
+            not is_runway_or_days
+            and any(k in msg_clean for k in ["what is my burn", "burn rate", "how much am i spending", "spending", "expenses", "daily burn"])
+        )
+        is_advice_question = (
+            not is_runway_or_days
+            and any(k in msg_clean for k in ["what should i do", "advice", "is my business healthy", "am i safe", "recommendation", "how to fix"])
+        )
+
+        if is_runway_or_days:
+            headline = f"You have **{runway_desc}** of cash runway remaining at an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day (current balance: ${float(cash_result['current_balance']):,.2f}, Status: {cash_result['cash_status']})."
+        elif is_balance_only:
+            headline = f"Your current cash balance is **${float(cash_result['current_balance']):,.2f} {cash_result['currency']}** (net change across reviewed period: ${float(cash_result['net_period_change']):,.2f})."
+        elif is_burn_only:
+            headline = f"Your average daily burn rate is **${float(cash_result['average_daily_burn']):,.2f}/day** (gross outflows: ${float(cash_result['gross_outflows']):,.2f} vs inflows: ${float(cash_result['gross_inflows']):,.2f})."
+        elif is_advice_question:
+            headline = f"Financial Health Assessment: Your cash status is **{cash_result['cash_status']}** with {runway_desc} of runway."
+        else:
+            headline = f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} (Threshold: {cash_result['alert_threshold_days']} days)."
+
+        reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
 
         return CopilotResponse(
             reply=_enrich_reply(reply),
@@ -319,11 +380,17 @@ def run_copilot_supervisor(
 
 
     # 4. General Financial Dialogue
-    general_reply = (
-        "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
-        "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
-        "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
-    )
+    if request.csv_content:
+        general_reply = (
+            "Statement loaded. You can ask follow-up questions such as 'how many days left?', "
+            "'what is my daily burn?', 'what loan options can I qualify for?', or request to stage a line of credit."
+        )
+    else:
+        general_reply = (
+            "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
+            "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
+            "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
+        )
     return CopilotResponse(
         reply=_enrich_reply(general_reply),
         intent_detected="GENERAL_ASSISTANCE",

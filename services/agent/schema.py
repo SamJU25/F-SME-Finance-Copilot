@@ -59,10 +59,18 @@ class FetchModelsResponse(BaseModel):
 
 
 
+class ChatHistoryItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: str = Field(..., description="user or agent")
+    text: str = Field(..., description="Message text content")
+
+
 class AgentChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(..., description="User chat query or instruction")
+    history: List[ChatHistoryItem] = Field(default_factory=list, description="Recent conversation turns for follow-up context")
     tenant_id: str = Field(default="SME-DEFAULT", description="SME tenant identifier")
     csv_content: Optional[str] = Field(default=None, description="Raw CSV bank statement string for contextual analysis")
     alert_threshold_days: int = Field(default=30, gt=0, description="Runway alert threshold in days")
