@@ -905,7 +905,7 @@ export default function HomePage() {
                     placeholder="Paste API Key (e.g. AIzaSy..., sk-ant..., sk-...)"
                     value={draftConfig.api_key || ''}
                     onChange={(e) => {
-                      const updated = { ...draftConfig, api_key: e.target.value };
+                      const updated = { ...draftConfig, api_key: e.target.value.trim() };
                       setDraftConfig(updated);
                     }}
                   />

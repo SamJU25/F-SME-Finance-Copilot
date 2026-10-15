@@ -101,8 +101,9 @@ class LocalSLMEngine:
 
             if history:
                 for h in history[-4:]:
-                    role = "assistant" if getattr(h, "role", "") == "agent" else "user"
-                    txt = getattr(h, "text", "")
+                    r = h.get("role", "") if isinstance(h, dict) else getattr(h, "role", "")
+                    role = "assistant" if r == "agent" else "user"
+                    txt = h.get("text", "") if isinstance(h, dict) else getattr(h, "text", "")
                     if txt:
                         messages.append({"role": role, "content": txt})
 

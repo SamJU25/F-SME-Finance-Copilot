@@ -39,7 +39,17 @@ from services.ingestion.csv_parser import CSVIngestionError
 
 
 INJECTION_PATTERN = re.compile(
-    r"(ignore\s+(all\s+)?previous\s+instructions|system\s+override|disregard\s+security|you\s+are\s+now\s+an?\s+unrestricted|bypass\s+(2fa|biometric|security))",
+    r"(ignore|disregard|forget|override)\s+(all\s+)?(?:previous\s+)?(?:instructions|prompts|rules|guidelines|security)"
+    r"|system\s+override"
+    r"|you\s+are\s+now\s+(?:an?\s+)?unrestricted"
+    r"|bypass\s+(?:2fa|biometric|security|hitl|tier)"
+    r"|admin\s+mode\s+enabled",
+    re.IGNORECASE,
+)
+
+API_KEY_PATTERN = re.compile(
+    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
+    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{4,})['\"]?",
     re.IGNORECASE,
 )
 
@@ -49,13 +59,27 @@ def inspect_for_prompt_injection(text: str) -> bool:
     return bool(INJECTION_PATTERN.search(text))
 
 
-from services.agent.dynamic_router import classify_intent_dynamic, classify_sub_intent_dynamic
+def inspect_for_api_key(text: str) -> bool:
+    """Detects raw API keys, passwords, PINs, or credential secrets pasted into chat messages."""
+    return bool(API_KEY_PATTERN.search(text))
+
+
+from services.agent.dynamic_router import (
+    classify_intent_dynamic,
+    classify_sub_intent_dynamic,
+    is_ai_disclaimer,
+    is_off_topic_query,
+)
 
 
 def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMConfig] = None) -> str:
     """Classifies user chat message into structured financial intent categories dynamically using LLM routing."""
     if inspect_for_prompt_injection(message):
         return "SECURITY_DEFENSE_TRIGGERED"
+    if inspect_for_api_key(message):
+        return "CREDENTIAL_SECURITY_ALERT"
+    if is_off_topic_query(message, history=request.history):
+        return "GENERAL_ASSISTANCE"
 
     # 1. Explicit request parameters take highest priority
     if request.staged_action_type:
@@ -67,11 +91,19 @@ def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMC
     ):
         return "CASH_DIAGNOSTIC"
 
-    # 2. Dynamic LLM Intent Routing (without hardcoded sentence catalogs)
+    # 2. Check for Bank Statement CSV pasted directly into chat message
+    has_statement = bool(request.csv_content) or ("transaction_id" in message and "amount" in message)
+    eval_message = message
+    if not request.csv_content and "transaction_id" in message and "amount" in message:
+        csv_start = message.find("transaction_id")
+        if csv_start != -1:
+            eval_message = message[:csv_start].strip()
+
+    # 3. Dynamic LLM Intent Routing (without hardcoded sentence catalogs)
     return classify_intent_dynamic(
-        message=message,
+        message=eval_message,
         history=request.history,
-        has_csv=bool(request.csv_content),
+        has_csv=has_statement,
         config=config,
     )
 
@@ -84,6 +116,12 @@ def run_copilot_supervisor(
     """Core reasoning supervisor dispatching requests to deterministic tools and formatting responses."""
     effective_tenant = tenant_id or request.tenant_id or "SME-DEFAULT"
     effective_config = llm_config or request.llm_config
+
+    effective_csv = request.csv_content
+    if not effective_csv and request.message and "transaction_id" in request.message and "amount" in request.message:
+        csv_start = request.message.find("transaction_id")
+        if csv_start != -1:
+            effective_csv = request.message[csv_start:].strip()
 
     # Default to Local SLM (Llama 3.2 1B ONNX) if available and not in automated test harness
     if (
@@ -125,7 +163,10 @@ def run_copilot_supervisor(
             )
             local_advice = sanitize_cfo_reply(raw_advice) if raw_advice else None
             if local_advice and len(local_advice) > 20:
-                return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{local_advice}"
+                if not is_ai_disclaimer(local_advice):
+                    if not ("### Financial Diagnostic Summary" in local_advice or "### Credit Underwriting Assessment" in local_advice):
+                        return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{local_advice}"
+                    return local_advice
             return base_reply
 
         # 2. Pure offline fallback (deterministic templates)
@@ -147,9 +188,10 @@ def run_copilot_supervisor(
         if ai_reply:
             cleaned_ai = sanitize_cfo_reply(ai_reply)
             if cleaned_ai and len(cleaned_ai) > 20:
-                if "runway" not in cleaned_ai.lower() and "balance" not in cleaned_ai.lower():
-                    return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{cleaned_ai}"
-                return cleaned_ai
+                if not is_ai_disclaimer(cleaned_ai):
+                    if not ("### Financial Diagnostic Summary" in cleaned_ai or "### Credit Underwriting Assessment" in cleaned_ai):
+                        return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{cleaned_ai}"
+                    return cleaned_ai
         return base_reply
 
     # 0. Prompt Injection Defense Barrier
@@ -161,6 +203,24 @@ def run_copilot_supervisor(
                 "No unauthorized state changes or covenant modifications are permitted."
             ),
             intent_detected="SECURITY_DEFENSE_TRIGGERED",
+            requires_biometric_hitl=False,
+        )
+
+    # 0b. Credential Security Guard & Onboarding Guidance
+    if intent == "CREDENTIAL_SECURITY_ALERT":
+        return CopilotResponse(
+            reply=(
+                "Security Alert: An API key or secret token was detected in your message.\n\n"
+                "For banking-grade security, API keys and credentials should never be pasted into the chat conversation. "
+                "The chat does not automatically store or connect credentials from message text.\n\n"
+                "How to configure your API key securely:\n"
+                "1. Click the **⚙️ AI Provider** button in the top-right header.\n"
+                "2. Select your provider (Gemini, Claude, OpenAI, DeepSeek, Groq, or Custom).\n"
+                "3. Paste your key into the masked **API Key** input field.\n"
+                "4. Click **⚡ Test Connection** to verify your key and discover available live models.\n"
+                "5. Click **Save Settings** to store it securely in your browser's private local storage."
+            ),
+            intent_detected="CREDENTIAL_SECURITY_ALERT",
             requires_biometric_hitl=False,
         )
 
@@ -212,12 +272,12 @@ def run_copilot_supervisor(
 
     # 2. Credit Underwriting Flow
     if intent == "CREDIT_UNDERWRITING":
-        if not request.csv_content:
+        if not effective_csv:
             if is_local:
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about financing or credit underwriting, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond in 2 concise, executive sentences. State directly how transactional underwriting evaluates Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity. Advise uploading their bank statement CSV to compute firm credit limits and true APR disclosures."
+                    "The business owner is inquiring about financing or credit underwriting, but NO bank statement CSV is currently loaded in session.\n"
+                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded. Instruct the user to upload their 90-day bank statement CSV so you can evaluate their Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity with true APR disclosures."
                 )
                 local_reply = generate_local_reply(
                     prompt=request.message,
@@ -235,8 +295,8 @@ def run_copilot_supervisor(
             if effective_config and (effective_config.provider or "").lower() != "offline":
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about financing or credit underwriting, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond in 2 concise, executive sentences. State directly how transactional underwriting evaluates Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity. Advise uploading their bank statement CSV to compute firm credit limits and true APR disclosures."
+                    "The business owner is inquiring about financing or credit underwriting, but NO bank statement CSV is currently loaded in session.\n"
+                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded. Instruct the user to upload their 90-day bank statement CSV so you can evaluate their Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity with true APR disclosures."
                 )
                 ai_reply = query_external_llm(
                     prompt=request.message,
@@ -254,13 +314,17 @@ def run_copilot_supervisor(
             return CopilotResponse(
                 reply=(
                     "To evaluate digital credit underwriting and match pre-qualified financing options, "
-                    "please provide your transactional bank statement CSV."
+                    "please provide your transactional bank statement CSV.\n\n"
+                    "Getting Started:\n"
+                    "- Upload your 90-day bank statement CSV using the Upload Statement button.\n"
+                    "- Our deterministic underwriting engine calculates your Daily Average Balance (DAB), revenue stability, and NSF metrics.\n"
+                    "- You will receive matched credit facilities with true APR disclosures."
                 ),
                 intent_detected=intent,
             )
 
         try:
-            uw_result = tool_underwrite_credit(request.csv_content, nsf_count=request.nsf_count)
+            uw_result = tool_underwrite_credit(effective_csv, nsf_count=request.nsf_count)
         except CSVIngestionError as exc:
             return CopilotResponse(
                 reply=f"Statement ingestion failed: {exc.code} - {str(exc)}",
@@ -305,12 +369,12 @@ def run_copilot_supervisor(
 
     # 3. Cash Flow Diagnostic Flow
     if intent == "CASH_DIAGNOSTIC":
-        if not request.csv_content:
+        if not effective_csv:
             if is_local:
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about liquidity, cash flow, or runway, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond in 2 concise, executive sentences. Answer their inquiry directly from a CFO working-capital perspective, and state that uploading a bank statement CSV will execute deterministic Daily Average Balance (DAB), net burn rate, and projected cash deficit calculations."
+                    "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
+                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV using the dedicated uploader on the left (or select 'Load Sample') so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
                 )
                 local_reply = generate_local_reply(
                     prompt=request.message,
@@ -328,8 +392,8 @@ def run_copilot_supervisor(
             if effective_config and (effective_config.provider or "").lower() != "offline":
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about liquidity, cash flow, or runway, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond in 2 concise, executive sentences. Answer their inquiry directly from a CFO working-capital perspective, and state that uploading a bank statement CSV will execute deterministic Daily Average Balance (DAB), net burn rate, and projected cash deficit calculations."
+                    "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
+                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV using the dedicated uploader on the left (or select 'Load Sample') so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
                 )
                 ai_reply = query_external_llm(
                     prompt=request.message,
@@ -347,7 +411,11 @@ def run_copilot_supervisor(
             return CopilotResponse(
                 reply=(
                     "To diagnose your cash runway, burn rate, and overdraft risks, "
-                    "please provide your transactional bank statement CSV."
+                    "please provide your transactional bank statement CSV.\n\n"
+                    "Getting Started:\n"
+                    "- Upload your 90-day bank statement CSV using the Upload Statement button.\n"
+                    "- Our deterministic calculation engine will compute net burn, runway, and cash deficit points.\n"
+                    "- You can ask custom horizon queries such as 'What is my runway in 45 days?'"
                 ),
                 intent_detected=intent,
             )
@@ -385,7 +453,7 @@ def run_copilot_supervisor(
 
         try:
             cash_result = tool_analyze_cash_flow(
-                request.csv_content,
+                effective_csv,
                 alert_threshold_days=request.alert_threshold_days,
                 target_horizon_days=target_days,
                 dso_days=dso,
@@ -503,7 +571,19 @@ def run_copilot_supervisor(
         )
 
 
-    # 4. General Financial Dialogue
+    # 4. General Financial Dialogue & Off-Topic Handling
+    if is_off_topic_query(request.message, history=request.history):
+        return CopilotResponse(
+            reply=(
+                "As the Autonomous SME Finance Copilot, I specialize exclusively in SME business liquidity, "
+                "working capital auditing, and transactional credit underwriting.\n\n"
+                "I am unable to assist with non-financial topics. How can I assist you with your business "
+                "cash runway, burn rate, overdraft forecast, or financing options today?"
+            ),
+            intent_detected="GENERAL_ASSISTANCE",
+            requires_biometric_hitl=False,
+        )
+
     is_local = (
         effective_config
         and (effective_config.provider or "").lower() == "offline"
@@ -511,7 +591,7 @@ def run_copilot_supervisor(
     )
     if is_local:
         sys_directive = get_conversational_system_prompt()
-        if request.csv_content:
+        if effective_csv:
             sys_directive += "\nNote: A transactional bank statement is already loaded into session."
         local_reply = generate_local_reply(
             prompt=request.message,
@@ -528,7 +608,7 @@ def run_copilot_supervisor(
 
     if effective_config and (effective_config.provider or "").lower() != "offline":
         sys_directive = get_conversational_system_prompt()
-        if request.csv_content:
+        if effective_csv:
             sys_directive += "\nNote: A transactional bank statement is already loaded into session."
         ai_reply = query_external_llm(
             prompt=request.message,
@@ -543,16 +623,19 @@ def run_copilot_supervisor(
                 requires_biometric_hitl=False,
             )
 
-    if request.csv_content:
+    if effective_csv:
         general_reply = (
             "Statement loaded. You can ask follow-up questions such as 'how many days left?', "
             "'what is my daily burn?', 'what loan options can I qualify for?', or request to stage a line of credit."
         )
     else:
         general_reply = (
-            "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
-            "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
-            "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
+            "I am the Autonomous SME Finance Copilot. I help SME founders analyze cash runway, "
+            "evaluate WeBank transactional credit eligibility, and stage financing proposals safely.\n\n"
+            "3 Quick Steps to Get Started:\n"
+            "1. Upload your 90-day bank statement CSV or click a demo sample.\n"
+            "2. Ask any question: 'What is my runway?', 'Do I have overdraft risk?', or 'What loans qualify?'.\n"
+            "3. Stage financing proposals securely under Tier 2, requiring Tier 3 biometric confirmation to execute."
         )
     return CopilotResponse(
         reply=general_reply,

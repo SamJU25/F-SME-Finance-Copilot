@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class LLMConfig(BaseModel):
@@ -60,10 +60,20 @@ class FetchModelsResponse(BaseModel):
 
 
 class ChatHistoryItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
-    role: str = Field(..., description="user or agent")
-    text: str = Field(..., description="Message text content")
+    role: str = Field(default="user", description="user or agent")
+    text: str = Field(default="", description="Message text content")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fields(cls, data):
+        if isinstance(data, dict):
+            if "role" not in data and "sender" in data:
+                data["role"] = data["sender"]
+            if "text" not in data and "content" in data:
+                data["text"] = data["content"]
+        return data
 
 
 class AgentChatRequest(BaseModel):

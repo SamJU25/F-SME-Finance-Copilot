@@ -28,8 +28,15 @@ from services.agent.schema import (
 
 # Pre-compiled PII Sanitization Patterns
 RE_ACCOUNT = re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{9,18}\b")
-RE_TAX_ID = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+RE_TAX_ID = re.compile(r"\b\d{3}-\d{2}-\d{4}\b|\b\d{2}-\d{7}\b")  # SSN and SME EIN
 RE_EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+RE_PHONE = re.compile(r"(?:\+?1[-.\s]*)?(?:\(\d{3}\)|\b\d{3}\b)[-.\s]*\d{3}[-.\s]*\d{4}\b")
+RE_IBAN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}([A-Z0-9]?){0,16}\b")
+RE_API_KEY = re.compile(
+    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
+    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{16,})['\"]?",
+    re.IGNORECASE,
+)
 
 
 def mask_pii(text: str) -> str:
@@ -39,7 +46,18 @@ def mask_pii(text: str) -> str:
     scrubbed = RE_ACCOUNT.sub("[REDACTED_ACCOUNT]", text)
     scrubbed = RE_TAX_ID.sub("[REDACTED_TAX_ID]", scrubbed)
     scrubbed = RE_EMAIL.sub("[REDACTED_EMAIL]", scrubbed)
+    scrubbed = RE_PHONE.sub("[REDACTED_PHONE]", scrubbed)
+    scrubbed = RE_IBAN.sub("[REDACTED_IBAN]", scrubbed)
+    scrubbed = RE_API_KEY.sub("[REDACTED_API_KEY]", scrubbed)
     return scrubbed
+
+
+def _extract_history_turn(h: Any) -> tuple[str, str]:
+    """Safely extracts role and text from either Pydantic model or dictionary turn."""
+    if isinstance(h, dict):
+        return h.get("role", "user"), h.get("text", "")
+    return getattr(h, "role", "user"), getattr(h, "text", "")
+
 
 
 PROVIDER_DEFAULTS = {
@@ -123,8 +141,11 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
             latency_ms=0,
         )
 
+    api_key = (req.api_key or "").strip()
+    base_url = (req.base_url or "").strip()
+
     # Validate mandatory fields
-    if provider in ["gemini", "anthropic", "openai", "deepseek", "groq"] and not req.api_key:
+    if provider in ["gemini", "anthropic", "openai", "deepseek", "groq"] and not api_key:
         return TestConnectionResponse(
             success=False,
             message=f"API key is required for provider '{provider}'.",
@@ -132,7 +153,7 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
             latency_ms=None,
         )
 
-    if provider == "custom" and not req.base_url:
+    if provider == "custom" and not base_url:
         return TestConnectionResponse(
             success=False,
             message="Base URL is required for custom OpenAI-compatible endpoint.",
@@ -140,14 +161,14 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
             latency_ms=None,
         )
 
-    endpoint, model = _resolve_endpoint(provider, req.base_url, req.model_name)
+    endpoint, model = _resolve_endpoint(provider, base_url, req.model_name)
     probe_prompt = "Hello. Respond with the single word 'READY'."
     start_time = time.perf_counter()
 
     try:
         with httpx.Client(timeout=6.0) as client:
             if provider == "gemini":
-                url = f"{endpoint}?key={req.api_key}"
+                url = f"{endpoint}?key={api_key}"
                 payload = {
                     "contents": [{"parts": [{"text": probe_prompt}]}],
                     "generationConfig": {"temperature": 0.1, "maxOutputTokens": 10},
@@ -156,7 +177,7 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
 
             elif provider == "anthropic":
                 headers = {
-                    "x-api-key": req.api_key or "",
+                    "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                     "content-type": "application/json",
                 }
@@ -169,8 +190,8 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
 
             else:  # OpenAI, DeepSeek, Groq, Custom
                 headers = {"content-type": "application/json"}
-                if req.api_key:
-                    headers["Authorization"] = f"Bearer {req.api_key}"
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
                 payload = {
                     "model": model,
                     "messages": [{"role": "user", "content": probe_prompt}],
@@ -248,21 +269,23 @@ def query_external_llm(
         return None
 
     provider = config.provider.lower()
-    endpoint, model = _resolve_endpoint(provider, config.base_url, config.model_name)
+    api_key = (config.api_key or "").strip() if config.api_key else None
+    base_url = (config.base_url or "").strip() if config.base_url else None
+    endpoint, model = _resolve_endpoint(provider, base_url, config.model_name)
     sanitized_prompt = mask_pii(prompt)
 
     try:
         with httpx.Client(timeout=10.0) as client:
             if provider == "gemini":
-                if not config.api_key:
+                if not api_key:
                     return None
-                url = f"{endpoint}?key={config.api_key}"
+                url = f"{endpoint}?key={api_key}"
                 history_text = ""
                 if history:
                     h_parts = []
                     for h in history[-6:]:
-                        role_str = "Assistant" if getattr(h, "role", "") == "agent" else "User"
-                        txt = getattr(h, "text", "")
+                        r, txt = _extract_history_turn(h)
+                        role_str = "Assistant" if r == "agent" else "User"
                         if txt:
                             h_parts.append(f"{role_str}: {mask_pii(txt)}")
                     if h_parts:
@@ -278,18 +301,18 @@ def query_external_llm(
                     return data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
             elif provider == "anthropic":
-                if not config.api_key:
+                if not api_key:
                     return None
                 headers = {
-                    "x-api-key": config.api_key,
+                    "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                     "content-type": "application/json",
                 }
                 anthropic_msgs = []
                 if history:
                     for h in history[-6:]:
-                        h_role = "assistant" if getattr(h, "role", "") == "agent" else "user"
-                        txt = getattr(h, "text", "")
+                        r, txt = _extract_history_turn(h)
+                        h_role = "assistant" if r == "agent" else "user"
                         if txt:
                             anthropic_msgs.append({"role": h_role, "content": mask_pii(txt)})
                 anthropic_msgs.append({"role": "user", "content": sanitized_prompt})
@@ -306,15 +329,15 @@ def query_external_llm(
                     data = res.json()
                     return data["content"][0]["text"].strip()
 
-            else:  # OpenAI, DeepSeek, Groq, Ollama, Custom
+            else:  # OpenAI, DeepSeek, Groq, Custom
                 headers = {"content-type": "application/json"}
-                if config.api_key:
-                    headers["Authorization"] = f"Bearer {config.api_key}"
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
                 openai_msgs = [{"role": "system", "content": system_instruction}]
                 if history:
                     for h in history[-6:]:
-                        h_role = "assistant" if getattr(h, "role", "") == "agent" else "user"
-                        txt = getattr(h, "text", "")
+                        r, txt = _extract_history_turn(h)
+                        h_role = "assistant" if r == "agent" else "user"
                         if txt:
                             openai_msgs.append({"role": h_role, "content": mask_pii(txt)})
                 openai_msgs.append({"role": "user", "content": sanitized_prompt})
@@ -387,8 +410,11 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
             message="Offline engine ready with local on-device neural model (Meta Llama-3.2-1B-Instruct)." if engine.is_available() else "Offline on-device model files not detected on disk.",
         )
 
+    api_key = (req.api_key or "").strip()
+    base_url = (req.base_url or "").strip()
+
     # If missing required credentials, return empty models list (never pretend with hardcoded list)
-    if provider in ["gemini", "anthropic", "openai", "deepseek", "groq"] and not req.api_key:
+    if provider in ["gemini", "anthropic", "openai", "deepseek", "groq"] and not api_key:
         return FetchModelsResponse(
             success=False,
             provider=provider,
@@ -396,7 +422,7 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
             message=f"API key required. Enter your API key to discover live models from {provider}.",
         )
 
-    if provider == "custom" and not req.base_url:
+    if provider == "custom" and not base_url:
         return FetchModelsResponse(
             success=False,
             provider=provider,
@@ -407,7 +433,7 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
     try:
         with httpx.Client(timeout=6.0) as client:
             if provider == "gemini":
-                url = f"https://generativelanguage.googleapis.com/v1beta/models?key={req.api_key}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
                 res = client.get(url)
                 if res.status_code == 200:
                     data = res.json()
@@ -429,7 +455,7 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
             elif provider == "anthropic":
                 url = "https://api.anthropic.com/v1/models"
                 headers = {
-                    "x-api-key": req.api_key or "",
+                    "x-api-key": api_key,
                     "anthropic-version": "2023-06-01",
                 }
                 res = client.get(url, headers=headers)
@@ -449,7 +475,7 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
                         )
 
             else:  # OpenAI, DeepSeek, Groq, Custom
-                base = req.base_url
+                base = base_url
                 if not base:
                     if provider == "openai":
                         base = "https://api.openai.com/v1"
@@ -465,8 +491,8 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
                     clean_base = clean_base[:-17]
                 url = f"{clean_base}/models"
                 headers = {}
-                if req.api_key:
-                    headers["Authorization"] = f"Bearer {req.api_key}"
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
                 res = client.get(url, headers=headers)
                 if res.status_code == 200:
                     data = res.json()

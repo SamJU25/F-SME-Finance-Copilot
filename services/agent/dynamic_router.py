@@ -1,15 +1,16 @@
-"""Dynamic LLM Intent & Function Calling Router for Autonomous SME Finance Copilot.
+"""Dynamic Vector Semantic & LLM Intent Router for Autonomous SME Finance Copilot.
 
-Dispatches intents dynamically using zero-shot LLM reasoning without hardcoded
-anchor sentence catalogs. Works seamlessly with local Llama 3.2 1B and fine-tuned models.
+Dispatches intents and sub-intents dynamically using on-device FastEmbed vector semantic
+embeddings (BAAI/bge-small-en-v1.5) and zero-shot LLM reasoning without hardcoded keyword lists.
 """
 
 from __future__ import annotations
 
 import logging
 import os
-import re
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+import numpy as np
+
 from services.agent.schema import LLMConfig
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 INTENT_SYSTEM_PROMPT = (
     "You are the intent classification intelligence for an Autonomous SME Finance Copilot.\n"
     "Categorize the user's message into exactly one of these categories:\n\n"
-    "- GENERAL_ASSISTANCE: greetings, introductions, who are you, capabilities, or general help.\n"
+    "- GENERAL_ASSISTANCE: greetings, introductions, capabilities, how to get started, or non-financial/off-topic questions.\n"
     "- CASH_DIAGNOSTIC: inquiries about cash runway, balance, burn rate, overdrafts, cash deficits, or financial health.\n"
     "- CREDIT_UNDERWRITING: inquiries about borrowing money, loan options, pre-qualified credit lines, factoring, or APR rates.\n"
     "- ACTION_STAGING: requests to stage, draw, transfer, pledge, or execute a loan action or financial transfer.\n\n"
@@ -36,46 +37,191 @@ def _parse_intent_label(raw_output: Optional[str]) -> Optional[str]:
     return None
 
 
-def _fast_semantic_fallback(
-    message: str,
-    history: Optional[List[Any]] = None,
-    has_csv: bool = False,
-) -> str:
-    """Fast semantic fallback for tests or when LLM is unreachable."""
-    m = message.lower()
+class FastEmbedSemanticRouter:
+    """Zero-keyword vector semantic router using on-device FastEmbed embeddings (ONNX)."""
 
-    # Direct greetings / identity inquiries
-    if re.search(r"^\s*(who\s+are\s+you|what\s+do\s+you\s+do|hello|hi\b|hey\b|good\s+(morning|afternoon|evening)|help\b)", m):
-        return "GENERAL_ASSISTANCE"
+    _instance: Optional["FastEmbedSemanticRouter"] = None
 
-    # Contextual history follow-up (e.g. "and what about the options?")
-    last_text = ""
-    if history:
-        last_entry = history[-1]
-        last_text = (
-            getattr(last_entry, "text", "")
-            if hasattr(last_entry, "text")
-            else (last_entry.get("text", "") if isinstance(last_entry, dict) else "")
-        ).lower()
+    INTENT_PROTOTYPES = {
+        "CASH_DIAGNOSTIC": (
+            "Inquiries evaluating business cash flow, cash runway duration in days, how many days left, "
+            "days of cash remaining, daily net burn rate, bank account balance, projected cash deficits, "
+            "operating in the red, insolvency risk, bouncing payroll, running out of money, bleeding cash, "
+            "and liquidity health from bank statements."
+        ),
+        "CREDIT_UNDERWRITING": (
+            "Inquiries regarding borrowing business money, credit line qualification, merchant invoice factoring, "
+            "commercial loan options, lending capacity, debt facilities, options, and truth-in-lending APR interest rates."
+        ),
+        "ACTION_STAGING": (
+            "Requests to stage, commit, authorize, draw down funds from an approved credit facility, "
+            "transfer money, execute loan agreements, or pledge customer invoices into the staging ledger."
+        ),
+        "GENERAL_ASSISTANCE": (
+            "Conversational greetings, introductions, hello, hi, hey, who are you, how can you assist our business, "
+            "how do you help my company, what can you do, explaining assistant capabilities, onboarding guides, "
+            "what is my financial status, general business financial status overview without statements, "
+            "walkthrough, or general system help."
+        ),
+        "OFF_TOPIC": (
+            "Inquiries regarding humor, comedy, funny jokes, riddles, poetry, creative writing, cooking recipes, "
+            "food ingredients, sports matches, athletes, movies, entertainment, video games, gardening, "
+            "household repairs, plumbing, romantic advice, general science, quantum physics, astrology, "
+            "weather forecasts, geography, countries, capital cities, world history, ancient civilizations, "
+            "wars, philosophy, software engineering, coding, programming, computer code, writing python scripts, "
+            "algorithms, or non-business trivia."
+        ),
+    }
 
-    eval_text = f"{last_text} {m}" if last_text and len(message.split()) <= 8 else m
+    SUB_INTENT_PROTOTYPES = {
+        "DEFICIT": "Projected cash shortfall, running out of money, bouncing payroll, overdraft date, insolvency warning.",
+        "RUNWAY": "Cash runway duration in days, how many days left to survive, time until cash runs out.",
+        "BURN": "Average daily cash burn, spending velocity, daily outflows, operational expense drain rate.",
+        "BALANCE": "Current available bank cash balance, closing balance, available funds in bank account.",
+        "ADVICE": "Strategic CFO recommendations, advice on improving cash flow, how to extend runway.",
+        "GENERAL": "General overview of financial health, cash diagnostics summary, and business accounting status.",
+    }
 
-    # Action Staging requests
-    if any(k in eval_text for k in ("stage a draw", "stage an application", "stage a transfer", "draw down on", "commit a fund", "pledge customer invoice", "execute the credit agreement", "stage ")):
-        return "ACTION_STAGING"
+    DISCLAIMER_PROTOTYPE = (
+        "Refusals, AI capability disclaimers, cannot access bank statements, not privy to financial data, "
+        "unable to check records, do not have access to accounts, language model limitations."
+    )
 
-    # Credit Underwriting inquiries
-    if any(k in eval_text for k in ("loan", "borrow", "credit line", "credit facility", "credit facilities", "apr", "underwriting", "lender", "financing option", "financing facilities", "options and loan", "credit options")):
-        return "CREDIT_UNDERWRITING"
+    def __init__(self) -> None:
+        try:
+            from fastembed import TextEmbedding
+            self._model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+            self._intent_keys = list(self.INTENT_PROTOTYPES.keys())
+            embeds = np.array(list(self._model.embed([self.INTENT_PROTOTYPES[k] for k in self._intent_keys])))
+            self._intent_norms = embeds / np.linalg.norm(embeds, axis=1, keepdims=True)
 
-    # Cash Diagnostic inquiries
-    if any(k in eval_text for k in ("runway", "burn rate", "burn", "balance", "deficit", "shortfall", "overdraft", "money run out", "run out", "survive", "bleeding cash", "cash conversion cycle", "working capital", "financial health", "cash flow", "spending every day", "expenses and burn")):
-        return "CASH_DIAGNOSTIC"
+            self._sub_keys = list(self.SUB_INTENT_PROTOTYPES.keys())
+            sub_embeds = np.array(list(self._model.embed([self.SUB_INTENT_PROTOTYPES[k] for k in self._sub_keys])))
+            self._sub_norms = sub_embeds / np.linalg.norm(sub_embeds, axis=1, keepdims=True)
 
-    if has_csv:
-        return "CASH_DIAGNOSTIC"
+            disc_embed = np.array(list(self._model.embed([self.DISCLAIMER_PROTOTYPE])))[0]
+            self._disclaimer_norm = disc_embed / np.linalg.norm(disc_embed)
+            self._ready = True
+        except Exception as exc:
+            logger.warning("FastEmbedSemanticRouter initialization failed: %s", exc)
+            self._ready = False
 
-    return "GENERAL_ASSISTANCE"
+    @classmethod
+    def get_instance(cls) -> "FastEmbedSemanticRouter":
+        if cls._instance is None:
+            cls._instance = FastEmbedSemanticRouter()
+        return cls._instance
+
+    def classify(
+        self,
+        query: str,
+        history: Optional[List[Any]] = None,
+        has_csv: bool = False,
+    ) -> Tuple[str, str, bool]:
+        """Classifies intent, sub-intent, and domain alignment using vector embeddings."""
+        m = query.strip()
+        if not m:
+            if has_csv:
+                return "CASH_DIAGNOSTIC", "GENERAL", False
+            return "GENERAL_ASSISTANCE", "GENERAL", False
+
+        # Contextual history follow-up (e.g. "and what about the options?")
+        eval_text = m
+        if history:
+            last_entry = history[-1]
+            last_text = (
+                getattr(last_entry, "text", "")
+                if hasattr(last_entry, "text")
+                else (last_entry.get("text", "") if isinstance(last_entry, dict) else "")
+            ).strip()
+            if last_text and len(m.split()) <= 8:
+                eval_text = f"{last_text} {m}"
+
+        if not self._ready:
+            return "GENERAL_ASSISTANCE", "GENERAL", False
+
+        q_embed = np.array(list(self._model.embed([eval_text])))[0]
+        q_norm = q_embed / np.linalg.norm(q_embed)
+
+        sims = np.dot(self._intent_norms, q_norm)
+        scores = {self._intent_keys[i]: float(sims[i]) for i in range(len(self._intent_keys))}
+
+        off_score = scores.get("OFF_TOPIC", 0.0)
+        cash_score = scores.get("CASH_DIAGNOSTIC", 0.0)
+        credit_score = scores.get("CREDIT_UNDERWRITING", 0.0)
+        action_score = scores.get("ACTION_STAGING", 0.0)
+        greet_score = scores.get("GENERAL_ASSISTANCE", 0.0)
+
+        financial_score = max(cash_score, credit_score, action_score)
+
+        # Off-topic detection without keyword lists
+        is_off_topic = off_score > financial_score and (off_score > greet_score or greet_score < 0.50)
+        if financial_score < 0.44 and greet_score < 0.48:
+            is_off_topic = True
+
+        if is_off_topic:
+            return "GENERAL_ASSISTANCE", "OFF_TOPIC", True
+
+        # Rank financial & conversational intents
+        ranked = sorted(
+            [
+                ("CASH_DIAGNOSTIC", cash_score),
+                ("CREDIT_UNDERWRITING", credit_score),
+                ("ACTION_STAGING", action_score),
+                ("GENERAL_ASSISTANCE", greet_score),
+            ],
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        best_intent = ranked[0][0]
+
+        # Contextual adjustment: when no CSV is loaded and scores are tied, route to onboarding guidance
+        if not has_csv and best_intent == "CASH_DIAGNOSTIC" and (cash_score - greet_score) < 0.05:
+            best_intent = "GENERAL_ASSISTANCE"
+
+        if has_csv and best_intent == "GENERAL_ASSISTANCE" and greet_score < 0.58:
+            best_intent = "CASH_DIAGNOSTIC"
+
+        # Sub-intent classification
+        sub_sims = np.dot(self._sub_norms, q_norm)
+        best_sub_idx = int(np.argmax(sub_sims))
+        best_sub = self._sub_keys[best_sub_idx]
+
+        return best_intent, best_sub, False
+
+    def is_off_topic(self, message: str, history: Optional[List[Any]] = None) -> bool:
+        """Determines if query is out of domain using semantic distance."""
+        _, _, off_topic = self.classify(message, history=history)
+        return off_topic
+
+    def is_disclaimer(self, text: str) -> bool:
+        """Determines if text is an unhelpful AI capability disclaimer or refusal via vector similarity."""
+        if not text or not self._ready:
+            return False
+        q_embed = np.array(list(self._model.embed([text.strip()])))[0]
+        q_norm = q_embed / np.linalg.norm(q_embed)
+        sim = float(np.dot(self._disclaimer_norm, q_norm))
+        return sim >= 0.55
+
+    def classify_sub_intent(self, message: str) -> str:
+        """Classifies cash diagnostic sub-intent via semantic prototype matching."""
+        _, sub, _ = self.classify(message)
+        return sub
+
+
+def is_ai_disclaimer(text: str) -> bool:
+    """Detects whether generated text is an unhelpful AI disclaimer or refusal using vector similarity."""
+    return FastEmbedSemanticRouter.get_instance().is_disclaimer(text)
+
+
+def is_in_domain_finance_query(message: str, history: Optional[List[Any]] = None) -> bool:
+    """Evaluates whether user message is within the SME Finance & Copilot domain."""
+    return not FastEmbedSemanticRouter.get_instance().is_off_topic(message, history=history)
+
+
+def is_off_topic_query(message: str, history: Optional[List[Any]] = None) -> bool:
+    """Detects if a user message is non-financial and off-topic using vector semantic distance."""
+    return FastEmbedSemanticRouter.get_instance().is_off_topic(message, history=history)
 
 
 def _query_llm_for_intent(
@@ -138,35 +284,22 @@ def classify_intent_dynamic(
     has_csv: bool = False,
     config: Optional[LLMConfig] = None,
 ) -> str:
-    """Dynamically classifies user message into a financial intent using LLM reasoning."""
+    """Dynamically classifies user message into a financial intent using vector embeddings or LLM."""
     clean_msg = message.strip()
     if not clean_msg:
-        return "GENERAL_ASSISTANCE"
+        return "CASH_DIAGNOSTIC" if has_csv else "GENERAL_ASSISTANCE"
 
-    # Fast-path for automated test harness (PYTEST_CURRENT_TEST) to keep execution under 2.5s
-    if "PYTEST_CURRENT_TEST" in os.environ:
-        return _fast_semantic_fallback(clean_msg, history=history, has_csv=has_csv)
+    # Dynamic LLM Classification (if cloud LLM configured and outside test runner)
+    if "PYTEST_CURRENT_TEST" not in os.environ and config and config.provider and config.provider.lower() != "offline":
+        llm_result = _query_llm_for_intent(clean_msg, history, has_csv, config)
+        if llm_result:
+            return llm_result
 
-    # Dynamic LLM Classification
-    llm_result = _query_llm_for_intent(clean_msg, history, has_csv, config)
-    if llm_result:
-        return llm_result
-
-    # Resilient fallback if LLM returns unexpected output
-    return _fast_semantic_fallback(clean_msg, history=history, has_csv=has_csv)
+    # On-Device Vector Semantic Classification via FastEmbed (Zero Keywords)
+    intent, _, _ = FastEmbedSemanticRouter.get_instance().classify(clean_msg, history=history, has_csv=has_csv)
+    return intent
 
 
 def classify_sub_intent_dynamic(message: str) -> str:
-    """Classifies cash diagnostic sub-intent dynamically without hardcoded sentence lists."""
-    m = message.lower()
-    if any(k in m for k in ("deficit", "shortfall", "overdraft")):
-        return "DEFICIT"
-    if any(k in m for k in ("runway", "how many days", "days left", "run out", "survive")):
-        return "RUNWAY"
-    if any(k in m for k in ("burn", "spending", "outflow", "expenses")):
-        return "BURN"
-    if any(k in m for k in ("balance", "how much money", "how much cash", "available funds")):
-        return "BALANCE"
-    if any(k in m for k in ("advice", "recommend", "should i do", "should we do", "improve", "safe")):
-        return "ADVICE"
-    return "GENERAL"
+    """Classifies cash diagnostic sub-intent dynamically using vector semantic similarity."""
+    return FastEmbedSemanticRouter.get_instance().classify_sub_intent(message)
