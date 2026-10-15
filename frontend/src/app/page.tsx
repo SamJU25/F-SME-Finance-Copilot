@@ -304,6 +304,7 @@ export default function HomePage() {
   const [result, setResult] = useState<CashAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const dynamicAlertDate = computeAlertBoundaryDate(result?.end_date, threshold) || result?.alert_boundary_date;
 
   // Staged Action Proposals State
   const [stagedIntents, setStagedIntents] = useState<StagedIntentItem[]>([]);
@@ -1263,8 +1264,8 @@ export default function HomePage() {
                 <div className="threshold-helper">
                   Triggers warning if burn velocity depletes cash balance within{' '}
                   <strong>{threshold || '30'} days</strong>
-                  {result?.alert_boundary_date && (
-                    <span> (before <time dateTime={result.alert_boundary_date}>{result.alert_boundary_date}</time>)</span>
+                  {dynamicAlertDate && (
+                    <span> (before <time dateTime={dynamicAlertDate}>{dynamicAlertDate}</time>)</span>
                   )}
                   .
                 </div>
@@ -2053,6 +2054,21 @@ export default function HomePage() {
       )}
     </div>
   );
+}
+
+function computeAlertBoundaryDate(endDateStr: string | null | undefined, thresholdDaysStr: string): string | null {
+  if (!endDateStr) return null;
+  const days = parseInt(thresholdDaysStr, 10);
+  if (isNaN(days) || days <= 0) return null;
+  try {
+    const [year, month, day] = endDateStr.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const dt = new Date(Date.UTC(year, month - 1, day));
+    dt.setUTCDate(dt.getUTCDate() + days);
+    return dt.toISOString().slice(0, 10);
+  } catch {
+    return null;
+  }
 }
 
 function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
