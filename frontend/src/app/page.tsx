@@ -933,9 +933,9 @@ export default function HomePage() {
           </button>
 
           {/* Institutional Security & Governance Badge */}
-          <div className="topbar-security-badge" title="Hardware Biometric 2FA & Consortium Audit Ledger">
+          <div className="topbar-security-badge" title="Hardware Passkey 2FA & Consortium Audit Ledger">
             <span className="security-dot" aria-hidden="true" />
-            <span>Biometric 2FA · FISCO BCOS</span>
+            <span>Passkey 2FA · FISCO BCOS</span>
           </div>
         </div>
       </header>
@@ -945,7 +945,7 @@ export default function HomePage() {
         <h1>Continuous cash protection & liquidity matching.</h1>
         <p className="lede">
           Import a bank statement CSV to review transactions, forecast cash runway,
-          and manage working capital with biometric approval for disbursements.
+          and manage working capital with passkey or PIN approval for disbursements.
         </p>
 
         {/* Autonomous AI Agent Command Deck & Surveillance Sentinels */}
@@ -1051,7 +1051,7 @@ export default function HomePage() {
                 <div className="staged-queue-eyebrow">Staged Action Ledger</div>
                 <h3 className="staged-queue-title">Staged Financial Proposals Awaiting Founder Authorization</h3>
                 <p className="staged-queue-subtitle">
-                  Autonomous proposals queued for review. Zero funds move without explicit physical biometric passkey authorization.
+                  Autonomous proposals queued for review. Zero funds move without explicit passkey, device PIN, or security key authorization.
                 </p>
               </div>
             </div>
@@ -1097,7 +1097,7 @@ export default function HomePage() {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           {isExecuted ? (
-                            <span className="staged-executed-badge" title="WebAuthn FIDO2 Biometric confirmed on FISCO BCOS">
+                            <span className="staged-executed-badge" title="WebAuthn FIDO2 Passkey confirmed on FISCO BCOS">
                               <span>✓</span>
                               <span>Passkey Authorized</span>
                             </span>
@@ -1106,7 +1106,7 @@ export default function HomePage() {
                               type="button"
                               className="staged-action-btn"
                               onClick={() => executeBiometric(item.id)}
-                              title="Sign and authorize this proposal using WebAuthn FIDO2 biometric passkey"
+                              title="Sign and authorize this proposal using WebAuthn FIDO2 passkey or device PIN"
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -1238,8 +1238,8 @@ export default function HomePage() {
               <p>Financing options and transfer requests are staged in an immutable ledger. Zero funds move automatically.</p>
             </div>
             <div className="side-note">
-              <strong>Biometric Passkey Approval</strong>
-              <p>Drawdowns and fund disbursements require explicit physical WebAuthn passkey confirmation before execution.</p>
+              <strong>Passkey & PIN Authorization</strong>
+              <p>Drawdowns and fund disbursements require explicit WebAuthn confirmation via laptop PIN, Touch ID, or security key.</p>
             </div>
           </aside>
         </div>
@@ -1532,13 +1532,13 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {/* Biometric Approval Card */}
+                    {/* Passkey / PIN Approval Card */}
                     {m.data?.staged_action && (
                       <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
                         <strong>
                           {executedIntents[m.data.staged_action.intent_id]
                             ? '✅ Execution Completed (Passkey Signed)'
-                            : '⚠️ Biometric Approval Required'}
+                            : '⚠️ Founder Approval Required (Passkey / PIN)'}
                         </strong>
                         <div style={{ marginTop: 4 }}>
                           Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
@@ -1549,7 +1549,7 @@ export default function HomePage() {
                             type="button"
                             onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
                           >
-                            👆 Confirm Biometric Passkey
+                            👆 Authorize Disbursement (Passkey / PIN)
                           </button>
                         )}
                       </div>
