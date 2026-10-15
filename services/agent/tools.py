@@ -551,3 +551,58 @@ def tool_verify_invoice_hash(
         "consortium_status": status.value,
         "is_double_financing_risk": status.value != "UNREGISTERED",
     }
+
+
+def tool_calculate_ccc(
+    message: str = "",
+    dso_days: Optional[int] = None,
+    dpo_days: Optional[int] = None,
+    dio_days: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Calculates Cash Conversion Cycle (CCC = DSO + DIO - DPO) with trade terms."""
+    import re
+    dso = dso_days
+    dpo = dpo_days
+    dio = dio_days if dio_days is not None else 30
+
+    if dso is None and message:
+        m = re.search(r"\b(?:dso|receivables?|clients?|customers?)\D*?(\d{1,3})\s*[- ]*(?:day|days)\b", message, re.IGNORECASE)
+        if m:
+            dso = int(m.group(1))
+
+    if dpo is None and message:
+        m = re.search(r"\b(?:dpo|payables?|vendors?|suppliers?)\D*?(\d{1,3})\s*[- ]*(?:day|days)\b", message, re.IGNORECASE)
+        if m:
+            dpo = int(m.group(1))
+
+    dso = dso if dso is not None else 45
+    dpo = dpo if dpo is not None else 30
+    dio = dio if dio is not None else 25
+
+    ccc_days, status, rationale = calculate_cash_conversion_cycle(dso_days=dso, dio_days=dio, dpo_days=dpo)
+    return {
+        "dso_days": dso,
+        "dio_days": dio,
+        "dpo_days": dpo,
+        "ccc_days": ccc_days,
+        "cycle_classification": status,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_predictive_cash(
+    csv_content: str,
+    forecast_horizon_days: int = 30,
+) -> Dict[str, Any]:
+    """Projects cash balance and identifies deficit points over custom horizons."""
+    cf = tool_analyze_cash_flow(csv_content, target_horizon_days=forecast_horizon_days)
+    return {
+        "severity": cf.get("deficit_severity", "SAFE"),
+        "projected_shortfall": cf.get("projected_shortfall_amount", "0.00"),
+        "shortfall_date": cf.get("projected_deficit_date"),
+        "root_cause": cf.get("primary_deficit_trigger", "Operational cash burn"),
+        "recommendation": cf.get("advisory_note") or "Maintain liquidity reserves",
+        "has_projected_deficit": cf.get("has_projected_deficit", False),
+        "days_until_deficit": cf.get("days_until_deficit"),
+        "forecast_target_balance": cf.get("forecast_target_balance"),
+    }
