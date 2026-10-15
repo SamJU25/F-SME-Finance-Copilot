@@ -67,7 +67,7 @@ class CreditSubagent:
         """Dispatches quantitative debt calculation requests to specialized tools."""
         # 1. Fixed Charge Coverage Ratio (FCCR)
         if sub_intent == "FCCR":
-            p_dict = extract_fccr_params(request.message)
+            p_dict = extract_fccr_params(request.message, history=request.history)
             eb = p_dict["ebitda"]
             fc = p_dict["fixed_charges"]
             ds = p_dict["total_debt_service"]
@@ -118,7 +118,7 @@ class CreditSubagent:
 
         # 2. Maximum Prudent Debt Capacity
         if sub_intent == "DEBT_CAPACITY":
-            p_dict = extract_debt_capacity_params(request.message)
+            p_dict = extract_debt_capacity_params(request.message, history=request.history)
             noi = p_dict["net_operating_income"]
             metrics = None
 
@@ -168,7 +168,7 @@ class CreditSubagent:
 
         # 3. Debt Service Coverage Ratio (DSCR)
         if sub_intent == "DSCR":
-            p_dict = extract_dscr_params(request.message)
+            p_dict = extract_dscr_params(request.message, history=request.history)
             noi = p_dict["net_operating_income"]
             ads = p_dict.get("total_debt_service") or p_dict.get("annual_debt_service")
 
@@ -215,7 +215,7 @@ class CreditSubagent:
 
         # 4. Commercial Loan Amortization
         if sub_intent in ("AMORTIZATION", "LOAN_AMORTIZATION"):
-            p_dict = extract_amortization_params(request.message)
+            p_dict = extract_amortization_params(request.message, history=request.history)
             res = tool_calculate_loan_amortization(
                 principal=p_dict["principal"],
                 annual_interest_rate_pct=p_dict["annual_interest_rate_pct"],
@@ -241,7 +241,7 @@ class CreditSubagent:
 
         # 5. Invoice Factoring Net Proceeds & True APR
         if sub_intent == "FACTORING":
-            p_dict = extract_factoring_params(request.message)
+            p_dict = extract_factoring_params(request.message, history=request.history)
             res = tool_calculate_factoring_proceeds(
                 invoice_amount=p_dict["invoice_amount"],
                 advance_rate_pct=p_dict["advance_rate_pct"],

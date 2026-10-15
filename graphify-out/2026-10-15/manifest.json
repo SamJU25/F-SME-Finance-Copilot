@@ -1458,15 +1458,15 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792075750.3198135,
-    "seen": 1792076181.322723,
-    "ast_hash": "e77fa394ccbacc2d447d6c438bb96377",
+    "mtime": 1792077112.3540525,
+    "seen": 1792077835.986045,
+    "ast_hash": "1ad24228b6f4f604dd780ae2cc18a35d",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
-    "mtime": 1792076012.3291419,
-    "seen": 1792076181.3227248,
-    "ast_hash": "b3f702512eb556ee5d42384cbca66495",
+    "mtime": 1792077744.4123807,
+    "seen": 1792077835.9860468,
+    "ast_hash": "83f9f54af478d89bbe85f3fdef911161",
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
@@ -1557,6 +1557,30 @@
     "mtime": 1792075807.5380912,
     "seen": 1792076181.3257987,
     "ast_hash": "731f91a3dcbc9a42ceb0847de19eb51a",
+    "semantic_hash": ""
+  },
+  "services/agent/subagents/__init__.py": {
+    "mtime": 1792076862.5797098,
+    "seen": 1792077835.9860363,
+    "ast_hash": "55fc29be7d80e29e122f2ff9d621f500",
+    "semantic_hash": ""
+  },
+  "services/agent/subagents/credit_subagent.py": {
+    "mtime": 1792077749.7917,
+    "seen": 1792077835.9860394,
+    "ast_hash": "6eb2a9784ac7ba8cf69f67ba70eb83e8",
+    "semantic_hash": ""
+  },
+  "services/agent/subagents/liquidity_subagent.py": {
+    "mtime": 1792077769.9387753,
+    "seen": 1792077835.986041,
+    "ast_hash": "183149bb0c99188955c7407dda573560",
+    "semantic_hash": ""
+  },
+  "services/agent/subagents/risk_subagent.py": {
+    "mtime": 1792077806.5009658,
+    "seen": 1792077835.9860427,
+    "ast_hash": "fae476f5b065f4021d0896f6787cee24",
     "semantic_hash": ""
   }
 }

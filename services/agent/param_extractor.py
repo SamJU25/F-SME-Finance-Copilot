@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def parse_numeric_token(token: str) -> Optional[Decimal]:
@@ -25,7 +25,41 @@ def parse_numeric_token(token: str) -> Optional[Decimal]:
         return None
 
 
-def extract_amortization_params(text: str) -> Dict[str, Any]:
+def backfill_missing_params(
+    params: Dict[str, Any],
+    history: Optional[List[Any]],
+    extractor_fn: Any,
+) -> Dict[str, Any]:
+    """Inspects conversation history in reverse order to backfill missing parameters in follow-up queries."""
+    if not history:
+        return params
+
+    missing_keys = [k for k, v in params.items() if v is None]
+    if not missing_keys:
+        return params
+
+    for entry in reversed(history):
+        txt = (
+            getattr(entry, "text", "")
+            if hasattr(entry, "text")
+            else (entry.get("text", "") if isinstance(entry, dict) else "")
+        ).strip()
+        if not txt:
+            continue
+
+        prior_params = extractor_fn(txt, history=None)
+        for k in missing_keys:
+            if params.get(k) is None and prior_params.get(k) is not None:
+                params[k] = prior_params[k]
+
+        missing_keys = [k for k, v in params.items() if v is None]
+        if not missing_keys:
+            break
+
+    return params
+
+
+def extract_amortization_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts principal, interest rate, term months, and elapsed periods for loan amortization."""
     principal: Optional[Decimal] = None
     rate_pct: Optional[Decimal] = None
@@ -85,15 +119,22 @@ def extract_amortization_params(text: str) -> Dict[str, Any]:
                 principal = val
                 break
 
-    return {
-        "principal": principal or Decimal("50000.00"),
-        "annual_interest_rate_pct": rate_pct or Decimal("8.50"),
-        "term_months": term_months or 24,
+    params = {
+        "principal": principal,
+        "annual_interest_rate_pct": rate_pct,
+        "term_months": term_months,
         "periods_elapsed": elapsed_months,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_amortization_params)
+
+    params["principal"] = params["principal"] or Decimal("50000.00")
+    params["annual_interest_rate_pct"] = params["annual_interest_rate_pct"] or Decimal("8.50")
+    params["term_months"] = params["term_months"] or 24
+    return params
 
 
-def extract_dscr_params(text: str) -> Dict[str, Any]:
+def extract_dscr_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts Net Operating Income (NOI) and Total Debt Service from text."""
     noi: Optional[Decimal] = None
     debt_service: Optional[Decimal] = None
@@ -124,13 +165,16 @@ def extract_dscr_params(text: str) -> Dict[str, Any]:
             if debt_service is None:
                 debt_service = valid_nums[1]
 
-    return {
+    params = {
         "net_operating_income": noi,
         "total_debt_service": debt_service,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_dscr_params)
+    return params
 
 
-def extract_break_even_params(text: str) -> Dict[str, Any]:
+def extract_break_even_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts fixed costs, contribution margin ratio, revenue, and variable costs."""
     fc: Optional[Decimal] = None
     cm_ratio: Optional[Decimal] = None
@@ -172,15 +216,18 @@ def extract_break_even_params(text: str) -> Dict[str, Any]:
     if vc_match:
         vc = parse_numeric_token(vc_match.group(1))
 
-    return {
+    params = {
         "fixed_costs": fc,
         "cm_ratio": cm_ratio,
         "revenue": rev,
         "variable_costs": vc,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_break_even_params)
+    return params
 
 
-def extract_factoring_params(text: str) -> Dict[str, Any]:
+def extract_factoring_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts invoice face value, advance rate %, discount fee %, and collection days."""
     inv_amount: Optional[Decimal] = None
     advance_pct: Optional[Decimal] = None
@@ -245,15 +292,23 @@ def extract_factoring_params(text: str) -> Dict[str, Any]:
         if valid_nums:
             inv_amount = valid_nums[0]
 
-    return {
-        "invoice_amount": inv_amount or Decimal("50000.00"),
-        "advance_rate_pct": advance_pct or Decimal("85.00"),
-        "fee_rate_pct": fee_pct or Decimal("3.00"),
-        "collection_days": days or 45,
+    params = {
+        "invoice_amount": inv_amount,
+        "advance_rate_pct": advance_pct,
+        "fee_rate_pct": fee_pct,
+        "collection_days": days,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_factoring_params)
+
+    params["invoice_amount"] = params["invoice_amount"] or Decimal("50000.00")
+    params["advance_rate_pct"] = params["advance_rate_pct"] or Decimal("85.00")
+    params["fee_rate_pct"] = params["fee_rate_pct"] or Decimal("3.00")
+    params["collection_days"] = params["collection_days"] or 45
+    return params
 
 
-def extract_defensive_interval_params(text: str) -> Dict[str, Any]:
+def extract_defensive_interval_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts quick assets and daily operating expenses from text."""
     qa: Optional[Decimal] = None
     burn: Optional[Decimal] = None
@@ -283,13 +338,16 @@ def extract_defensive_interval_params(text: str) -> Dict[str, Any]:
             if burn is None:
                 burn = valid_nums[1]
 
-    return {
+    params = {
         "quick_assets": qa,
         "daily_operating_expenses": burn,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_defensive_interval_params)
+    return params
 
 
-def extract_fccr_params(text: str) -> Dict[str, Any]:
+def extract_fccr_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts EBITDA, fixed charges, and total debt service from text."""
     ebitda: Optional[Decimal] = None
     fc: Optional[Decimal] = None
@@ -318,14 +376,17 @@ def extract_fccr_params(text: str) -> Dict[str, Any]:
             if ds is None:
                 ds = valid_nums[2]
 
-    return {
+    params = {
         "ebitda": ebitda,
         "fixed_charges": fc,
         "total_debt_service": ds,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_fccr_params)
+    return params
 
 
-def extract_debt_capacity_params(text: str) -> Dict[str, Any]:
+def extract_debt_capacity_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts DAB, NOI, target DSCR, interest rate, and term for prudent debt capacity."""
     dab: Optional[Decimal] = None
     noi: Optional[Decimal] = None
@@ -371,16 +432,19 @@ def extract_debt_capacity_params(text: str) -> Dict[str, Any]:
         if valid_nums:
             noi = valid_nums[0]
 
-    return {
+    params = {
         "daily_average_balance": dab,
         "net_operating_income": noi,
         "max_dscr": dscr,
         "annual_interest_rate_pct": rate,
         "loan_term_months": term,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_debt_capacity_params)
+    return params
 
 
-def extract_wcr_params(text: str) -> Dict[str, Any]:
+def extract_wcr_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts accounts receivable, inventory, and accounts payable for WCR."""
     ar: Optional[Decimal] = None
     inv: Optional[Decimal] = None
@@ -415,14 +479,17 @@ def extract_wcr_params(text: str) -> Dict[str, Any]:
             if ap is None:
                 ap = valid_nums[2]
 
-    return {
+    params = {
         "accounts_receivable": ar,
         "inventory": inv,
         "accounts_payable": ap,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_wcr_params)
+    return params
 
 
-def extract_ocf_ratio_params(text: str) -> Dict[str, Any]:
+def extract_ocf_ratio_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts operating cash flow and current liabilities."""
     ocf: Optional[Decimal] = None
     cl: Optional[Decimal] = None
@@ -444,13 +511,16 @@ def extract_ocf_ratio_params(text: str) -> Dict[str, Any]:
             if cl is None:
                 cl = valid_nums[1]
 
-    return {
+    params = {
         "operating_cash_flow": ocf,
         "current_liabilities": cl,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_ocf_ratio_params)
+    return params
 
 
-def extract_break_even_units_params(text: str) -> Dict[str, Any]:
+def extract_break_even_units_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts fixed costs, unit selling price, and unit variable cost."""
     fc: Optional[Decimal] = None
     price: Optional[Decimal] = None
@@ -479,14 +549,17 @@ def extract_break_even_units_params(text: str) -> Dict[str, Any]:
             if vc is None:
                 vc = valid_nums[2]
 
-    return {
+    params = {
         "fixed_costs": fc,
         "unit_selling_price": price,
         "unit_variable_cost": vc,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_break_even_units_params)
+    return params
 
 
-def extract_attrition_params(text: str) -> Dict[str, Any]:
+def extract_attrition_params(text: str, history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """Extracts current annual revenue, annual burn, and lost client annual revenue."""
     rev: Optional[Decimal] = None
     burn: Optional[Decimal] = None
@@ -519,11 +592,14 @@ def extract_attrition_params(text: str) -> Dict[str, Any]:
             if burn is None:
                 burn = valid_nums[2]
 
-    return {
+    params = {
         "current_annual_revenue": rev,
         "current_annual_burn": burn,
         "lost_client_annual_revenue": lost,
     }
+    if history:
+        params = backfill_missing_params(params, history, extract_attrition_params)
+    return params
 
 
 def extract_invoice_hash_params(text: str) -> Dict[str, Any]:

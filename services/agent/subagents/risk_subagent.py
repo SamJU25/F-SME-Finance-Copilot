@@ -58,7 +58,7 @@ class RiskManagerSubagent:
         """Dispatches risk and unit economics calculations to specialized tools."""
         # 1. Break-Even Revenue & Margin of Safety
         if sub_intent == "BREAK_EVEN":
-            p_dict = extract_break_even_params(request.message)
+            p_dict = extract_break_even_params(request.message, history=request.history)
             fc = p_dict.get("fixed_costs")
             cm_ratio = p_dict.get("cm_ratio") or p_dict.get("contribution_margin_ratio")
             rev = p_dict.get("revenue")
@@ -116,7 +116,7 @@ class RiskManagerSubagent:
 
         # 2. Break-Even Volume in Physical Units
         if sub_intent == "BREAK_EVEN_UNITS":
-            p_dict = extract_break_even_units_params(request.message)
+            p_dict = extract_break_even_units_params(request.message, history=request.history)
             fc = p_dict["fixed_costs"]
             price = p_dict["unit_selling_price"]
             vc = p_dict["unit_variable_cost"]
@@ -197,7 +197,7 @@ class RiskManagerSubagent:
 
         # 4. Customer Churn & Revenue Attrition Impact
         if sub_intent == "ATTRITION":
-            p_dict = extract_attrition_params(request.message)
+            p_dict = extract_attrition_params(request.message, history=request.history)
             rev = p_dict["current_annual_revenue"]
             burn = p_dict["current_annual_burn"]
             lost = p_dict["lost_client_annual_revenue"]

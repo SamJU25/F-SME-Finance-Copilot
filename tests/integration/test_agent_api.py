@@ -715,13 +715,89 @@ def test_agent_chat_invoice_hash_verification():
     assert "VALIDATED" in data["reply"]
 
 
+def test_agent_chat_amortization_parameter_inheritance():
+    """Verify follow-up query inherits principal and term from prior turn when interest rate changes."""
+    turn1_msg = "Calculate monthly payment for a $50,000 commercial loan at 8% over 24 months"
+    r1 = client.post("/api/v1/agent/chat", json={"message": turn1_msg})
+    assert r1.status_code == 200
+    d1 = r1.json()
+    assert "$50,000.00" in d1["reply"]
+    assert "8.00%" in d1["reply"]
+    assert "$2,261.36" in d1["reply"]
+
+    # Turn 2: delta query inherits $50k principal and 24 month term
+    turn2_msg = "what if interest is 10%?"
+    r2 = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": turn2_msg,
+            "history": [
+                {"role": "user", "text": turn1_msg},
+                {"role": "agent", "text": d1["reply"]},
+            ],
+        },
+    )
+    assert r2.status_code == 200
+    d2 = r2.json()
+    assert d2["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "$50,000.00" in d2["reply"]
+    assert "10.00%" in d2["reply"]
+    assert "24 months" in d2["reply"]
+    assert "$2,307.25" in d2["reply"]
 
 
+def test_agent_chat_break_even_parameter_inheritance():
+    """Verify follow-up query inherits fixed operating costs when contribution margin ratio changes."""
+    turn1_msg = "What is our break-even if fixed costs are $25,000 and margin is 40%?"
+    r1 = client.post("/api/v1/agent/chat", json={"message": turn1_msg})
+    assert r1.status_code == 200
+    d1 = r1.json()
+    assert "$25,000.00" in d1["reply"]
+    assert "40.0%" in d1["reply"]
+    assert "$62,500.00" in d1["reply"]
+
+    # Turn 2: delta query inherits $25k fixed costs
+    turn2_msg = "what if margin is 50%?"
+    r2 = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": turn2_msg,
+            "history": [
+                {"role": "user", "text": turn1_msg},
+                {"role": "agent", "text": d1["reply"]},
+            ],
+        },
+    )
+    assert r2.status_code == 200
+    d2 = r2.json()
+    assert d2["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "$25,000.00" in d2["reply"]
+    assert "50.0%" in d2["reply"]
+    assert "$50,000.00" in d2["reply"]
 
 
+def test_agent_chat_dscr_parameter_inheritance():
+    """Verify follow-up query inherits Net Operating Income when annual debt service changes."""
+    turn1_msg = "What is our DSCR if net operating income is $120,000 and annual debt service is $80,000?"
+    r1 = client.post("/api/v1/agent/chat", json={"message": turn1_msg})
+    assert r1.status_code == 200
+    d1 = r1.json()
+    assert "1.50x" in d1["reply"]
 
-
-
-
-
-
+    # Turn 2: delta query inherits $120k NOI
+    turn2_msg = "what if debt service is $60,000?"
+    r2 = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": turn2_msg,
+            "history": [
+                {"role": "user", "text": turn1_msg},
+                {"role": "agent", "text": d1["reply"]},
+            ],
+        },
+    )
+    assert r2.status_code == 200
+    d2 = r2.json()
+    assert d2["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "$120,000.00" in d2["reply"]
+    assert "2.00x" in d2["reply"]

@@ -142,17 +142,29 @@ class FastEmbedSemanticRouter:
                 return "CASH_DIAGNOSTIC", "GENERAL", False
             return "GENERAL_ASSISTANCE", "GENERAL", False
 
-        # Contextual history follow-up (e.g. "and what about the options?")
+        # Contextual history follow-up (e.g. "and what about the options?" or "what if interest is 10%?")
         eval_text = m
         if history:
-            last_entry = history[-1]
-            last_text = (
-                getattr(last_entry, "text", "")
-                if hasattr(last_entry, "text")
-                else (last_entry.get("text", "") if isinstance(last_entry, dict) else "")
-            ).strip()
-            if last_text and len(m.split()) <= 8:
-                eval_text = f"{last_text} {m}"
+            last_user_msg = ""
+            last_agent_msg = ""
+            for item in reversed(history):
+                role = getattr(item, "role", "") if hasattr(item, "role") else (item.get("role", "") if isinstance(item, dict) else "")
+                txt = (getattr(item, "text", "") if hasattr(item, "text") else (item.get("text", "") if isinstance(item, dict) else "")).strip()
+                if role == "user" and not last_user_msg:
+                    last_user_msg = txt
+                elif role in ("agent", "assistant") and not last_agent_msg:
+                    last_agent_msg = txt
+                if last_user_msg and last_agent_msg:
+                    break
+
+            m_lower = m.lower().strip()
+            is_delta_query = any(m_lower.startswith(prefix) for prefix in ("what if", "how about", "what about", "and if", "change to", "if rate", "if interest", "with rate", "with interest"))
+            if is_delta_query and last_user_msg:
+                eval_text = f"{last_user_msg} {m}"
+            elif len(m.split()) <= 8:
+                context_ref = last_agent_msg or last_user_msg
+                if context_ref:
+                    eval_text = f"{context_ref} {m}"
 
         if not self._ready:
             return "GENERAL_ASSISTANCE", "GENERAL", False
@@ -220,9 +232,9 @@ class FastEmbedSemanticRouter:
         sim = float(np.dot(self._disclaimer_norm, q_norm))
         return sim >= 0.55
 
-    def classify_sub_intent(self, message: str) -> str:
+    def classify_sub_intent(self, message: str, history: Optional[List[Any]] = None) -> str:
         """Classifies cash diagnostic sub-intent via semantic prototype matching."""
-        _, sub, _ = self.classify(message)
+        _, sub, _ = self.classify(message, history=history)
         return sub
 
 
@@ -317,6 +329,6 @@ def classify_intent_dynamic(
     return intent
 
 
-def classify_sub_intent_dynamic(message: str) -> str:
+def classify_sub_intent_dynamic(message: str, history: Optional[List[Any]] = None) -> str:
     """Classifies cash diagnostic sub-intent dynamically using vector semantic similarity."""
-    return FastEmbedSemanticRouter.get_instance().classify_sub_intent(message)
+    return FastEmbedSemanticRouter.get_instance().classify_sub_intent(message, history=history)

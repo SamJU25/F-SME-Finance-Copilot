@@ -345,7 +345,7 @@ def run_copilot_supervisor(
         )
 
     # 1b. Deterministic Quantitative Financial Calculations
-    sub_intent = classify_sub_intent_dynamic(request.message)
+    sub_intent = classify_sub_intent_dynamic(request.message, history=request.history)
     quant_resp = _handle_quantitative_calculation(
         sub_intent=sub_intent,
         request=request,

@@ -56,7 +56,7 @@ class LiquiditySubagent:
         """Dispatches liquidity and working capital calculations to specialized tools."""
         # 1. Working Capital Requirement (WCR)
         if sub_intent == "WCR":
-            p_dict = extract_wcr_params(request.message)
+            p_dict = extract_wcr_params(request.message, history=request.history)
             ar = p_dict["accounts_receivable"]
             inv = p_dict["inventory"]
             ap = p_dict["accounts_payable"]
@@ -91,7 +91,7 @@ class LiquiditySubagent:
 
         # 2. Operating Cash Flow (OCF) Ratio
         if sub_intent == "OCF_RATIO":
-            p_dict = extract_ocf_ratio_params(request.message)
+            p_dict = extract_ocf_ratio_params(request.message, history=request.history)
             ocf = p_dict["operating_cash_flow"]
             cl = p_dict["current_liabilities"]
 
@@ -124,7 +124,7 @@ class LiquiditySubagent:
 
         # 3. Defensive Interval Ratio (DIR)
         if sub_intent == "DEFENSIVE_INTERVAL":
-            p_dict = extract_defensive_interval_params(request.message)
+            p_dict = extract_defensive_interval_params(request.message, history=request.history)
             qa = p_dict["quick_assets"]
             burn = p_dict["daily_operating_expenses"]
             metrics = None
