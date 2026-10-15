@@ -2005,7 +2005,7 @@
       "file_type": "code",
       "norm_label": "analyze()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L253"
+      "source_location": "L256"
     },
     {
       "id": "frontend_src_app_page_homepage_executeanalysis",
@@ -2017,7 +2017,7 @@
       "file_type": "code",
       "norm_label": "executeanalysis()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L221"
+      "source_location": "L224"
     },
     {
       "id": "frontend_src_app_page_homepage_executebiometric",
@@ -2029,7 +2029,7 @@
       "file_type": "code",
       "norm_label": "executebiometric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L318"
+      "source_location": "L321"
     },
     {
       "id": "frontend_src_app_page_homepage_fetchmodels",
@@ -2053,7 +2053,7 @@
       "file_type": "code",
       "norm_label": "handleloadsample()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L262"
+      "source_location": "L265"
     },
     {
       "id": "frontend_src_app_page_homepage_handlesavesettings",
@@ -2065,7 +2065,7 @@
       "file_type": "code",
       "norm_label": "handlesavesettings()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L210"
+      "source_location": "L213"
     },
     {
       "id": "frontend_src_app_page_homepage_handletestconnection",
@@ -2077,7 +2077,7 @@
       "file_type": "code",
       "norm_label": "handletestconnection()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L185"
+      "source_location": "L188"
     },
     {
       "id": "frontend_src_app_page_homepage_sendchatmessage",
@@ -2089,7 +2089,7 @@
       "file_type": "code",
       "norm_label": "sendchatmessage()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L277"
+      "source_location": "L280"
     },
     {
       "id": "frontend_src_app_page_metric",
@@ -2101,7 +2101,7 @@
       "file_type": "code",
       "norm_label": "metric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L899"
+      "source_location": "L907"
     },
     {
       "id": "frontend_src_app_page_money",
@@ -29412,6 +29412,18 @@
       "type": "external"
     },
     {
+      "id": "huggingface_hub",
+      "label": "huggingface_hub",
+      "_origin": "semantic",
+      "community": 6,
+      "community_name": "DCFModelValidator",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "huggingface_hub",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "os",
       "label": "os",
       "_origin": "semantic",
@@ -29444,17 +29456,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "sys",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "huggingface_hub",
-      "label": "huggingface_hub",
-      "community": 6,
-      "community_name": "DCFModelValidator",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "huggingface_hub",
       "source_file": "",
       "type": "external"
     }
@@ -29865,7 +29866,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L459",
+      "source_location": "L462",
       "weight": 1.0
     },
     {
@@ -29877,7 +29878,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L459",
+      "source_location": "L462",
       "weight": 1.0
     },
     {
@@ -29889,7 +29890,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L259",
+      "source_location": "L262",
       "weight": 1.0
     },
     {
@@ -29901,7 +29902,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L271",
+      "source_location": "L274",
       "weight": 1.0
     },
     {
@@ -29913,7 +29914,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L197",
+      "source_location": "L200",
       "weight": 1.0
     },
     {
@@ -31809,7 +31810,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L221",
+      "source_location": "L224",
       "weight": 1.0
     },
     {
@@ -31821,7 +31822,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L277",
+      "source_location": "L280",
       "weight": 1.0
     },
     {
@@ -31833,7 +31834,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L318",
+      "source_location": "L321",
       "weight": 1.0
     },
     {
@@ -52945,7 +52946,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L899",
+      "source_location": "L907",
       "weight": 1.0
     },
     {
@@ -52956,7 +52957,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L185",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -52967,7 +52968,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L210",
+      "source_location": "L213",
       "weight": 1.0
     },
     {
@@ -52978,7 +52979,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L253",
+      "source_location": "L256",
       "weight": 1.0
     },
     {
@@ -52989,7 +52990,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L262",
+      "source_location": "L265",
       "weight": 1.0
     },
     {
@@ -62340,5 +62341,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "bcc1db46dcf4503b40fad56bf86701220f97f583"
+  "built_at_commit": "e04b7be6097ab80df2afffd193a6dc0e340d79b9"
 }

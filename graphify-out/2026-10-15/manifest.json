@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792052385.7535875,
-    "seen": 1792052527.3231413,
-    "ast_hash": "38933704ffd41945550d18691d25ae2e",
+    "mtime": 1792059984.8080494,
+    "seen": 1792060086.3958466,
+    "ast_hash": "730dcb1bd25a5e767923babc80e1eefe",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1458,9 +1458,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792059251.4800198,
-    "seen": 1792059439.9840899,
-    "ast_hash": "301fde44dd9f3defe9812381f8bb2ecc",
+    "mtime": 1792059874.9775002,
+    "seen": 1792060086.397284,
+    "ast_hash": "f8dba286a3758242ce89ec8403c5f480",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {

@@ -123,6 +123,14 @@ export default function HomePage() {
       const saved = localStorage.getItem('sme_copilot_llm_config');
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (parsed.provider === 'offline' && (!parsed.model_name || parsed.model_name === 'deterministic-v1')) {
+          parsed.model_name = 'llama-3.2-1b-instruct-onnx';
+          try {
+            localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
+          } catch {
+            // LocalStorage write fallback
+          }
+        }
         setLlmConfig(parsed);
         setDraftConfig(parsed);
       }
