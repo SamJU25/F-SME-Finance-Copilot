@@ -86,3 +86,13 @@ def test_analyze_api_enforces_configured_upload_limit(monkeypatch):
     )
     assert response.status_code == 413
     assert response.json()["error"]["code"] == "UPLOAD_TOO_LARGE"
+
+
+def test_analyze_api_defaults_threshold_to_30_when_omitted():
+    response = client.post(
+        "/api/v1/analyze",
+        files={"file": ("synthetic.csv", CSV.encode(), "text/csv")},
+    )
+    assert response.status_code == 200
+    assert response.json()["alert_threshold_days"] == 30
+

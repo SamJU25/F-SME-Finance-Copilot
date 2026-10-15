@@ -46,7 +46,7 @@ class CashAnalysisResponse(BaseModel):
 @router.post("/analyze", response_model=CashAnalysisResponse)
 async def analyze_csv(
     file: UploadFile = File(...),
-    alert_threshold_days: int = Form(..., gt=0),
+    alert_threshold_days: int = Form(30, gt=0),
     dso_days: int | None = Form(None, ge=0),
     dpo_days: int | None = Form(None, ge=0),
     dio_days: int | None = Form(0, ge=0),

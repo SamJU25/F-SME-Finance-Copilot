@@ -218,30 +218,59 @@ export default function HomePage() {
     setTestResult(null);
   }
 
-  async function analyze(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file) {
-      setError('Choose a CSV file before reviewing cash activity.');
-      return;
-    }
+  async function executeAnalysis(targetFile: File, thresholdValue?: string) {
     setLoading(true);
     setError(null);
     setResult(null);
+    const effectiveDays = thresholdValue && Number(thresholdValue) >= 1
+      ? thresholdValue
+      : (threshold && Number(threshold) >= 1 ? threshold : '30');
     try {
       const data = new FormData();
-      data.append('file', file);
-      data.append('alert_threshold_days', threshold);
+      data.append('file', targetFile);
+      data.append('alert_threshold_days', effectiveDays);
       const response = await fetch(`${API_URL}/api/v1/analyze`, { method: 'POST', body: data });
       const body = await response.json();
       if (!response.ok) {
-        const detail = body?.error ?? body?.detail?.error;
-        throw new Error(detail?.message ?? 'The file could not be analyzed. Check the CSV and try again.');
+        let msg = 'The file could not be analyzed. Check the CSV and try again.';
+        if (body?.error?.message) {
+          msg = body.error.message;
+        } else if (Array.isArray(body?.detail)) {
+          msg = body.detail.map((d: { loc?: string[]; msg?: string }) => `${d.loc?.join('.') || ''}: ${d.msg || ''}`).join(', ');
+        } else if (typeof body?.detail === 'string') {
+          msg = body.detail;
+        }
+        throw new Error(msg);
       }
       setResult(body as CashAnalysisResponse);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'A network error interrupted the request. Try again.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function analyze(event?: FormEvent<HTMLFormElement>) {
+    if (event) event.preventDefault();
+    if (!file) {
+      setError('Choose a CSV file before reviewing cash activity.');
+      return;
+    }
+    await executeAnalysis(file, threshold);
+  }
+
+  async function handleLoadSample() {
+    try {
+      const res = await fetch('/synthetic-statement.csv');
+      if (!res.ok) throw new Error('Could not fetch sample CSV file.');
+      const text = await res.text();
+      const sampleFile = new File([text], 'synthetic-statement.csv', { type: 'text/csv' });
+      setFile(sampleFile);
+      setCsvText(text);
+      setThreshold('30');
+      await executeAnalysis(sampleFile, '30');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Failed to load sample statement.');
     }
   }
 
@@ -348,17 +377,27 @@ export default function HomePage() {
             <h2 id="upload-title">Review a statement</h2>
             <p className="panel-intro">Your file is processed in local memory only. Zero data is persisted or sent to third parties.</p>
             <form onSubmit={analyze}>
-              <label className="field-label" htmlFor="threshold">Alert threshold (days)</label>
-              <input
-                id="threshold"
-                name="alert_threshold_days"
-                type="number"
-                min="1"
-                step="1"
-                value={threshold}
-                onChange={(event) => setThreshold(event.target.value)}
-                required
-              />
+              <div style={{ marginBottom: 16 }}>
+                <label className="field-label" htmlFor="threshold">Alert threshold (runway warning days)</label>
+                <input
+                  id="threshold"
+                  name="alert_threshold_days"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="30"
+                  value={threshold}
+                  onChange={(event) => setThreshold(event.target.value)}
+                  onBlur={() => {
+                    if (!threshold || Number(threshold) < 1) {
+                      setThreshold('30');
+                    }
+                  }}
+                />
+                <span style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginTop: 4 }}>
+                  Default: 30 days. Triggers a warning if projected cash runway drops below this threshold.
+                </span>
+              </div>
 
               <div className="dropzone">
                 <span className="upload-icon" aria-hidden="true">↑</span>
@@ -378,15 +417,30 @@ export default function HomePage() {
                       const reader = new FileReader();
                       reader.onload = (e) => setCsvText(e.target?.result as string);
                       reader.readAsText(picked);
+                      executeAnalysis(picked, threshold);
                     } else {
                       setCsvText(null);
                     }
                   }}
                 />
-                <div className="file-name">{file ? file.name : 'UTF-8 CSV · max 1 MB'}</div>
+                <div className="file-name">
+                  {file ? `${file.name} (${file.size} bytes)` : 'UTF-8 CSV · max 1 MB'}
+                </div>
               </div>
 
-              <button className="submit" type="submit" disabled={loading || !threshold || Number(threshold) < 1}>
+              <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="pill-btn"
+                  onClick={handleLoadSample}
+                  disabled={loading}
+                  title="Load and analyze the bundled demo statement with 1 click"
+                >
+                  ⚡ Load demo statement (synthetic-statement.csv)
+                </button>
+              </div>
+
+              <button className="submit" type="submit" disabled={loading || !file} style={{ marginTop: 16 }}>
                 {loading ? 'Reviewing statement…' : 'Analyze cash activity'}
               </button>
             </form>
