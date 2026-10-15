@@ -6,6 +6,7 @@ non-sufficient funds (NSF) frequency, and transparent Annual Percentage Rate (AP
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
 from typing import Optional, Sequence
@@ -37,6 +38,8 @@ class UnderwritingDossier(BaseModel):
     risk_tier: RiskTier
     max_qualified_limit: Decimal
     recommended_product_types: list[ProductType]
+    revenue_volatility_cv: Optional[Decimal] = None
+    volatility_tier: Optional[str] = None
 
 
 class FinancingOption(BaseModel):
@@ -85,18 +88,89 @@ def convert_factor_rate_to_apr(factor_rate: Decimal, term_days: int) -> Decimal:
 
 
 def calculate_dab_from_transactions(transactions: Sequence[DemoTransaction]) -> Decimal:
-    """Calculates Daily Average Balance (DAB) from closing balances across distinct transaction dates."""
+    """Calculates bank-grade Daily Average Balance (DAB) using the Calendar-Day Carry-Forward Method.
+
+    Carries forward the latest business day closing balance across non-transaction
+    calendar days (weekends, holidays, quiet periods) across the full period.
+    """
     if not transactions:
         return Decimal("0.00")
 
-    day_balances: dict[str, Decimal] = {}
-    for tx in transactions:
-        day_balances[tx.posted_on.isoformat()] = tx.closing_balance
+    ordered = sorted(transactions, key=lambda t: (t.posted_on, t.row_number))
+    first_date = min(t.posted_on for t in ordered)
+    last_date = max(t.posted_on for t in ordered)
 
-    total = sum(day_balances.values(), Decimal("0.00"))
-    count = Decimal(len(day_balances))
-    dab = total / count
+    # Pre-index the final closing balance of each date
+    closing_by_date: dict[date, Decimal] = {}
+    for tx in ordered:
+        closing_by_date[tx.posted_on] = tx.closing_balance
+
+    daily_balances: list[Decimal] = []
+    current_date = first_date
+    last_known_balance = ordered[0].closing_balance
+
+    while current_date <= last_date:
+        if current_date in closing_by_date:
+            last_known_balance = closing_by_date[current_date]
+        daily_balances.append(last_known_balance)
+        current_date += timedelta(days=1)
+
+    total = sum(daily_balances, Decimal("0.00"))
+    dab = total / Decimal(len(daily_balances))
     return dab.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def calculate_inflow_volatility(transactions: Sequence[DemoTransaction]) -> tuple[Decimal, str]:
+    """Calculates Revenue Inflow Volatility (Coefficient of Variation - CV) across weekly buckets.
+
+    Formula: CV = StdDev(Inflows) / Mean(Inflows)
+    Tiers:
+      CV <= 0.35: "LOW" (Stable recurring customer receipts)
+      0.35 < CV <= 0.75: "MODERATE" (Normal commercial fluctuation)
+      CV > 0.75: "HIGH" (Lumpy, irregular revenue)
+    """
+    if not transactions:
+        return Decimal("0.00"), "LOW"
+
+    ordered = sorted(transactions, key=lambda t: (t.posted_on, t.row_number))
+    first_date = min(t.posted_on for t in ordered)
+    last_date = max(t.posted_on for t in ordered)
+    total_days = (last_date - first_date).days + 1
+
+    num_weeks = max(1, (total_days + 6) // 7)
+    weekly_inflows: list[Decimal] = [Decimal("0.00")] * num_weeks
+
+    for tx in ordered:
+        if tx.amount > 0:
+            day_offset = (tx.posted_on - first_date).days
+            week_idx = min(num_weeks - 1, day_offset // 7)
+            weekly_inflows[week_idx] += tx.amount
+
+    total_inflows = sum(weekly_inflows, Decimal("0.00"))
+    if total_inflows <= 0 or num_weeks <= 1:
+        pos_txs = [t.amount for t in ordered if t.amount > 0]
+        if len(pos_txs) <= 1:
+            return Decimal("0.00"), "LOW"
+        mean_tx = sum(pos_txs, Decimal("0.00")) / Decimal(len(pos_txs))
+        if mean_tx <= 0:
+            return Decimal("0.00"), "LOW"
+        variance = sum(((amt - mean_tx) ** 2 for amt in pos_txs), Decimal("0.00")) / Decimal(len(pos_txs))
+        std_dev = variance.sqrt()
+        cv = (std_dev / mean_tx).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    else:
+        mean_weekly = total_inflows / Decimal(num_weeks)
+        variance = sum(((w - mean_weekly) ** 2 for w in weekly_inflows), Decimal("0.00")) / Decimal(num_weeks)
+        std_dev = variance.sqrt()
+        cv = (std_dev / mean_weekly).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    if cv <= Decimal("0.35"):
+        tier = "LOW"
+    elif cv <= Decimal("0.75"):
+        tier = "MODERATE"
+    else:
+        tier = "HIGH"
+
+    return cv, tier
 
 
 def underwrite_sme_transactions(
@@ -108,13 +182,14 @@ def underwrite_sme_transactions(
 ) -> UnderwritingDossier:
     """
     Synthesizes transactional cash activity into an objective underwriting dossier.
-    Evaluates cash reserve stability and NSF risk to calculate credit tier and borrowing limit.
+    Evaluates cash reserve stability, revenue volatility, and NSF risk to calculate credit tier and limit.
     """
     if not transactions:
         raise ValueError("At least one transaction is required for underwriting")
 
     currency = transactions[0].currency
     dab = calculate_dab_from_transactions(transactions)
+    cv, vol_tier = calculate_inflow_volatility(transactions)
 
     if dab >= prime_dab_threshold and nsf_count == 0:
         tier = RiskTier.PRIME
@@ -146,6 +221,8 @@ def underwrite_sme_transactions(
         risk_tier=tier,
         max_qualified_limit=max_limit,
         recommended_product_types=products,
+        revenue_volatility_cv=cv,
+        volatility_tier=vol_tier,
     )
 
 

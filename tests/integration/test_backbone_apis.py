@@ -94,6 +94,8 @@ def test_underwrite_api_returns_dossier_and_matched_options():
     assert dossier["transaction_count"] == 2
     assert dossier["nsf_count"] == 0
     assert dossier["max_qualified_limit"] == "52500.00"
+    assert dossier["volatility_tier"] in ("LOW", "MODERATE", "HIGH")
+    assert dossier["revenue_volatility_cv"] is not None
 
     # Verify matched options
     options = data["matched_options"]

@@ -10,6 +10,7 @@ from services.calculations.runway import (
     calculate_runway_days,
     calculate_dab,
     calculate_dscr,
+    calculate_cash_conversion_cycle,
 )
 
 
@@ -72,3 +73,32 @@ def test_calculate_dscr_zero_debt():
     
     dscr = calculate_dscr(net_operating_income, total_debt_service)
     assert dscr == Decimal("999.00")
+
+
+def test_calculate_cash_conversion_cycle_working_capital_trap():
+    ccc_days, status, rationale = calculate_cash_conversion_cycle(dso_days=60, dpo_days=15, dio_days=0)
+    assert ccc_days == 45
+    assert status == "WORKING_CAPITAL_TRAP"
+    assert "trapped in working capital for 45 days" in rationale
+    assert "DSO: 60d" in rationale
+    assert "DPO: 15d" in rationale
+
+
+def test_calculate_cash_conversion_cycle_balanced():
+    ccc_days, status, rationale = calculate_cash_conversion_cycle(dso_days=30, dpo_days=20, dio_days=10)
+    assert ccc_days == 20
+    assert status == "BALANCED"
+    assert "balanced at 20 days" in rationale
+
+
+def test_calculate_cash_conversion_cycle_cash_generative():
+    ccc_days, status, rationale = calculate_cash_conversion_cycle(dso_days=5, dpo_days=30, dio_days=0)
+    assert ccc_days == -25
+    assert status == "CASH_GENERATIVE"
+    assert "Negative working capital cycle (-25 days)" in rationale
+
+
+def test_calculate_cash_conversion_cycle_validation():
+    with pytest.raises(ValueError, match="must be non-negative"):
+        calculate_cash_conversion_cycle(dso_days=-5, dpo_days=10)
+

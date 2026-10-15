@@ -3,6 +3,7 @@ from services.calculations.runway import (
     calculate_runway_days,
     calculate_dab,
     calculate_dscr,
+    calculate_cash_conversion_cycle,
 )
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "calculate_runway_days",
     "calculate_dab",
     "calculate_dscr",
+    "calculate_cash_conversion_cycle",
 ]

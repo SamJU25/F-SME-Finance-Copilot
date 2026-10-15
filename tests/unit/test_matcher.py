@@ -13,6 +13,7 @@ from services.matcher import (
     ProductType,
     convert_factor_rate_to_apr,
     calculate_dab_from_transactions,
+    calculate_inflow_volatility,
     underwrite_sme_transactions,
     match_financing_options,
 )
@@ -57,6 +58,17 @@ def test_calculate_dab_from_transactions():
     assert dab == Decimal("20000.00")
 
 
+def test_calculate_dab_calendar_day_carry_forward_gaps():
+    """Verify quiet gap days (e.g. Oct 2, 3, 4) carry forward prior closing balance."""
+    txs = [
+        make_tx(1, "10000.00"),
+        make_tx(5, "20000.00"),
+    ]
+    # Oct 1 (10k), Oct 2 (10k), Oct 3 (10k), Oct 4 (10k), Oct 5 (20k) -> 60,000 / 5 = 12,000
+    dab = calculate_dab_from_transactions(txs)
+    assert dab == Decimal("12000.00")
+
+
 def test_underwrite_prime_tier():
     txs = [
         make_tx(1, "12000.00"),
@@ -96,3 +108,38 @@ def test_match_financing_options_and_predatory_flag():
         assert opt.max_amount > 0
         assert opt.apr_percent > 0
         assert opt.requires_tier_3_hitl is True
+
+
+def test_calculate_inflow_volatility_steady_vs_lumpy():
+    # Steady weekly inflows: 4 weeks with exactly $5,000 inflow each
+    steady_txs = [
+        make_tx(1, "10000.00", amount="5000.00"),
+        make_tx(8, "15000.00", amount="5000.00"),
+        make_tx(15, "20000.00", amount="5000.00"),
+        make_tx(22, "25000.00", amount="5000.00"),
+    ]
+    steady_cv, steady_tier = calculate_inflow_volatility(steady_txs)
+    assert steady_tier == "LOW"
+    assert steady_cv == Decimal("0.00")
+
+    # Lumpy irregular inflows: 1 large inflow on day 1, zero on subsequent weeks
+    lumpy_txs = [
+        make_tx(1, "20000.00", amount="20000.00"),
+        make_tx(8, "18000.00", amount="-2000.00"),
+        make_tx(15, "16000.00", amount="-2000.00"),
+        make_tx(22, "14000.00", amount="-2000.00"),
+    ]
+    lumpy_cv, lumpy_tier = calculate_inflow_volatility(lumpy_txs)
+    assert lumpy_tier == "HIGH"
+    assert lumpy_cv > Decimal("0.75")
+
+
+def test_underwrite_dossier_includes_volatility_metrics():
+    txs = [
+        make_tx(1, "10000.00", amount="2000.00"),
+        make_tx(8, "12000.00", amount="2000.00"),
+    ]
+    dossier = underwrite_sme_transactions(txs, nsf_count=0)
+    assert dossier.revenue_volatility_cv is not None
+    assert dossier.volatility_tier in ("LOW", "MODERATE", "HIGH")
+

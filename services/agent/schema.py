@@ -71,6 +71,10 @@ class AgentChatRequest(BaseModel):
     staged_amount_cents: Optional[int] = Field(default=None, gt=0, description="Action amount in cents")
     staged_target: Optional[str] = Field(default=None, description="Action recipient or lender name")
     llm_config: Optional[LLMConfig] = Field(default=None, description="Optional LLM provider configuration")
+    target_horizon_days: Optional[int] = Field(default=None, gt=0, description="Optional custom target forecast horizon in days")
+    dso_days: Optional[int] = Field(default=None, ge=0, description="Optional Days Sales Outstanding")
+    dpo_days: Optional[int] = Field(default=None, ge=0, description="Optional Days Payable Outstanding")
+    dio_days: Optional[int] = Field(default=None, ge=0, description="Optional Days Inventory Outstanding")
 
 
 
@@ -79,12 +83,35 @@ class AgentMetricsSummary(BaseModel):
 
     current_balance: Optional[str] = None
     net_period_change: Optional[str] = None
+    gross_inflows: Optional[str] = None
+    gross_outflows: Optional[str] = None
     average_daily_burn: Optional[str] = None
     runway_days: Optional[int] = None
     cash_status: Optional[str] = None
     daily_average_balance: Optional[str] = None
     risk_tier: Optional[str] = None
     max_qualified_limit: Optional[str] = None
+    has_projected_deficit: Optional[bool] = None
+    deficit_severity: Optional[str] = None
+    days_until_deficit: Optional[int] = None
+    projected_deficit_date: Optional[str] = None
+    projected_shortfall_amount: Optional[str] = None
+    recommended_bridge_amount: Optional[str] = None
+    target_horizon_days: Optional[int] = None
+    target_horizon_date: Optional[str] = None
+    forecast_target_balance: Optional[str] = None
+    confidence_tier: Optional[str] = None
+    horizon_capped: Optional[bool] = None
+    advisory_note: Optional[str] = None
+    detected_recurring_rent: Optional[str] = None
+    detected_recurring_debt: Optional[str] = None
+    primary_deficit_trigger: Optional[str] = None
+    revenue_volatility_cv: Optional[str] = None
+    volatility_tier: Optional[str] = None
+    cash_conversion_cycle_days: Optional[int] = None
+    working_capital_status: Optional[str] = None
+    working_capital_rationale: Optional[str] = None
+
 
 
 class AgentMatchedOption(BaseModel):

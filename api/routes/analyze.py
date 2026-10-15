@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 from services.calculations.cash_analysis import calculate_cash_analysis
+from services.calculations.runway import calculate_cash_conversion_cycle
 from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv
 
 router = APIRouter(prefix="/api/v1", tags=["Cash analysis"])
@@ -35,12 +36,20 @@ class CashAnalysisResponse(BaseModel):
     runway_days: int | None
     alert_threshold_days: int
     cash_status: Literal["CASH_NONPOSITIVE", "LOW_RUNWAY", "WATCH", "NO_BURN"]
+    gross_inflows: str | None = None
+    gross_outflows: str | None = None
+    cash_conversion_cycle_days: int | None = None
+    working_capital_status: Literal["WORKING_CAPITAL_TRAP", "BALANCED", "CASH_GENERATIVE"] | None = None
+    working_capital_rationale: str | None = None
 
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
 async def analyze_csv(
     file: UploadFile = File(...),
     alert_threshold_days: int = Form(..., gt=0),
+    dso_days: int | None = Form(None, ge=0),
+    dpo_days: int | None = Form(None, ge=0),
+    dio_days: int | None = Form(0, ge=0),
 ) -> CashAnalysisResponse | JSONResponse:
     if MAX_UPLOAD_BYTES <= 0:
         raise RuntimeError("MAX_ANALYSIS_UPLOAD_BYTES must be a positive integer")
@@ -56,6 +65,15 @@ async def analyze_csv(
         return JSONResponse(status_code=422, content={"error": {"code": exc.code, "message": str(exc)}})
 
     result = calculate_cash_analysis(ingestion.accepted_rows, ingestion.rejected_rows, alert_threshold_days)
+
+    ccc_days, wc_status, wc_rationale = None, None, None
+    if dso_days is not None and dpo_days is not None:
+        ccc_days, wc_status, wc_rationale = calculate_cash_conversion_cycle(
+            dso_days=dso_days,
+            dpo_days=dpo_days,
+            dio_days=dio_days or 0,
+        )
+
     return CashAnalysisResponse(
         currency=result.currency,
         accepted_count=result.accepted_count,
@@ -67,6 +85,11 @@ async def analyze_csv(
         runway_days=result.runway_days,
         alert_threshold_days=result.alert_threshold_days,
         cash_status=result.cash_status,
+        gross_inflows=_format_money(result.gross_inflows),
+        gross_outflows=_format_money(result.gross_outflows),
+        cash_conversion_cycle_days=ccc_days,
+        working_capital_status=wc_status,
+        working_capital_rationale=wc_rationale,
     )
 
 

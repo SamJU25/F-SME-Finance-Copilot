@@ -12,11 +12,16 @@ export interface CashAnalysisResponse {
   rejected_rows: RejectedRow[];
   current_balance: string;
   net_period_change: string;
+  gross_inflows?: string;
+  gross_outflows?: string;
   period_days: number;
   average_daily_burn: string;
   runway_days: number | null;
   alert_threshold_days: number;
   cash_status: CashStatus;
+  cash_conversion_cycle_days?: number | null;
+  working_capital_status?: 'WORKING_CAPITAL_TRAP' | 'BALANCED' | 'CASH_GENERATIVE' | null;
+  working_capital_rationale?: string | null;
 }
 
 // Three-Tier Security Gate & Staged Action Intents
@@ -57,6 +62,8 @@ export interface UnderwritingDossier {
   risk_tier: RiskTier;
   max_qualified_limit: string;
   recommended_product_types: ProductType[];
+  revenue_volatility_cv?: string | null;
+  volatility_tier?: 'LOW' | 'MODERATE' | 'HIGH' | null;
 }
 
 export interface FinancingOption {
@@ -80,13 +87,36 @@ export interface UnderwriteApiResponse {
 export interface AgentMetricsSummary {
   current_balance?: string;
   net_period_change?: string;
+  gross_inflows?: string;
+  gross_outflows?: string;
   average_daily_burn?: string;
   runway_days?: number | null;
   cash_status?: string;
   daily_average_balance?: string;
   risk_tier?: string;
   max_qualified_limit?: string;
+  has_projected_deficit?: boolean;
+  deficit_severity?: string;
+  days_until_deficit?: number | null;
+  projected_deficit_date?: string | null;
+  projected_shortfall_amount?: string;
+  recommended_bridge_amount?: string;
+  target_horizon_days?: number | null;
+  target_horizon_date?: string | null;
+  forecast_target_balance?: string | null;
+  confidence_tier?: 'HIGH' | 'INDICATIVE' | null;
+  horizon_capped?: boolean | null;
+  advisory_note?: string | null;
+  detected_recurring_rent?: string | null;
+  detected_recurring_debt?: string | null;
+  primary_deficit_trigger?: string | null;
+  revenue_volatility_cv?: string | null;
+  volatility_tier?: 'LOW' | 'MODERATE' | 'HIGH' | null;
+  cash_conversion_cycle_days?: number | null;
+  working_capital_status?: 'WORKING_CAPITAL_TRAP' | 'BALANCED' | 'CASH_GENERATIVE' | null;
+  working_capital_rationale?: string | null;
 }
+
 
 export interface AgentActionProposal {
   intent_id: string;

@@ -62,3 +62,18 @@ def test_cash_analysis_requires_rows_and_positive_threshold():
         calculate_cash_analysis([], [], 10)
     with pytest.raises(ValueError):
         calculate_cash_analysis([row(2, 1, "0.00", "10.00")], [], 0)
+
+
+def test_cash_analysis_gross_inflows_and_outflows_decomposition():
+    """Verify gross inflows (credits) and gross outflows (debits) are independently isolated."""
+    rows = [
+        row(2, 1, "5000.00", "5000.00"),
+        row(3, 2, "3000.00", "8000.00"),
+        row(4, 3, "-2000.00", "6000.00"),
+        row(5, 4, "-1500.00", "4500.00"),
+    ]
+    result = calculate_cash_analysis(rows, [], 10)
+    assert result.gross_inflows == Decimal("8000.00")
+    assert result.gross_outflows == Decimal("3500.00")
+    assert result.net_period_change == Decimal("4500.00")
+

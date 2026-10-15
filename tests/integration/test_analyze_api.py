@@ -26,12 +26,35 @@ def test_analyze_api_returns_decimal_strings_and_row_provenance():
         "rejected_rows": [],
         "current_balance": "95.00",
         "net_period_change": "-5.00",
+        "gross_inflows": "5.00",
+        "gross_outflows": "10.00",
         "period_days": 2,
         "average_daily_burn": "2.50",
         "runway_days": 38,
         "alert_threshold_days": 10,
         "cash_status": "WATCH",
+        "cash_conversion_cycle_days": None,
+        "working_capital_status": None,
+        "working_capital_rationale": None,
     }
+
+
+def test_analyze_api_with_cash_conversion_cycle():
+    response = client.post(
+        "/api/v1/analyze",
+        data={
+            "alert_threshold_days": "10",
+            "dso_days": "45",
+            "dpo_days": "15",
+            "dio_days": "0",
+        },
+        files={"file": ("synthetic.csv", CSV.encode(), "text/csv")},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cash_conversion_cycle_days"] == 30
+    assert body["working_capital_status"] == "BALANCED"
+    assert "balanced at 30 days" in body["working_capital_rationale"]
 
 
 def test_analyze_api_reports_file_errors_in_stable_shape():

@@ -21,6 +21,8 @@ class CashAnalysisResult:
     runway_days: int | None
     alert_threshold_days: int
     cash_status: str
+    gross_inflows: Decimal = Decimal("0.00")
+    gross_outflows: Decimal = Decimal("0.00")
 
 
 def calculate_cash_analysis(
@@ -40,6 +42,12 @@ def calculate_cash_analysis(
     period_days = max(1, (last_date - first_date).days + 1)
     current_balance = ordered[-1].closing_balance
     net_period_change = sum((row.amount for row in ordered), Decimal("0"))
+    gross_inflows = sum((r.amount for r in ordered if r.amount > 0), Decimal("0.00")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    gross_outflows = abs(sum((r.amount for r in ordered if r.amount < 0), Decimal("0.00"))).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
     average_daily_burn = max(Decimal("0"), -net_period_change / Decimal(period_days))
     average_daily_burn = average_daily_burn.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
@@ -70,4 +78,6 @@ def calculate_cash_analysis(
         runway_days=runway_days,
         alert_threshold_days=alert_threshold_days,
         cash_status=cash_status,
+        gross_inflows=gross_inflows,
+        gross_outflows=gross_outflows,
     )

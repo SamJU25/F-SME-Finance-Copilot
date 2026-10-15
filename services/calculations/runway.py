@@ -65,3 +65,41 @@ def calculate_dscr(net_operating_income: Decimal, total_debt_service: Decimal) -
     
     dscr = net_operating_income / total_debt_service
     return dscr.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def calculate_cash_conversion_cycle(dso_days: int, dpo_days: int, dio_days: int = 0) -> tuple[int, str, str]:
+    """
+    Calculate Cash Conversion Cycle (CCC) in days and determine working capital health.
+    Formula: CCC = DSO + DIO - DPO
+    Where:
+      - DSO (Days Sales Outstanding): Days taken to collect receivables from customers.
+      - DIO (Days Inventory Outstanding): Days inventory is held prior to sale.
+      - DPO (Days Payable Outstanding): Days taken to pay vendor obligations.
+
+    Status Tiers:
+      - CCC > 30: "WORKING_CAPITAL_TRAP" (Capital trapped in operational lag; invoice factoring or line needed)
+      - 0 <= CCC <= 30: "BALANCED" (Normal commercial trade terms)
+      - CCC < 0: "CASH_GENERATIVE" (Suppliers finance customer receivables; negative working capital advantage)
+    """
+    if dso_days < 0 or dpo_days < 0 or dio_days < 0:
+        raise ValueError("dso_days, dpo_days, and dio_days must be non-negative integers.")
+
+    ccc_days = dso_days + dio_days - dpo_days
+    if ccc_days > 30:
+        status = "WORKING_CAPITAL_TRAP"
+        rationale = (
+            f"Cash is trapped in working capital for {ccc_days} days. Customer payment collection (DSO: {dso_days}d) "
+            f"lags vendor payment terms (DPO: {dpo_days}d). Invoice factoring or a working capital facility is recommended."
+        )
+    elif ccc_days >= 0:
+        status = "BALANCED"
+        rationale = (
+            f"Working capital cycle is balanced at {ccc_days} days. Customer collection and vendor payment schedules align."
+        )
+    else:
+        status = "CASH_GENERATIVE"
+        rationale = (
+            f"Negative working capital cycle ({ccc_days} days). Vendor credit terms finance receivables before client collections."
+        )
+    return ccc_days, status, rationale
+

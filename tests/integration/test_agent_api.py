@@ -76,6 +76,8 @@ def test_agent_credit_underwriting_flow():
     assert data["intent_detected"] == "CREDIT_UNDERWRITING"
     assert data["metrics"] is not None
     assert data["metrics"]["risk_tier"] == "NEAR_PRIME"
+    assert data["metrics"]["volatility_tier"] in ("LOW", "MODERATE", "HIGH")
+    assert data["metrics"]["revenue_volatility_cv"] is not None
     assert len(data["matched_options"]) >= 1
 
     top_facility = data["matched_options"][0]
@@ -273,6 +275,114 @@ def test_agent_fetch_models_custom_missing_base_url():
     data = response.json()
     assert data["success"] is False
     assert "Base URL required" in data["message"]
+
+
+def test_agent_cash_diagnostic_predictive_early_warning():
+    """Verify agent cash diagnostic surfaces forward-looking deficit metrics and recommended bridge."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "Diagnose my cash runway and check for upcoming cash flow shortfalls",
+            "csv_content": SYNTHETIC_BANK_CSV,
+            "alert_threshold_days": 30,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    metrics = data["metrics"]
+    assert metrics is not None
+    assert "has_projected_deficit" in metrics
+    assert metrics["deficit_severity"] in ["SAFE", "WATCH", "WARNING", "CRITICAL"]
+    assert metrics["current_balance"] == "7500.00"
+    assert metrics["gross_inflows"] == "2000.00"
+    assert metrics["gross_outflows"] == "3500.00"
+    assert metrics["detected_recurring_rent"] == "2000.00"
+
+
+def test_agent_cash_diagnostic_dynamic_custom_days():
+    """Verify natural language query asking for arbitrary days (e.g. 42 days) computes exact target forecast."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "Can I survive 42 days with this cash burn rate?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    metrics = data["metrics"]
+    assert metrics is not None
+    assert metrics["target_horizon_days"] == 42
+    assert metrics["target_horizon_date"] is not None
+    assert metrics["forecast_target_balance"] is not None
+    assert "Day 42" in data["reply"]
+
+
+def test_agent_chat_target_horizon_field_in_request():
+    """Verify explicit target_horizon_days in payload overrides or sets dynamic projection horizon."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "Analyze my cash position",
+            "csv_content": SYNTHETIC_BANK_CSV,
+            "target_horizon_days": 55,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    metrics = data["metrics"]
+    assert metrics is not None
+    assert metrics["target_horizon_days"] == 55
+    assert metrics["forecast_target_balance"] is not None
+
+
+def test_agent_chat_horizon_capped_at_365_days():
+    """Verify chat request asking for days beyond 365 is capped with advisory note."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "What will my balance be in 500 days?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    metrics = data["metrics"]
+    assert metrics is not None
+    assert metrics["target_horizon_days"] == 365
+    assert metrics["horizon_capped"] is True
+    assert metrics["confidence_tier"] == "INDICATIVE"
+    assert "capped at 365 days" in metrics["advisory_note"]
+    assert "capped at 365 days" in data["reply"]
+
+
+def test_agent_chat_working_capital_cycle_detection():
+    """Verify chat agent detects customer DSO and vendor DPO to compute CCC."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "My customers take 60 days to pay and suppliers give 15 days terms. What is my working capital risk?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    metrics = data["metrics"]
+    assert metrics is not None
+    assert metrics["cash_conversion_cycle_days"] == 45
+    assert metrics["working_capital_status"] == "WORKING_CAPITAL_TRAP"
+    assert "Cash Conversion Cycle is 45 days" in data["reply"]
+    assert "trapped in working capital" in data["reply"].lower()
+
+
+
+
+
 
 
 

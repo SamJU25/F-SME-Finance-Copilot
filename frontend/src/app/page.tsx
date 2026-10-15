@@ -448,6 +448,24 @@ export default function HomePage() {
               <div key={idx} className={`chat-msg ${m.role}`}>
                 <div>{m.text}</div>
 
+                {/* Predictive Early-Warning Alert Card */}
+                {m.data?.metrics?.has_projected_deficit && (
+                  <div className="chat-card" style={{ borderColor: '#e0837b', background: '#fdf2f1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9b3d37', fontWeight: 700 }}>
+                      <span>🚨</span>
+                      <span>{m.data.metrics.deficit_severity} DEFICIT EARLY WARNING</span>
+                    </div>
+                    <div style={{ marginTop: 4, color: '#172b2d' }}>
+                      Projected shortfall of <strong>${m.data.metrics.projected_shortfall_amount}</strong> in <strong>{m.data.metrics.days_until_deficit} days</strong> ({m.data.metrics.projected_deficit_date}).
+                    </div>
+                    {m.data.metrics.recommended_bridge_amount && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: '#5e7071' }}>
+                        💡 Recommended working capital bridge: <strong>${m.data.metrics.recommended_bridge_amount}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Structured Metrics Card */}
                 {m.data?.metrics && (
                   <div className="chat-card">
@@ -459,6 +477,7 @@ export default function HomePage() {
                     {m.data.metrics.risk_tier && <div>Risk Tier: {m.data.metrics.risk_tier}</div>}
                   </div>
                 )}
+
 
                 {/* Pre-Qualified Financing Options */}
                 {m.data?.matched_options && m.data.matched_options.length > 0 && (

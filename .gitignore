@@ -51,6 +51,7 @@ tmp/
 temp/
 *.lock
 .freebuff/
+graphify-out/cache/ast/
 
 # Internal Team Notes & Informal Materials
 TEAM_CHEAT_SHEET*

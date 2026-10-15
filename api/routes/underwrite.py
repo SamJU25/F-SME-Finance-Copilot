@@ -35,6 +35,8 @@ class UnderwritingDossierResponse(BaseModel):
     risk_tier: RiskTier
     max_qualified_limit: str
     recommended_product_types: list[ProductType]
+    revenue_volatility_cv: Optional[str] = None
+    volatility_tier: Optional[str] = None
 
 
 class FinancingOptionResponse(BaseModel):
@@ -92,6 +94,8 @@ async def underwrite_statement(
             risk_tier=dossier.risk_tier,
             max_qualified_limit=_format_money(dossier.max_qualified_limit),
             recommended_product_types=dossier.recommended_product_types,
+            revenue_volatility_cv=_format_money(dossier.revenue_volatility_cv) if dossier.revenue_volatility_cv is not None else None,
+            volatility_tier=dossier.volatility_tier,
         ),
         matched_options=[
             FinancingOptionResponse(

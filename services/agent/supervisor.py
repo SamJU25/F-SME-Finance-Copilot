@@ -51,7 +51,16 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
         return "ACTION_STAGING"
     if any(k in msg_lower for k in ["loan", "financing", "credit", "underwrite", "lender", "factor rate", "apr", "facility"]):
         return "CREDIT_UNDERWRITING"
-    if any(k in msg_lower for k in ["runway", "burn", "balance", "cash flow", "deficit", "survive", "overdraft"]):
+    if (
+        request.target_horizon_days is not None
+        or request.dso_days is not None
+        or request.dpo_days is not None
+        or any(k in msg_lower for k in [
+            "runway", "burn", "balance", "cash flow", "cash position", "deficit",
+            "survive", "overdraft", "forecast", "shortfall", "working capital",
+            "cash conversion", "ccc", "dso", "dpo"
+        ])
+    ):
         return "CASH_DIAGNOSTIC"
     return "GENERAL_ASSISTANCE"
 
@@ -166,6 +175,8 @@ def run_copilot_supervisor(
             daily_average_balance=dossier["daily_average_balance"],
             risk_tier=dossier["risk_tier"],
             max_qualified_limit=dossier["max_qualified_limit"],
+            revenue_volatility_cv=dossier.get("revenue_volatility_cv"),
+            volatility_tier=dossier.get("volatility_tier"),
         )
 
         top_option = matched_opts[0] if matched_opts else None
@@ -203,8 +214,46 @@ def run_copilot_supervisor(
                 intent_detected=intent,
             )
 
+        # Dynamic target horizon day detection (e.g. "34 days", "55 days", "in 120 days")
+        target_days: Optional[int] = request.target_horizon_days
+        if target_days is None:
+            day_match = re.search(r"\b(\d{1,4})\s*[- ]*(?:day|days)\b", request.message, re.IGNORECASE)
+            if day_match:
+                try:
+                    parsed_days = int(day_match.group(1))
+                    if parsed_days > 0:
+                        target_days = parsed_days
+                except ValueError:
+                    pass
+
+        # Working capital cycle detection (DSO / DPO)
+        dso: Optional[int] = request.dso_days
+        dpo: Optional[int] = request.dpo_days
+        dio: Optional[int] = request.dio_days or 0
+        if dso is None:
+            dso_match = re.search(r"\b(?:dso|receivables?|clients?|customers?)\D*?(\d{1,3})\s*[- ]*(?:day|days)\b", request.message, re.IGNORECASE)
+            if dso_match:
+                try:
+                    dso = int(dso_match.group(1))
+                except ValueError:
+                    pass
+        if dpo is None:
+            dpo_match = re.search(r"\b(?:dpo|payables?|vendors?|suppliers?)\D*?(\d{1,3})\s*[- ]*(?:day|days)\b", request.message, re.IGNORECASE)
+            if dpo_match:
+                try:
+                    dpo = int(dpo_match.group(1))
+                except ValueError:
+                    pass
+
         try:
-            cash_result = tool_analyze_cash_flow(request.csv_content, alert_threshold_days=request.alert_threshold_days)
+            cash_result = tool_analyze_cash_flow(
+                request.csv_content,
+                alert_threshold_days=request.alert_threshold_days,
+                target_horizon_days=target_days,
+                dso_days=dso,
+                dpo_days=dpo,
+                dio_days=dio,
+            )
         except CSVIngestionError as exc:
             return CopilotResponse(
                 reply=f"Statement ingestion failed: {exc.code} - {str(exc)}",
@@ -214,17 +263,51 @@ def run_copilot_supervisor(
         metrics = AgentMetricsSummary(
             current_balance=cash_result["current_balance"],
             net_period_change=cash_result["net_period_change"],
+            gross_inflows=cash_result.get("gross_inflows"),
+            gross_outflows=cash_result.get("gross_outflows"),
             average_daily_burn=cash_result["average_daily_burn"],
             runway_days=cash_result["runway_days"],
             cash_status=cash_result["cash_status"],
+            has_projected_deficit=cash_result.get("has_projected_deficit"),
+            deficit_severity=cash_result.get("deficit_severity"),
+            days_until_deficit=cash_result.get("days_until_deficit"),
+            projected_deficit_date=cash_result.get("projected_deficit_date"),
+            projected_shortfall_amount=cash_result.get("projected_shortfall_amount"),
+            recommended_bridge_amount=cash_result.get("recommended_bridge_amount"),
+            target_horizon_days=cash_result.get("target_horizon_days"),
+            target_horizon_date=cash_result.get("target_horizon_date"),
+            forecast_target_balance=cash_result.get("forecast_target_balance"),
+            confidence_tier=cash_result.get("confidence_tier"),
+            horizon_capped=cash_result.get("horizon_capped"),
+            advisory_note=cash_result.get("advisory_note"),
+            detected_recurring_rent=cash_result.get("detected_recurring_rent"),
+            detected_recurring_debt=cash_result.get("detected_recurring_debt"),
+            primary_deficit_trigger=cash_result.get("primary_deficit_trigger"),
+            cash_conversion_cycle_days=cash_result.get("cash_conversion_cycle_days"),
+            working_capital_status=cash_result.get("working_capital_status"),
+            working_capital_rationale=cash_result.get("working_capital_rationale"),
         )
 
         runway_desc = f"{cash_result['runway_days']} days" if cash_result["runway_days"] is not None else "Infinite (Cash positive)"
+        pred_snippet = f" {cash_result['predictive_explanation']}" if cash_result.get("predictive_explanation") else ""
+        target_snippet = ""
+        if cash_result.get("target_horizon_days") and cash_result.get("forecast_target_balance") is not None:
+            tier_label = f" [{cash_result.get('confidence_tier', 'HIGH')} CONFIDENCE]"
+            advisory_text = f" {cash_result['advisory_note']}" if cash_result.get("advisory_note") else ""
+            target_snippet = (
+                f" Specifically for Day {cash_result['target_horizon_days']} ({cash_result['target_horizon_date']}){tier_label}, "
+                f"projected balance is ${float(cash_result['forecast_target_balance']):,.2f}.{advisory_text}"
+            )
+
+        wc_snippet = ""
+        if cash_result.get("cash_conversion_cycle_days") is not None:
+            wc_snippet = f" Working Capital: Cash Conversion Cycle is {cash_result['cash_conversion_cycle_days']} days ({cash_result.get('working_capital_status')}). {cash_result.get('working_capital_rationale', '')}"
+
         reply = (
             f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} "
             f"with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. "
             f"Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} "
-            f"(Threshold: {cash_result['alert_threshold_days']} days)."
+            f"(Threshold: {cash_result['alert_threshold_days']} days).{pred_snippet}{target_snippet}{wc_snippet}"
         )
 
         return CopilotResponse(
@@ -233,6 +316,7 @@ def run_copilot_supervisor(
             metrics=metrics,
             requires_biometric_hitl=False,
         )
+
 
     # 4. General Financial Dialogue
     general_reply = (
