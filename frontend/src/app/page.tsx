@@ -1482,6 +1482,66 @@ export default function HomePage() {
                     <ul>{result.rejected_rows.map((row) => <li key={`${row.row_number}-${row.reason_code}`}>Row {row.row_number}: {row.reason_code.replaceAll('_', ' ').toLowerCase()}</li>)}</ul>
                   </div>
                 )}
+
+                {result.accounts_breakdown && result.accounts_breakdown.length > 1 && (
+                  <div className="treasury-portfolio-section" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
+                        🏛️ Consolidated Multi-Account Portfolio ({result.accounts_breakdown.length} Accounts)
+                      </h3>
+                      {result.has_overlaps_deduped && (
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                          ✓ Overlaps Deduplicated
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                      {result.accounts_breakdown.map((acc, idx) => (
+                        <div key={idx} style={{ padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 6, border: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <span style={{ fontWeight: 600, fontSize: 12 }}>{acc.account_id}</span>
+                            <span className="tabular-num" style={{ fontWeight: 600, fontSize: 13 }}>{money(acc.closing_balance, result.currency)}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={acc.file_name}>
+                            {acc.file_name}
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+                            {acc.start_date} → {acc.end_date} · {acc.transaction_count} txs
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result.internal_transfers_excluded && (
+                  <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>🔄</span>
+                    <div style={{ fontSize: 12, lineHeight: 1.4 }}>
+                      <strong>Contra-Transfers Eliminated:</strong>{' '}
+                      <span className="tabular-num" style={{ fontWeight: 600 }}>{money(result.internal_transfers_excluded, result.currency)}</span> in internal bank sweeps/transfers were identified and excluded from operational revenue and burn calculations.
+                      {result.operational_inflows && (
+                        <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11, marginTop: 2 }}>
+                          Operational Inflows: {money(result.operational_inflows, result.currency)} · Operational Outflows: {money(result.operational_outflows || '0.00', result.currency)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {result.calendar_gaps && result.calendar_gaps.length > 0 && (
+                  <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>⚠️</span>
+                    <div style={{ fontSize: 12, lineHeight: 1.4, color: '#f59e0b' }}>
+                      <strong>Statement Continuity Notice:</strong>
+                      <ul style={{ margin: '4px 0 0 0', paddingLeft: 18 }}>
+                        {result.calendar_gaps.map((gap, gIdx) => (
+                          <li key={gIdx}>{gap}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="empty-results-box">

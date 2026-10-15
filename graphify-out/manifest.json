@@ -1152,9 +1152,9 @@
     "semantic_hash": ""
   },
   "frontend/src/types/api.ts": {
-    "mtime": 1792097102.7510178,
-    "seen": 1792097199.7956762,
-    "ast_hash": "5a1b04d4cce208e5f3387424637efc51",
+    "mtime": 1792101791.7478068,
+    "seen": 1792101843.3409803,
+    "ast_hash": "90c38a06238548f02bd32a964d57a91f",
     "semantic_hash": ""
   },
   "services/__init__.py": {
@@ -1182,9 +1182,9 @@
     "semantic_hash": ""
   },
   "services/ingestion/csv_parser.py": {
-    "mtime": 1792101099.3060324,
-    "seen": 1792101138.339937,
-    "ast_hash": "e2712f9222e87f5df51a50751348ad99",
+    "mtime": 1792101642.7182417,
+    "seen": 1792101843.3443828,
+    "ast_hash": "f9186a7b61dce74e25fe41a0314f536b",
     "semantic_hash": ""
   },
   "services/security/__init__.py": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
-    "mtime": 1792100855.57592,
-    "seen": 1792101138.3361468,
-    "ast_hash": "43d8c1c941f7adc0f4e8f6b7a7f7e2b6",
+    "mtime": 1792101682.5575547,
+    "seen": 1792101843.3403509,
+    "ast_hash": "407aa00ba581e3c3209f6961851fbe68",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792100877.0272129,
-    "seen": 1792101138.3366807,
-    "ast_hash": "7236d4bf335faa6b9e569c7a712bdcc2",
+    "mtime": 1792101813.7290084,
+    "seen": 1792101843.340978,
+    "ast_hash": "73f575017db6cd522c2a7ec8b8bc8f95",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1290,9 +1290,9 @@
     "semantic_hash": ""
   },
   "tests/integration/test_analyze_api.py": {
-    "mtime": 1792100181.0178306,
-    "seen": 1792100361.2560263,
-    "ast_hash": "aa5acb3022509a6168f9ac18c48e6817",
+    "mtime": 1792101714.6261656,
+    "seen": 1792101843.346112,
+    "ast_hash": "fc8ab36b1dddc0d78f51c6e34993e34d",
     "semantic_hash": ""
   },
   "tests/unit/test_cash_analysis.py": {
@@ -1611,6 +1611,18 @@
     "mtime": 1792100688.2623472,
     "seen": 1792101138.3399422,
     "ast_hash": "a072828b157ef78a254f44c381f18a84",
+    "semantic_hash": ""
+  },
+  "services/ingestion/portfolio_consolidator.py": {
+    "mtime": 1792101427.0836663,
+    "seen": 1792101843.344767,
+    "ast_hash": "53f5f4278e788a3f3ff219ae57d81a45",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_portfolio_consolidator.py": {
+    "mtime": 1792101768.9820223,
+    "seen": 1792101843.34742,
+    "ast_hash": "a288355958069645c61a3593064d6e26",
     "semantic_hash": ""
   }
 }

@@ -78,6 +78,7 @@ class IngestionResult:
     currency: str
     accepted_rows: list[DemoTransaction]
     rejected_rows: list[RejectedRow]
+    treasury: Any | None = None
 
 
 def redact_pii_string(raw_text: str) -> str:
@@ -535,14 +536,10 @@ def parse_multiple_bank_csv(
     if len(files) == 1:
         return parse_bank_csv(files[0][1], llm_config=llm_config)
 
-    all_accepted: list[DemoTransaction] = []
-    all_rejected: list[RejectedRow] = []
     file_results: list[tuple[str, IngestionResult]] = []
-
     for filename, content in files:
         result = parse_bank_csv(content, llm_config=llm_config)
         file_results.append((filename, result))
-        all_rejected.extend(result.rejected_rows)
 
     currencies = {res.currency for _, res in file_results}
     if len(currencies) > 1:
@@ -550,82 +547,16 @@ def parse_multiple_bank_csv(
             "MIXED_CURRENCIES",
             f"Statements use conflicting currencies: {', '.join(sorted(currencies))}. All merged files must share the same currency.",
         )
-    currency = currencies.pop()
 
-    # Deduplicate transactions across statements
-    seen_keys: set[tuple[date, Decimal, str]] = set()
-    seen_ids: set[str] = set()
+    from services.ingestion.portfolio_consolidator import consolidate_multi_statement_treasury
+    treasury = consolidate_multi_statement_treasury(file_results)
 
-    # Detect multi-account overlap: if date ranges overlap significantly, sum closing balances
-    is_multi_account = False
-    if len(file_results) >= 2:
-        date_ranges = []
-        for _, res in file_results:
-            if res.accepted_rows:
-                min_d = min(tx.posted_on for tx in res.accepted_rows)
-                max_d = max(tx.posted_on for tx in res.accepted_rows)
-                date_ranges.append((min_d, max_d))
-        for i in range(len(date_ranges)):
-            for j in range(i + 1, len(date_ranges)):
-                start_i, end_i = date_ranges[i]
-                start_j, end_j = date_ranges[j]
-                if max(start_i, start_j) <= min(end_i, end_j):
-                    is_multi_account = True
-                    break
-
-    for _, res in file_results:
-        for tx in res.accepted_rows:
-            dedup_key = (tx.posted_on, tx.amount, tx.description.strip().lower())
-            if tx.transaction_id in seen_ids or dedup_key in seen_keys:
-                continue
-            seen_ids.add(tx.transaction_id)
-            seen_keys.add(dedup_key)
-            all_accepted.append(tx)
-
-    if not all_accepted:
+    if not treasury.accepted_rows:
         raise CSVIngestionError("NO_VALID_ROWS", "Merged CSV statements contain no valid transactions.")
 
-    all_accepted.sort(key=lambda t: (t.posted_on, t.row_number))
-
-    if is_multi_account:
-        combined_final_balance = sum(
-            res.accepted_rows[-1].closing_balance
-            for _, res in file_results
-            if res.accepted_rows
-        )
-        total_net_change = sum(tx.amount for tx in all_accepted)
-        starting_balance = combined_final_balance - total_net_change
-
-        running_bal = starting_balance
-        recomputed_rows = []
-        for idx, tx in enumerate(all_accepted, start=1):
-            running_bal += tx.amount
-            recomputed_rows.append(
-                DemoTransaction(
-                    row_number=idx,
-                    transaction_id=tx.transaction_id,
-                    posted_on=tx.posted_on,
-                    amount=tx.amount,
-                    currency=tx.currency,
-                    description=tx.description,
-                    closing_balance=running_bal,
-                )
-            )
-        all_accepted = recomputed_rows
-    else:
-        reindexed = []
-        for idx, tx in enumerate(all_accepted, start=1):
-            reindexed.append(
-                DemoTransaction(
-                    row_number=idx,
-                    transaction_id=tx.transaction_id,
-                    posted_on=tx.posted_on,
-                    amount=tx.amount,
-                    currency=tx.currency,
-                    description=tx.description,
-                    closing_balance=tx.closing_balance,
-                )
-            )
-        all_accepted = reindexed
-
-    return IngestionResult(currency=currency, accepted_rows=all_accepted, rejected_rows=all_rejected)
+    return IngestionResult(
+        currency=treasury.currency,
+        accepted_rows=treasury.accepted_rows,
+        rejected_rows=treasury.rejected_rows,
+        treasury=treasury,
+    )

@@ -42,6 +42,13 @@ def test_analyze_api_returns_decimal_strings_and_row_provenance():
         "analysis_mode": "LIVE_OPERATING",
         "projected_depletion_date": "2026-11-09",
         "alert_boundary_date": "2026-10-12",
+        "accounts_breakdown": None,
+        "internal_transfers_excluded": None,
+        "internal_transfers": None,
+        "calendar_gaps": None,
+        "has_overlaps_deduped": None,
+        "operational_inflows": None,
+        "operational_outflows": None,
     }
 
 
@@ -158,6 +165,50 @@ def test_analyze_api_with_universal_bofa_format():
     body = response.json()
     assert body["accepted_count"] == 2
     assert body["current_balance"] == "9800.00"
+
+
+def test_analyze_api_multi_account_portfolio_consolidation_and_contra_transfer():
+    chase_csv = (
+        "Date,Description,Amount,Running Bal.\n"
+        "2026-10-01,Client Payment,5000.00,15000.00\n"
+        "2026-10-02,Wire to SVB Checking,-2000.00,13000.00\n"
+    ).encode()
+    svb_csv = (
+        "Date,Description,Amount,Running Bal.\n"
+        "2026-10-02,Wire from Chase,2000.00,7000.00\n"
+        "2026-10-03,Cloud Infrastructure Hosting,-500.00,6500.00\n"
+    ).encode()
+
+    response = client.post(
+        "/api/v1/analyze",
+        data={"alert_threshold_days": "30"},
+        files=[
+            ("files", ("chase_operating.csv", chase_csv, "text/csv")),
+            ("files", ("svb_payroll.csv", svb_csv, "text/csv")),
+        ],
+    )
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["accepted_count"] == 4
+    # Multi-account total treasury: 13000 + 6500 = 19500
+    assert body["current_balance"] == "19500.00"
+
+    # Accounts breakdown
+    assert len(body["accounts_breakdown"]) == 2
+    assert body["accounts_breakdown"][0]["file_name"] == "chase_operating.csv"
+    assert body["accounts_breakdown"][0]["closing_balance"] == "13000.00"
+    assert body["accounts_breakdown"][1]["file_name"] == "svb_payroll.csv"
+    assert body["accounts_breakdown"][1]["closing_balance"] == "6500.00"
+
+    # Contra-transfer elimination
+    assert body["internal_transfers_excluded"] == "2000.00"
+    assert len(body["internal_transfers"]) == 1
+    assert body["internal_transfers"][0]["amount"] == "2000.00"
+
+    # Operational flows with contra-transfers excluded
+    assert body["operational_inflows"] == "5000.00"
+    assert body["operational_outflows"] == "500.00"
 
 
 

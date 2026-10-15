@@ -27,6 +27,26 @@ class RejectedRowResponse(BaseModel):
     reason_code: str
 
 
+class AccountSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    file_name: str
+    account_id: str
+    start_date: str
+    end_date: str
+    closing_balance: str
+    transaction_count: int
+
+
+class ContraTransferSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    outflow_tx_id: str
+    inflow_tx_id: str
+    amount: str
+    outflow_account: str
+    inflow_account: str
+    transfer_date: str
+
+
 class CashAnalysisResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     currency: str
@@ -50,6 +70,13 @@ class CashAnalysisResponse(BaseModel):
     analysis_mode: Literal["LIVE_OPERATING", "HISTORICAL_AUDIT"] = "LIVE_OPERATING"
     projected_depletion_date: str | None = None
     alert_boundary_date: str | None = None
+    accounts_breakdown: list[AccountSummary] | None = None
+    internal_transfers_excluded: str | None = None
+    internal_transfers: list[ContraTransferSummary] | None = None
+    calendar_gaps: list[str] | None = None
+    has_overlaps_deduped: bool | None = None
+    operational_inflows: str | None = None
+    operational_outflows: str | None = None
 
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
@@ -121,6 +148,47 @@ async def analyze_csv(
             dio_days=dio_days or 0,
         )
 
+    acc_breakdown: list[AccountSummary] | None = None
+    contra_excluded: str | None = None
+    contra_summaries: list[ContraTransferSummary] | None = None
+    cal_gaps: list[str] | None = None
+    has_deduped: bool | None = None
+    op_inflows: str | None = None
+    op_outflows: str | None = None
+
+    if ingestion.treasury is not None:
+        t = ingestion.treasury
+        acc_breakdown = [
+            AccountSummary(
+                file_name=a.file_name,
+                account_id=a.account_id,
+                start_date=a.start_date.isoformat(),
+                end_date=a.end_date.isoformat(),
+                closing_balance=_format_money(a.closing_balance),
+                transaction_count=a.transaction_count,
+            )
+            for a in t.accounts
+        ]
+        if t.internal_transfer_volume > Decimal("0.00"):
+            contra_excluded = _format_money(t.internal_transfer_volume)
+        if t.internal_transfers:
+            contra_summaries = [
+                ContraTransferSummary(
+                    outflow_tx_id=cp.outflow_tx_id,
+                    inflow_tx_id=cp.inflow_tx_id,
+                    amount=_format_money(cp.amount),
+                    outflow_account=cp.outflow_account,
+                    inflow_account=cp.inflow_account,
+                    transfer_date=cp.transfer_date.isoformat(),
+                )
+                for cp in t.internal_transfers
+            ]
+        if t.calendar_gaps:
+            cal_gaps = t.calendar_gaps
+        has_deduped = t.has_overlaps_deduped
+        op_inflows = _format_money(t.operational_inflows)
+        op_outflows = _format_money(t.operational_outflows)
+
     return CashAnalysisResponse(
         currency=result.currency,
         accepted_count=result.accepted_count,
@@ -143,6 +211,13 @@ async def analyze_csv(
         analysis_mode=result.analysis_mode,  # type: ignore[arg-type]
         projected_depletion_date=result.projected_depletion_date,
         alert_boundary_date=result.alert_boundary_date,
+        accounts_breakdown=acc_breakdown,
+        internal_transfers_excluded=contra_excluded,
+        internal_transfers=contra_summaries,
+        calendar_gaps=cal_gaps,
+        has_overlaps_deduped=has_deduped,
+        operational_inflows=op_inflows,
+        operational_outflows=op_outflows,
     )
 
 

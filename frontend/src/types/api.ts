@@ -6,6 +6,24 @@ export interface RejectedRow {
   reason_code: string;
 }
 
+export interface AccountSummary {
+  file_name: string;
+  account_id: string;
+  start_date: string;
+  end_date: string;
+  closing_balance: string;
+  transaction_count: number;
+}
+
+export interface ContraTransferSummary {
+  outflow_tx_id: string;
+  inflow_tx_id: string;
+  amount: string;
+  outflow_account: string;
+  inflow_account: string;
+  transfer_date: string;
+}
+
 export interface CashAnalysisResponse {
   currency: string;
   accepted_count: number;
@@ -28,6 +46,14 @@ export interface CashAnalysisResponse {
   analysis_mode?: 'LIVE_OPERATING' | 'HISTORICAL_AUDIT';
   projected_depletion_date?: string | null;
   alert_boundary_date?: string | null;
+  // Dynamic Multi-Statement Treasury Consolidation
+  accounts_breakdown?: AccountSummary[] | null;
+  internal_transfers_excluded?: string | null;
+  internal_transfers?: ContraTransferSummary[] | null;
+  calendar_gaps?: string[] | null;
+  has_overlaps_deduped?: boolean | null;
+  operational_inflows?: string | null;
+  operational_outflows?: string | null;
 }
 
 // Three-Tier Security Gate & Staged Action Intents
