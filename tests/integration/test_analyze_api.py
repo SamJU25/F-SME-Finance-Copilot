@@ -40,6 +40,8 @@ def test_analyze_api_returns_decimal_strings_and_row_provenance():
         "end_date": "2026-10-02",
         "statement_age_days": 0,
         "analysis_mode": "LIVE_OPERATING",
+        "projected_depletion_date": "2026-11-09",
+        "alert_boundary_date": "2026-10-12",
     }
 
 

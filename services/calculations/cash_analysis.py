@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 from typing import Sequence
 
@@ -28,6 +28,8 @@ class CashAnalysisResult:
     end_date: str | None = None
     statement_age_days: int = 0
     analysis_mode: str = "LIVE_OPERATING"  # "LIVE_OPERATING" | "HISTORICAL_AUDIT"
+    projected_depletion_date: str | None = None
+    alert_boundary_date: str | None = None
 
 
 def calculate_cash_analysis(
@@ -68,6 +70,12 @@ def calculate_cash_analysis(
     else:
         runway_days = None
 
+    alert_boundary_date = (last_date + timedelta(days=alert_threshold_days)).isoformat()
+    if runway_days is not None:
+        projected_depletion_date = (last_date + timedelta(days=runway_days)).isoformat()
+    else:
+        projected_depletion_date = None
+
     if current_balance <= 0:
         cash_status = "CASH_NONPOSITIVE"
     elif average_daily_burn == 0:
@@ -94,4 +102,6 @@ def calculate_cash_analysis(
         end_date=last_date.isoformat(),
         statement_age_days=statement_age_days,
         analysis_mode=analysis_mode,
+        projected_depletion_date=projected_depletion_date,
+        alert_boundary_date=alert_boundary_date,
     )

@@ -46,6 +46,8 @@ class CashAnalysisResponse(BaseModel):
     end_date: str | None = None
     statement_age_days: int = 0
     analysis_mode: Literal["LIVE_OPERATING", "HISTORICAL_AUDIT"] = "LIVE_OPERATING"
+    projected_depletion_date: str | None = None
+    alert_boundary_date: str | None = None
 
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
@@ -105,6 +107,8 @@ async def analyze_csv(
         end_date=result.end_date,
         statement_age_days=result.statement_age_days,
         analysis_mode=result.analysis_mode,  # type: ignore[arg-type]
+        projected_depletion_date=result.projected_depletion_date,
+        alert_boundary_date=result.alert_boundary_date,
     )
 
 

@@ -79,7 +79,7 @@
       "file_type": "code",
       "norm_label": "actionstatus",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L33"
+      "source_location": "L35"
     },
     {
       "id": "frontend_src_types_api_actiontype",
@@ -92,7 +92,7 @@
       "file_type": "code",
       "norm_label": "actiontype",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L32"
+      "source_location": "L34"
     },
     {
       "id": "frontend_src_types_api_agentactionproposal",
@@ -105,7 +105,7 @@
       "file_type": "code",
       "norm_label": "agentactionproposal",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L125"
+      "source_location": "L127"
     },
     {
       "id": "frontend_src_types_api_agentmetricssummary",
@@ -118,7 +118,7 @@
       "file_type": "code",
       "norm_label": "agentmetricssummary",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L91"
+      "source_location": "L93"
     },
     {
       "id": "frontend_src_types_api_cashstatus",
@@ -144,7 +144,7 @@
       "file_type": "code",
       "norm_label": "copilotresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L134"
+      "source_location": "L136"
     },
     {
       "id": "frontend_src_types_api_executionrequest",
@@ -157,7 +157,7 @@
       "file_type": "code",
       "norm_label": "executionrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L53"
+      "source_location": "L55"
     },
     {
       "id": "frontend_src_types_api_fetchmodelsrequest",
@@ -170,7 +170,7 @@
       "file_type": "code",
       "norm_label": "fetchmodelsrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L179"
+      "source_location": "L181"
     },
     {
       "id": "frontend_src_types_api_financingoption",
@@ -183,7 +183,7 @@
       "file_type": "code",
       "norm_label": "financingoption",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L73"
+      "source_location": "L75"
     },
     {
       "id": "frontend_src_types_api_modelitem",
@@ -196,7 +196,7 @@
       "file_type": "code",
       "norm_label": "modelitem",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L174"
+      "source_location": "L176"
     },
     {
       "id": "frontend_src_types_api_producttype",
@@ -209,7 +209,7 @@
       "file_type": "code",
       "norm_label": "producttype",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L59"
+      "source_location": "L61"
     },
     {
       "id": "frontend_src_types_api_rejectedrow",
@@ -235,7 +235,7 @@
       "file_type": "code",
       "norm_label": "risktier",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L58"
+      "source_location": "L60"
     },
     {
       "id": "frontend_src_types_api_stagedactionintent",
@@ -248,7 +248,7 @@
       "file_type": "code",
       "norm_label": "stagedactionintent",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L35"
+      "source_location": "L37"
     },
     {
       "id": "frontend_src_types_api_stagingrequest",
@@ -261,7 +261,7 @@
       "file_type": "code",
       "norm_label": "stagingrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L46"
+      "source_location": "L48"
     },
     {
       "id": "frontend_src_types_api_testconnectionrequest",
@@ -274,7 +274,7 @@
       "file_type": "code",
       "norm_label": "testconnectionrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L159"
+      "source_location": "L161"
     },
     {
       "id": "frontend_src_types_api_underwriteapiresponse",
@@ -287,7 +287,7 @@
       "file_type": "code",
       "norm_label": "underwriteapiresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L85"
+      "source_location": "L87"
     },
     {
       "id": "frontend_src_types_api_underwritingdossier",
@@ -300,7 +300,7 @@
       "file_type": "code",
       "norm_label": "underwritingdossier",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L61"
+      "source_location": "L63"
     },
     {
       "id": "services_agent_schema_agentactionproposal",
@@ -560,7 +560,7 @@
       "file_type": "code",
       "norm_label": "fetchmodelsresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L185"
+      "source_location": "L187"
     },
     {
       "id": "frontend_src_types_api_llmconfig",
@@ -573,7 +573,7 @@
       "file_type": "code",
       "norm_label": "llmconfig",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L152"
+      "source_location": "L154"
     },
     {
       "id": "frontend_src_types_api_llmproviderid",
@@ -586,7 +586,7 @@
       "file_type": "code",
       "norm_label": "llmproviderid",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L143"
+      "source_location": "L145"
     },
     {
       "id": "frontend_src_types_api_testconnectionresponse",
@@ -599,7 +599,7 @@
       "file_type": "code",
       "norm_label": "testconnectionresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L166"
+      "source_location": "L168"
     },
     {
       "id": "services_security_staging_ledger_biometricverificationerror",
@@ -1544,7 +1544,7 @@
       "file_type": "code",
       "norm_label": "calculate_cash_analysis()",
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L33"
+      "source_location": "L35"
     },
     {
       "id": "tests_unit_test_cash_analysis_row",
@@ -2948,7 +2948,7 @@
       "file_type": "code",
       "norm_label": "metric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L2050"
+      "source_location": "L2056"
     },
     {
       "id": "frontend_src_app_page_money",
@@ -3716,7 +3716,7 @@
       "file_type": "code",
       "norm_label": "analyze_csv()",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L52"
+      "source_location": "L54"
     },
     {
       "id": "api_routes_analyze_format_money",
@@ -3728,7 +3728,7 @@
       "file_type": "code",
       "norm_label": "_format_money()",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L111"
+      "source_location": "L115"
     },
     {
       "id": "api_routes_health_get_health_status",
@@ -4652,7 +4652,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_adapts_to_historical_audit_mode_for_outdated_statement()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L104"
+      "source_location": "L106"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_defaults_threshold_to_30_when_omitted",
@@ -4664,7 +4664,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_defaults_threshold_to_30_when_omitted()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L95"
+      "source_location": "L97"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_enforces_configured_upload_limit",
@@ -4676,7 +4676,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_enforces_configured_upload_limit()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L84"
+      "source_location": "L86"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_rejects_invalid_threshold",
@@ -4688,7 +4688,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_rejects_invalid_threshold()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L75"
+      "source_location": "L77"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_reports_file_errors_in_stable_shape",
@@ -4700,7 +4700,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_reports_file_errors_in_stable_shape()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L64"
+      "source_location": "L66"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_returns_decimal_strings_and_row_provenance",
@@ -4724,7 +4724,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_with_cash_conversion_cycle()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L46"
+      "source_location": "L48"
     },
     {
       "id": "tests_unit_test_security_gate_test_cannot_execute_already_executed_intent",
@@ -10532,7 +10532,7 @@
       "source_location": "L1"
     },
     {
-      "id": "services_calculations_cash_analysis_rationale_39",
+      "id": "services_calculations_cash_analysis_rationale_41",
       "label": "Calculate a historical-average burn/runway indicator; this is not a forecast.",
       "_origin": "ast",
       "community": 149,
@@ -10540,7 +10540,7 @@
       "file_type": "rationale",
       "norm_label": "calculate a historical-average burn/runway indicator; this is not a forecast.",
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L39"
+      "source_location": "L41"
     },
     {
       "id": "tests_unit_test_cash_analysis_rationale_68",
@@ -33652,7 +33652,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L69",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -33664,7 +33664,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L73",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -33676,7 +33676,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L82",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -33688,7 +33688,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L88",
+      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -33700,7 +33700,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L91",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -33712,7 +33712,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L92",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -33832,7 +33832,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1401",
+      "source_location": "L1405",
       "weight": 1.0
     },
     {
@@ -33844,7 +33844,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1403",
+      "source_location": "L1407",
       "weight": 1.0
     },
     {
@@ -33856,7 +33856,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1601",
+      "source_location": "L1607",
       "weight": 1.0
     },
     {
@@ -33868,7 +33868,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1682",
+      "source_location": "L1688",
       "weight": 1.0
     },
     {
@@ -36304,7 +36304,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L80",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -38644,7 +38644,7 @@
       "confidence_score": 1.0,
       "context": "decorator",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L51",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -46507,7 +46507,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L52",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -46519,7 +46519,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L52",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -46531,7 +46531,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L111",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -46723,7 +46723,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L33",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -46879,7 +46879,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L52",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -60003,7 +60003,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L111",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -60036,7 +60036,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L52",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -63600,7 +63600,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L2050",
+      "source_location": "L2056",
       "weight": 1.0
     },
     {
@@ -63743,7 +63743,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L125",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -63754,7 +63754,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L134",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -63765,7 +63765,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L143",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -63776,7 +63776,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L152",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -63787,7 +63787,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L159",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -63798,7 +63798,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L166",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -63809,7 +63809,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L174",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -63820,7 +63820,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L179",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -63831,7 +63831,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L185",
+      "source_location": "L187",
       "weight": 1.0
     },
     {
@@ -63853,7 +63853,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L32",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -63864,7 +63864,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L33",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -63875,7 +63875,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L35",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -63897,7 +63897,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L46",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -63908,7 +63908,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L53",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -63919,7 +63919,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L58",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -63930,7 +63930,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L59",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -63941,7 +63941,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L61",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -63952,7 +63952,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L73",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -63963,7 +63963,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L85",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -63985,7 +63985,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L91",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -66053,7 +66053,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L33",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -67879,7 +67879,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L104",
+      "source_location": "L106",
       "weight": 1.0
     },
     {
@@ -67901,7 +67901,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L46",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -67912,7 +67912,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L64",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -67923,7 +67923,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L75",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -67934,7 +67934,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L84",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -67945,7 +67945,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L95",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -72017,14 +72017,14 @@
       "weight": 1.0
     },
     {
-      "source": "services_calculations_cash_analysis_rationale_39",
+      "source": "services_calculations_cash_analysis_rationale_41",
       "target": "services_calculations_cash_analysis_calculate_cash_analysis",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L39",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -75836,7 +75836,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L34",
+      "source_location": "L36",
       "weight": 0.8
     },
     {
@@ -75848,7 +75848,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "services/calculations/cash_analysis.py",
-      "source_location": "L35",
+      "source_location": "L37",
       "weight": 0.8
     },
     {
@@ -76200,7 +76200,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L70",
+      "source_location": "L72",
       "weight": 0.8
     },
     {
@@ -76579,5 +76579,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "397bbb1b843f01f232de3d0a7562f3a21658e953"
+  "built_at_commit": "a5732ac8e28ed27fd3bed4c75338d984813f6d5e"
 }

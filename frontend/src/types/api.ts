@@ -26,6 +26,8 @@ export interface CashAnalysisResponse {
   end_date?: string | null;
   statement_age_days?: number | null;
   analysis_mode?: 'LIVE_OPERATING' | 'HISTORICAL_AUDIT';
+  projected_depletion_date?: string | null;
+  alert_boundary_date?: string | null;
 }
 
 // Three-Tier Security Gate & Staged Action Intents

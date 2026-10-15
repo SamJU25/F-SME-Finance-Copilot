@@ -1262,7 +1262,11 @@ export default function HomePage() {
                 </div>
                 <div className="threshold-helper">
                   Triggers warning if burn velocity depletes cash balance within{' '}
-                  <strong>{threshold || '30'} days</strong>.
+                  <strong>{threshold || '30'} days</strong>
+                  {result?.alert_boundary_date && (
+                    <span> (before <time dateTime={result.alert_boundary_date}>{result.alert_boundary_date}</time>)</span>
+                  )}
+                  .
                 </div>
               </div>
 
@@ -1423,6 +1427,8 @@ export default function HomePage() {
                     sub={
                       result.runway_days === null
                         ? 'Net cash-positive · Inflows ≥ Outflows'
+                        : result.projected_depletion_date
+                        ? `Projected zero-cash: ${result.projected_depletion_date}`
                         : `Cash depletes in ${result.runway_days} days`
                     }
                   />
