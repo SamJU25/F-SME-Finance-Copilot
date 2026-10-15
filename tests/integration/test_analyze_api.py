@@ -115,3 +115,49 @@ def test_analyze_api_adapts_to_historical_audit_mode_for_outdated_statement():
     assert body["analysis_mode"] == "HISTORICAL_AUDIT"
 
 
+def test_analyze_api_with_multiple_csv_files():
+    file1 = (
+        "Date,Description,Amount,Running Bal.\n"
+        "2026-10-01,Invoice payment,1000.00,5000.00\n"
+        "2026-10-02,Software subscription,-50.00,4950.00\n"
+    ).encode()
+    file2 = (
+        "Date,Description,Amount,Running Bal.\n"
+        "2026-10-03,Client retainer,2000.00,6950.00\n"
+        "2026-10-04,Office supply,-150.00,6800.00\n"
+    ).encode()
+
+    response = client.post(
+        "/api/v1/analyze",
+        data={"alert_threshold_days": "15"},
+        files=[
+            ("files", ("oct_part1.csv", file1, "text/csv")),
+            ("files", ("oct_part2.csv", file2, "text/csv")),
+        ],
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted_count"] == 4
+    assert body["current_balance"] == "6800.00"
+    assert body["period_days"] == 4
+
+
+def test_analyze_api_with_universal_bofa_format():
+    bofa_csv = (
+        "Date,Description,Amount,Running Bal.\n"
+        "10/01/2026,Deposit,3000.00,10000.00\n"
+        "10/05/2026,Office Depot,-200.00,9800.00\n"
+    ).encode()
+
+    response = client.post(
+        "/api/v1/analyze",
+        data={"alert_threshold_days": "30"},
+        files={"file": ("bofa_statement.csv", bofa_csv, "text/csv")},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted_count"] == 2
+    assert body["current_balance"] == "9800.00"
+
+
+

@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict
 
 from services.calculations.cash_analysis import calculate_cash_analysis
 from services.calculations.runway import calculate_cash_conversion_cycle
-from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv
+from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv, parse_multiple_bank_csv
 
 router = APIRouter(prefix="/api/v1", tags=["Cash analysis"])
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_ANALYSIS_UPLOAD_BYTES", "1048576"))
@@ -52,7 +52,8 @@ class CashAnalysisResponse(BaseModel):
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
 async def analyze_csv(
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
+    files: list[UploadFile] | None = File(None),
     alert_threshold_days: int = Form(30, gt=0),
     dso_days: int | None = Form(None, ge=0),
     dpo_days: int | None = Form(None, ge=0),
@@ -61,14 +62,36 @@ async def analyze_csv(
 ) -> CashAnalysisResponse | JSONResponse:
     if MAX_UPLOAD_BYTES <= 0:
         raise RuntimeError("MAX_ANALYSIS_UPLOAD_BYTES must be a positive integer")
-    content = await file.read(MAX_UPLOAD_BYTES + 1)
-    if len(content) > MAX_UPLOAD_BYTES:
+
+    upload_list: list[UploadFile] = []
+    if files:
+        upload_list.extend(files)
+    if file:
+        upload_list.append(file)
+
+    if not upload_list:
         return JSONResponse(
-            status_code=413,
-            content={"error": {"code": "UPLOAD_TOO_LARGE", "message": "CSV upload exceeds the configured size limit."}},
+            status_code=422,
+            content={"error": {"code": "INVALID_HEADER", "message": "CSV upload is required."}},
         )
+
+    file_contents: list[tuple[str, bytes]] = []
+    total_bytes = 0
+    for upload in upload_list:
+        content = await upload.read(MAX_UPLOAD_BYTES + 1)
+        total_bytes += len(content)
+        if total_bytes > MAX_UPLOAD_BYTES or len(content) > MAX_UPLOAD_BYTES:
+            return JSONResponse(
+                status_code=413,
+                content={"error": {"code": "UPLOAD_TOO_LARGE", "message": "CSV upload exceeds the configured size limit."}},
+            )
+        file_contents.append((upload.filename or "statement.csv", content))
+
     try:
-        ingestion = parse_bank_csv(content)
+        if len(file_contents) == 1:
+            ingestion = parse_bank_csv(file_contents[0][1])
+        else:
+            ingestion = parse_multiple_bank_csv(file_contents)
     except CSVIngestionError as exc:
         return JSONResponse(status_code=422, content={"error": {"code": exc.code, "message": str(exc)}})
 

@@ -1,14 +1,15 @@
-"""Bank statement CSV data ingestion and sanitization service."""
+"""Universal bank statement and financial table data ingestion and sanitization service."""
 
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -69,7 +70,7 @@ class IngestionResult:
 
 
 def redact_pii_string(raw_text: str) -> str:
-    """Masks basic IBAN-shaped values and US phone numbers in existing call sites."""
+    """Masks basic IBAN-shaped values and US phone numbers in transaction text."""
     masked = re.sub(r"\b[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\b", "[REDACTED_IBAN]", raw_text)
     return re.sub(r"\b\d{3}[-.\s]??\d{3}[-.\s]??\d{4}\b", "[REDACTED_PHONE]", masked)
 
@@ -92,21 +93,264 @@ def parse_bank_records(records: list[dict[str, Any]], tenant_id: str) -> list[No
     return normalized
 
 
+# ---------------------------------------------------------------------------
+# Universal Financial Table Parser (Multi-Bank, Payment Processors, Accounting)
+# ---------------------------------------------------------------------------
+
+_DATE_ALIASES = {
+    "date", "postedon", "postdate", "postingdate", "transactiondate", "transdate",
+    "bookingdate", "effectivedate", "valuedate", "created", "createdat", "createdutc",
+    "time", "timestamp", "when", "activitydate", "operationdate", "settlementdate",
+    "txndate", "processdate", "cleareddate",
+}
+
+_AMOUNT_ALIASES = {
+    "amount", "transactionamount", "transamount", "value", "total", "howmuch",
+    "sum", "price", "subtotal", "txnamount",
+}
+
+_NET_ALIASES = {"net", "netamount"}
+
+_DEBIT_ALIASES = {
+    "debit", "withdrawal", "withdrawals", "moneyout", "paidout", "debitamount",
+    "dr", "expense", "charges", "outflow", "spent", "debits", "payments",
+}
+
+_CREDIT_ALIASES = {
+    "credit", "deposit", "deposits", "moneyin", "paidin", "creditamount",
+    "cr", "income", "receipts", "inflow", "received", "credits",
+}
+
+_DESCRIPTION_ALIASES = {
+    "description", "details", "memo", "name", "counterparty", "payee", "payer",
+    "merchant", "narrative", "transactiondetails", "notes", "who", "reference",
+    "particulars", "split", "item", "title", "vendor", "payeename", "descriptionnarrative",
+}
+
+_BALANCE_ALIASES = {
+    "closingbalance", "balance", "runningbal", "runningbalance", "accountbalance",
+    "currentbalance", "availablebalance", "endingbalance", "ledgerbalance", "bal",
+}
+
+_TX_ID_ALIASES = {
+    "transactionid", "id", "transid", "txid", "referenceid", "refno",
+    "referencenumber", "checknumber", "documentnumber", "num", "receiptid",
+    "orderid", "fitid", "chequeno", "checkorslip", "checkslip", "checkno",
+}
+
+_CURRENCY_ALIASES = {
+    "currency", "curr", "ccy", "currencycode", "isocurrency",
+}
+
+_CURRENCY_SYMBOL_MAP = {
+    "$": "USD",
+    "€": "EUR",
+    "£": "GBP",
+    "¥": "JPY",
+    "₹": "INR",
+    "C$": "CAD",
+    "A$": "AUD",
+    "CHF": "CHF",
+}
+
+
+def _normalize_col_name(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower().strip())
+
+
+def _detect_columns(header: list[str]) -> dict[str, int] | None:
+    norm_cols = [_normalize_col_name(c) for c in header]
+    mapping: dict[str, int] = {}
+
+    for idx, col in enumerate(norm_cols):
+        if not col:
+            continue
+        if "tx_id" not in mapping and col in _TX_ID_ALIASES:
+            mapping["tx_id"] = idx
+        elif "date" not in mapping and col in _DATE_ALIASES:
+            mapping["date"] = idx
+        elif "balance" not in mapping and col in _BALANCE_ALIASES:
+            mapping["balance"] = idx
+        elif "debit" not in mapping and col in _DEBIT_ALIASES:
+            mapping["debit"] = idx
+        elif "credit" not in mapping and col in _CREDIT_ALIASES:
+            mapping["credit"] = idx
+        elif col in _NET_ALIASES:
+            # Net amount has priority over gross amount
+            mapping["amount"] = idx
+        elif "amount" not in mapping and col in _AMOUNT_ALIASES:
+            mapping["amount"] = idx
+        elif "description" not in mapping and col in _DESCRIPTION_ALIASES:
+            mapping["description"] = idx
+        elif "currency" not in mapping and col in _CURRENCY_ALIASES:
+            mapping["currency"] = idx
+
+    has_date = "date" in mapping
+    has_amount = "amount" in mapping or "debit" in mapping or "credit" in mapping
+    if not (has_date and has_amount):
+        return None
+
+    return mapping
+
+
+def _parse_universal_date(raw_val: str) -> date:
+    val = raw_val.strip()
+    if not val:
+        raise ValueError("EMPTY_DATE")
+
+    # 1. ISO date prefix (handles YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
+    if len(val) >= 10 and val[4] == "-" and val[7] == "-":
+        try:
+            return date.fromisoformat(val[:10])
+        except ValueError:
+            pass
+
+    patterns = (
+        "%Y-%m-%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%d/%m/%Y",
+        "%d/%m/%y",
+        "%d.%m.%Y",
+        "%d-%m-%Y",
+        "%m-%d-%Y",
+        "%d-%b-%Y",
+        "%b %d, %Y",
+        "%d %b %Y",
+        "%B %d, %Y",
+        "%Y/%m/%d",
+    )
+    for pat in patterns:
+        try:
+            return datetime.strptime(val, pat).date()
+        except ValueError:
+            continue
+
+    raise ValueError(f"Unrecognized date format: {val}")
+
+
+def _parse_universal_amount(raw_val: str) -> tuple[Decimal, str | None]:
+    val = raw_val.strip()
+    if not val:
+        return Decimal("0.00"), None
+
+    is_negative = False
+    detected_currency: str | None = None
+
+    val_upper = val.upper()
+    if val_upper.endswith(" CR"):
+        val = val[:-3].strip()
+    elif val_upper.endswith(" DR"):
+        is_negative = True
+        val = val[:-3].strip()
+
+    if val.endswith("-"):
+        is_negative = True
+        val = val[:-1].strip()
+
+    if val.startswith("(") and val.endswith(")"):
+        is_negative = True
+        val = val[1:-1].strip()
+
+    for sym, ccy in _CURRENCY_SYMBOL_MAP.items():
+        if sym in val:
+            detected_currency = ccy
+            val = val.replace(sym, "").strip()
+            break
+
+    if val.startswith("-"):
+        is_negative = True
+        val = val[1:].strip()
+    elif val.startswith("+"):
+        val = val[1:].strip()
+
+    for code in ("USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF"):
+        if code in val.upper():
+            detected_currency = code
+            val = re.sub(re.escape(code), "", val, flags=re.IGNORECASE).strip()
+            break
+
+    # European dot-thousands, comma-decimals: e.g. 1.250,50
+    if re.search(r"^\d{1,3}(\.\d{3})+,\d{2}$", val):
+        val = val.replace(".", "").replace(",", ".")
+    else:
+        val = val.replace(",", "")
+
+    val = re.sub(r"[^\d.]", "", val)
+    if not val:
+        return Decimal("0.00"), detected_currency
+
+    amt = Decimal(val)
+    if not amt.is_finite():
+        raise InvalidOperation("Non-finite amount")
+
+    if is_negative:
+        amt = -abs(amt)
+
+    return amt, detected_currency
+
+
+def _detect_delimiter(sample: str) -> str:
+    first_line = sample.splitlines()[0] if sample.splitlines() else ""
+    if "\t" in first_line and first_line.count("\t") > first_line.count(","):
+        return "\t"
+    if ";" in first_line and first_line.count(";") > first_line.count(","):
+        return ";"
+    return ","
+
+
 def parse_bank_csv(content: bytes) -> IngestionResult:
-    """Parse standard bank statement CSV schema, preserving row numbers and safe reason codes."""
+    """Universal bank statement and financial table CSV parser.
+    
+    Accepts standard schemas, commercial bank formats (Chase, BofA, Citi, Wells Fargo),
+    payment gateways (Stripe, Square, Shopify, PayPal), accounting platforms (QuickBooks, Xero),
+    and raw founder spreadsheets.
+    """
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise CSVIngestionError("INVALID_ENCODING", "Upload must be UTF-8 encoded CSV.") from exc
 
-    reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+    delimiter = _detect_delimiter(text)
+    reader = csv.reader(io.StringIO(text, newline=""), delimiter=delimiter, strict=True)
+
     try:
         header = next(reader)
     except (StopIteration, csv.Error) as exc:
         raise CSVIngestionError("INVALID_HEADER", "CSV header is missing or malformed.") from exc
-    if header != EXPECTED_HEADER:
+
+    # Fast path: exact match with standard baseline schema
+    if header == EXPECTED_HEADER:
+        return _parse_standard_csv(reader)
+
+    # Universal path: locate header row within the first 10 rows (accommodating metadata)
+    detected = _detect_columns(header)
+    header_offset = 1
+    if detected is None:
+        # Search for table header within the first 10 lines
+        lines = text.splitlines()
+        for idx in range(1, min(10, len(lines))):
+            try:
+                candidate = next(csv.reader([lines[idx]], delimiter=delimiter))
+                detected = _detect_columns(candidate)
+                if detected is not None:
+                    header = candidate
+                    header_offset = idx + 1
+                    # Re-initialize reader starting right after the detected header line
+                    remaining_text = "\n".join(lines[header_offset:])
+                    reader = csv.reader(io.StringIO(remaining_text, newline=""), delimiter=delimiter, strict=True)
+                    break
+            except Exception:
+                continue
+
+    if detected is None:
         raise CSVIngestionError("INVALID_HEADER", "CSV header does not match required schema: " + ",".join(EXPECTED_HEADER))
 
+    return _parse_universal_csv(reader, detected, start_row=header_offset + 1)
+
+
+def _parse_standard_csv(reader: Any) -> IngestionResult:
+    """Parses standard schema while preserving strict test invariants."""
     accepted: list[DemoTransaction] = []
     rejected: list[RejectedRow] = []
     seen_ids: set[str] = set()
@@ -170,3 +414,243 @@ def parse_bank_csv(content: bytes) -> IngestionResult:
     if not accepted:
         raise CSVIngestionError("NO_VALID_ROWS", "CSV contains no valid transaction rows.")
     return IngestionResult(currency=accepted[0].currency, accepted_rows=accepted, rejected_rows=rejected)
+
+
+def _parse_universal_csv(reader: Any, col_map: dict[str, int], start_row: int) -> IngestionResult:
+    """Parses universal columns, normalizes notations, backfills balances and hashes IDs."""
+    raw_accepted: list[dict[str, Any]] = []
+    rejected: list[RejectedRow] = []
+    currencies: set[str] = set()
+
+    date_idx = col_map["date"]
+    amount_idx = col_map.get("amount")
+    debit_idx = col_map.get("debit")
+    credit_idx = col_map.get("credit")
+    balance_idx = col_map.get("balance")
+    desc_idx = col_map.get("description")
+    id_idx = col_map.get("tx_id")
+    curr_idx = col_map.get("currency")
+
+    max_required_idx = max(filter(lambda x: x is not None, [date_idx, amount_idx, debit_idx, credit_idx]))
+
+    try:
+        for row_number, row in enumerate(reader, start=start_row):
+            if not row or all(not cell.strip() for cell in row):
+                continue
+            if len(row) <= max_required_idx:
+                rejected.append(RejectedRow(row_number, "INVALID_ROW_SHAPE"))
+                continue
+
+            # 1. Parse Date
+            try:
+                posted_on = _parse_universal_date(row[date_idx])
+            except (ValueError, IndexError):
+                rejected.append(RejectedRow(row_number, "INVALID_DATE"))
+                continue
+
+            # 2. Parse Amount (or Debit / Credit)
+            detected_sym_ccy: str | None = None
+            try:
+                if amount_idx is not None and amount_idx < len(row) and row[amount_idx].strip():
+                    amount, detected_sym_ccy = _parse_universal_amount(row[amount_idx])
+                elif debit_idx is not None or credit_idx is not None:
+                    credit_val = Decimal("0.00")
+                    debit_val = Decimal("0.00")
+                    if credit_idx is not None and credit_idx < len(row) and row[credit_idx].strip():
+                        credit_val, sym1 = _parse_universal_amount(row[credit_idx])
+                        detected_sym_ccy = detected_sym_ccy or sym1
+                    if debit_idx is not None and debit_idx < len(row) and row[debit_idx].strip():
+                        debit_val, sym2 = _parse_universal_amount(row[debit_idx])
+                        detected_sym_ccy = detected_sym_ccy or sym2
+                    amount = credit_val - abs(debit_val)
+                else:
+                    rejected.append(RejectedRow(row_number, "INVALID_AMOUNT"))
+                    continue
+            except (InvalidOperation, ValueError, IndexError):
+                rejected.append(RejectedRow(row_number, "INVALID_AMOUNT"))
+                continue
+
+            # 3. Parse Currency
+            currency = "USD"
+            if curr_idx is not None and curr_idx < len(row) and row[curr_idx].strip():
+                cur_candidate = row[curr_idx].strip().upper()
+                if re.fullmatch(r"[A-Z]{3}", cur_candidate):
+                    currency = cur_candidate
+                elif detected_sym_ccy:
+                    currency = detected_sym_ccy
+            elif detected_sym_ccy:
+                currency = detected_sym_ccy
+
+            currencies.add(currency)
+            if len(currencies) > 1:
+                raise CSVIngestionError("MIXED_CURRENCIES", "All rows in one upload must use the same currency.")
+
+            # 4. Parse Description
+            if desc_idx is not None and desc_idx < len(row):
+                description = redact_pii_string(row[desc_idx].strip() or "Transaction")
+            else:
+                description = "Transaction"
+
+            # 5. Parse Closing Balance (if present)
+            closing_balance: Decimal | None = None
+            if balance_idx is not None and balance_idx < len(row) and row[balance_idx].strip():
+                try:
+                    bal_val, _ = _parse_universal_amount(row[balance_idx])
+                    closing_balance = bal_val
+                except (InvalidOperation, ValueError):
+                    closing_balance = None
+
+            # 6. Parse Transaction ID
+            if id_idx is not None and id_idx < len(row) and row[id_idx].strip():
+                tx_id = row[id_idx].strip()
+            else:
+                raw_hash = hashlib.sha256(f"{row_number}_{posted_on}_{amount}_{description}".encode("utf-8")).hexdigest()[:12]
+                tx_id = f"tx_{raw_hash}"
+
+            raw_accepted.append({
+                "row_number": row_number,
+                "transaction_id": tx_id,
+                "posted_on": posted_on,
+                "amount": amount,
+                "currency": currency,
+                "description": description,
+                "closing_balance": closing_balance,
+            })
+    except csv.Error as exc:
+        raise CSVIngestionError("INVALID_ROW_SHAPE", "CSV contains malformed quoting.") from exc
+
+    if not raw_accepted:
+        raise CSVIngestionError("NO_VALID_ROWS", "CSV contains no valid transaction rows.")
+
+    # Sort chronologically by posted_on
+    raw_accepted.sort(key=lambda item: (item["posted_on"], item["row_number"]))
+
+    # Reconstruct running balance if balance column was omitted or partially populated
+    has_explicit_balances = all(item["closing_balance"] is not None for item in raw_accepted)
+    if not has_explicit_balances:
+        # Reconstruct running balance cumulatively from net cash movements
+        cumulative = Decimal("0.00")
+        for item in raw_accepted:
+            if item["closing_balance"] is not None:
+                cumulative = item["closing_balance"]
+            else:
+                cumulative += item["amount"]
+                item["closing_balance"] = cumulative
+
+    accepted_rows = [
+        DemoTransaction(
+            row_number=item["row_number"],
+            transaction_id=item["transaction_id"],
+            posted_on=item["posted_on"],
+            amount=item["amount"],
+            currency=item["currency"],
+            description=item["description"],
+            closing_balance=item["closing_balance"],
+        )
+        for item in raw_accepted
+    ]
+
+    return IngestionResult(currency=accepted_rows[0].currency, accepted_rows=accepted_rows, rejected_rows=rejected)
+
+
+def parse_multiple_bank_csv(files: Sequence[tuple[str, bytes]]) -> IngestionResult:
+    """Parses and consolidates multiple CSV statements across accounts or sequential periods."""
+    if not files:
+        raise CSVIngestionError("NO_FILES", "No statement files provided.")
+    if len(files) == 1:
+        return parse_bank_csv(files[0][1])
+
+    all_accepted: list[DemoTransaction] = []
+    all_rejected: list[RejectedRow] = []
+    file_results: list[tuple[str, IngestionResult]] = []
+
+    for filename, content in files:
+        result = parse_bank_csv(content)
+        file_results.append((filename, result))
+        all_rejected.extend(result.rejected_rows)
+
+    currencies = {res.currency for _, res in file_results}
+    if len(currencies) > 1:
+        raise CSVIngestionError(
+            "MIXED_CURRENCIES",
+            f"Statements use conflicting currencies: {', '.join(sorted(currencies))}. All merged files must share the same currency.",
+        )
+    currency = currencies.pop()
+
+    # Deduplicate transactions across statements
+    seen_keys: set[tuple[date, Decimal, str]] = set()
+    seen_ids: set[str] = set()
+
+    # Detect multi-account overlap: if date ranges overlap significantly, sum closing balances
+    is_multi_account = False
+    if len(file_results) >= 2:
+        date_ranges = []
+        for _, res in file_results:
+            if res.accepted_rows:
+                min_d = min(tx.posted_on for tx in res.accepted_rows)
+                max_d = max(tx.posted_on for tx in res.accepted_rows)
+                date_ranges.append((min_d, max_d))
+        for i in range(len(date_ranges)):
+            for j in range(i + 1, len(date_ranges)):
+                start_i, end_i = date_ranges[i]
+                start_j, end_j = date_ranges[j]
+                if max(start_i, start_j) <= min(end_i, end_j):
+                    is_multi_account = True
+                    break
+
+    for _, res in file_results:
+        for tx in res.accepted_rows:
+            dedup_key = (tx.posted_on, tx.amount, tx.description.strip().lower())
+            if tx.transaction_id in seen_ids or dedup_key in seen_keys:
+                continue
+            seen_ids.add(tx.transaction_id)
+            seen_keys.add(dedup_key)
+            all_accepted.append(tx)
+
+    if not all_accepted:
+        raise CSVIngestionError("NO_VALID_ROWS", "Merged CSV statements contain no valid transactions.")
+
+    all_accepted.sort(key=lambda t: (t.posted_on, t.row_number))
+
+    if is_multi_account:
+        combined_final_balance = sum(
+            res.accepted_rows[-1].closing_balance
+            for _, res in file_results
+            if res.accepted_rows
+        )
+        total_net_change = sum(tx.amount for tx in all_accepted)
+        starting_balance = combined_final_balance - total_net_change
+
+        running_bal = starting_balance
+        recomputed_rows = []
+        for idx, tx in enumerate(all_accepted, start=1):
+            running_bal += tx.amount
+            recomputed_rows.append(
+                DemoTransaction(
+                    row_number=idx,
+                    transaction_id=tx.transaction_id,
+                    posted_on=tx.posted_on,
+                    amount=tx.amount,
+                    currency=tx.currency,
+                    description=tx.description,
+                    closing_balance=running_bal,
+                )
+            )
+        all_accepted = recomputed_rows
+    else:
+        reindexed = []
+        for idx, tx in enumerate(all_accepted, start=1):
+            reindexed.append(
+                DemoTransaction(
+                    row_number=idx,
+                    transaction_id=tx.transaction_id,
+                    posted_on=tx.posted_on,
+                    amount=tx.amount,
+                    currency=tx.currency,
+                    description=tx.description,
+                    closing_balance=tx.closing_balance,
+                )
+            )
+        all_accepted = reindexed
+
+    return IngestionResult(currency=currency, accepted_rows=all_accepted, rejected_rows=all_rejected)

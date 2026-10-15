@@ -299,6 +299,7 @@ interface StagedIntentItem {
 
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
+  const [filesList, setFilesList] = useState<File[]>([]);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [threshold, setThreshold] = useState('30');
   const [result, setResult] = useState<CashAnalysisResponse | null>(null);
@@ -657,7 +658,7 @@ export default function HomePage() {
     setTestResult(null);
   }
 
-  async function executeAnalysis(targetFile: File, thresholdValue?: string) {
+  async function executeAnalysis(targetFile: File | File[], thresholdValue?: string) {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -666,7 +667,15 @@ export default function HomePage() {
       : (threshold && Number(threshold) >= 1 ? threshold : '30');
     try {
       const data = new FormData();
-      data.append('file', targetFile);
+      if (Array.isArray(targetFile)) {
+        if (targetFile.length === 1) {
+          data.append('file', targetFile[0]);
+        } else {
+          targetFile.forEach((f) => data.append('files', f));
+        }
+      } else {
+        data.append('file', targetFile);
+      }
       data.append('alert_threshold_days', effectiveDays);
       const response = await fetch(`${API_URL}/api/v1/analyze`, { method: 'POST', body: data });
       const body = await response.json();
@@ -690,8 +699,16 @@ export default function HomePage() {
   }
 
   function handleFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const picked = event.target.files?.[0] ?? null;
+    const pickedList = event.target.files ? Array.from(event.target.files) : [];
+    if (pickedList.length === 0) {
+      setFile(null);
+      setFilesList([]);
+      setCsvText(null);
+      return;
+    }
+    const picked = pickedList[0];
     setFile(picked);
+    setFilesList(pickedList);
     setResult(null);
     setError(null);
     if (picked) {
@@ -707,8 +724,10 @@ export default function HomePage() {
         }
       };
       reader.readAsText(picked);
-      executeAnalysis(picked, threshold);
-      const fileTitle = deriveSessionTitle(undefined, picked.name);
+      executeAnalysis(pickedList.length > 1 ? pickedList : picked, threshold);
+      const fileTitle = pickedList.length > 1
+        ? `${pickedList.length} Statements (${picked.name.replace(/\.[^/.]+$/, '')} +${pickedList.length - 1})`
+        : deriveSessionTitle(undefined, picked.name);
       setSessions((prev) => {
         const idx = prev.findIndex((s) => s.id === sessionId);
         if (idx >= 0) {
@@ -734,6 +753,7 @@ export default function HomePage() {
 
   async function handleRemoveCsv() {
     setFile(null);
+    setFilesList([]);
     setCsvText(null);
     setResult(null);
     setError(null);
@@ -765,12 +785,16 @@ export default function HomePage() {
 
   async function analyze(event?: FormEvent<HTMLFormElement>) {
     if (event) event.preventDefault();
-    if (!file && !csvText) {
+    if (!file && filesList.length === 0 && !csvText) {
       setError('Choose a CSV file before reviewing cash activity.');
       return;
     }
-    const targetFile = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
-    await executeAnalysis(targetFile, threshold);
+    if (filesList.length > 1) {
+      await executeAnalysis(filesList, threshold);
+    } else {
+      const targetFile = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+      await executeAnalysis(targetFile, threshold);
+    }
   }
 
   async function sendChatMessage(promptText?: string) {
@@ -1271,27 +1295,36 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {file || csvText ? (
+              {file || filesList.length > 0 || csvText ? (
                 <>
                   <input
                     ref={fileInputRef}
                     id="csv-file"
                     className="file-input"
-                    aria-label="Choose bank statement CSV file"
+                    aria-label="Choose bank statement CSV files"
                     type="file"
                     accept=".csv,text/csv"
+                    multiple
                     style={{ display: 'none' }}
                     onChange={handleFileInputChange}
                   />
                   <div className="uploaded-file-card" role="region" aria-label="Active uploaded bank statement">
                     <div className="uploaded-file-info">
-                      <span className="uploaded-file-icon" aria-hidden="true">📄</span>
+                      <span className="uploaded-file-icon" aria-hidden="true">
+                        {filesList.length > 1 ? '📚' : '📄'}
+                      </span>
                       <div className="uploaded-file-meta">
                         <span className="uploaded-file-name">
-                          {file ? file.name : 'Active_Statement.csv'}
+                          {filesList.length > 1
+                            ? `${filesList.length} Statements (Consolidated Treasury)`
+                            : file
+                            ? file.name
+                            : 'Active_Statement.csv'}
                         </span>
                         <span className="uploaded-file-size">
-                          {file
+                          {filesList.length > 1
+                            ? `${filesList.map((f) => f.name).join(', ')} · ${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
+                            : file
                             ? `${(file.size / 1024).toFixed(1)} KB · Active in Session`
                             : csvText
                             ? `${(csvText.length / 1024).toFixed(1)} KB · Active in Session`
@@ -1322,7 +1355,7 @@ export default function HomePage() {
               ) : (
                 <div className="dropzone">
                   <span className="upload-icon" aria-hidden="true">↑</span>
-                  <label className="field-label" htmlFor="csv-file">Choose a CSV file</label>
+                  <label className="field-label" htmlFor="csv-file">Choose CSV statements (single or multiple)</label>
                   <input
                     ref={fileInputRef}
                     id="csv-file"
@@ -1330,14 +1363,15 @@ export default function HomePage() {
                     aria-label="Choose bank statement CSV file"
                     type="file"
                     accept=".csv,text/csv"
+                    multiple
                     onChange={handleFileInputChange}
                   />
-                  <div className="file-name">UTF-8 CSV · max 1 MB</div>
+                  <div className="file-name">Universal format · Multi-file supported · Max 1 MB</div>
                 </div>
               )}
 
-              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
-                Format: <code>{CSV_HEADER}</code>
+              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+                Universal Ingestion: Commercial Banks (Chase, BofA, Citi, Wells Fargo), Processors (Stripe, Square, Shopify), Accounting (QuickBooks, Xero), or founder CSVs. Multi-account treasury consolidation supported.
               </div>
 
               <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
