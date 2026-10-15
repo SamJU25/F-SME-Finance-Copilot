@@ -42,7 +42,7 @@ function formatSessionTime(isoString?: string): string {
 
 const DEFAULT_WELCOME_MESSAGE: { role: 'agent'; text: string } = {
   role: 'agent',
-  text: 'Hello, I am your Autonomous SME Finance Copilot. You can pick an inquiry below, ask any financial question, or upload your transactional bank statement on the left to run live diagnostics.',
+  text: 'How can I help with your business finances today?',
 };
 
 const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defaultUrl?: string; description: string }> = {
@@ -345,9 +345,14 @@ export default function HomePage() {
     }
   }, [sessionMenuOpen]);
 
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([
-    DEFAULT_WELCOME_MESSAGE,
-  ]);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([]);
+
+  const conversationMessages = messages.filter(
+    (m) =>
+      m.text !== DEFAULT_WELCOME_MESSAGE.text &&
+      !m.text.includes('Autonomous SME Finance Copilot')
+  );
+  const hasUserMessages = conversationMessages.some((m) => m.role === 'user');
 
   // Multi-Provider AI Settings State
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
@@ -396,7 +401,7 @@ export default function HomePage() {
           id: storedSession,
           title: 'Session 1',
           updatedAt: new Date().toISOString(),
-          messageCount: 1,
+          messageCount: 0,
         };
         storedSessionsList = [initialItem, ...storedSessionsList];
         try {
@@ -657,7 +662,7 @@ export default function HomePage() {
     const textToSend = promptText || chatInput;
     if (!textToSend.trim()) return;
 
-    const newMsgs = [...messages, { role: 'user' as const, text: textToSend }];
+    const newMsgs = [...conversationMessages, { role: 'user' as const, text: textToSend }];
     setMessages(newMsgs);
     setChatInput('');
     setChatLoading(true);
@@ -679,7 +684,7 @@ export default function HomePage() {
         body: JSON.stringify({
           session_id: activeSession,
           message: textToSend,
-          history: messages.slice(-6).map((m) => ({ role: m.role, text: m.text })),
+          history: conversationMessages.slice(-6).map((m) => ({ role: m.role, text: m.text })),
           csv_content: csvText,
           alert_threshold_days: Number(threshold) || 30,
           llm_config: llmConfig,
@@ -720,12 +725,12 @@ export default function HomePage() {
 
   function handleCreateNewSession() {
     const newSessionId = `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    const newMsgs = [DEFAULT_WELCOME_MESSAGE];
+    const newMsgs: Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }> = [];
     const newSessionItem: SessionItem = {
       id: newSessionId,
       title: `Session ${sessions.length + 1}`,
       updatedAt: new Date().toISOString(),
-      messageCount: 1,
+      messageCount: 0,
     };
 
     setSessionId(newSessionId);
@@ -786,7 +791,7 @@ export default function HomePage() {
     }
 
     if (!loaded) {
-      setMessages([DEFAULT_WELCOME_MESSAGE]);
+      setMessages([]);
     }
 
     setSessionId(targetId);
@@ -924,13 +929,13 @@ export default function HomePage() {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             <span>Copilot</span>
-            <span className="topbar-chat-badge">{messages.length}</span>
+            <span className="topbar-chat-badge">{conversationMessages.length}</span>
           </button>
 
           {/* Institutional Security & Governance Badge */}
-          <div className="topbar-security-badge" title="Three-Tier Permission Gating & Consortium Audit Chain">
+          <div className="topbar-security-badge" title="Hardware Biometric 2FA & Consortium Audit Ledger">
             <span className="security-dot" aria-hidden="true" />
-            <span>Tier 3 FIDO2 · FISCO BCOS</span>
+            <span>Biometric 2FA · FISCO BCOS</span>
           </div>
         </div>
       </header>
@@ -939,8 +944,8 @@ export default function HomePage() {
         <div className="eyebrow">Autonomous AI CFO · FinTechathon 2026 Topic E</div>
         <h1>Continuous cash protection & liquidity matching.</h1>
         <p className="lede">
-          Import a bank statement CSV to review recent transactions, calculate your historical runway,
-          and interact with your autonomous AI CFO behind a Three-Tier Security Gate.
+          Import a bank statement CSV to review transactions, forecast cash runway,
+          and manage working capital with biometric approval for disbursements.
         </p>
 
         {/* Autonomous AI Agent Command Deck & Surveillance Sentinels */}
@@ -1039,14 +1044,14 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Tier 2 Staged Action Intents (Autonomous Proposals Awaiting Founder Biometric Signature) */}
+          {/* Staged Action Intents (Autonomous Proposals Awaiting Founder Biometric Signature) */}
           <div className="staged-queue-panel">
             <div className="staged-queue-head">
               <div>
-                <div className="staged-queue-eyebrow">Three-Tier Security Gate · Tier 2 Staging Ledger</div>
+                <div className="staged-queue-eyebrow">Staged Action Ledger</div>
                 <h3 className="staged-queue-title">Staged Financial Proposals Awaiting Founder Authorization</h3>
                 <p className="staged-queue-subtitle">
-                  Autonomous agent prepares facilities and pledges in this ledger. Zero funds move until authorized via physical biometric passkey (Tier 3).
+                  Autonomous proposals queued for review. Zero funds move without explicit physical biometric passkey authorization.
                 </p>
               </div>
             </div>
@@ -1059,7 +1064,7 @@ export default function HomePage() {
                     <th>Action Proposal</th>
                     <th>Amount</th>
                     <th>Terms & Compliance</th>
-                    <th>Security Tier</th>
+                    <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Authorization</th>
                   </tr>
                 </thead>
@@ -1087,7 +1092,7 @@ export default function HomePage() {
                         </td>
                         <td>
                           <span className={`staged-badge ${isExecuted ? 'executed' : 'pending'}`}>
-                            {isExecuted ? 'Tier 3 Executed' : 'Tier 2 Staged'}
+                            {isExecuted ? 'Authorized' : 'Awaiting Approval'}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
@@ -1222,19 +1227,19 @@ export default function HomePage() {
           </section>
 
           <aside className="panel" aria-labelledby="steps-title">
-            <h2 id="steps-title">Three-Tier Security Architecture</h2>
-            <p className="panel-intro">How the Autonomous AI Copilot protects your business funds:</p>
+            <h2 id="steps-title">Execution Governance</h2>
+            <p className="panel-intro">How financial operations are safeguarded:</p>
             <div className="side-note">
-              <strong>Tier 1 — Autonomous Observation</strong>
-              <p>Continuous transaction ingestion, daily average balance calculation, and cash burn metrics. 100% read-only.</p>
+              <strong>Read-Only Monitoring</strong>
+              <p>Continuous transaction ingestion, daily average balance calculation, and cash burn metrics run with zero write access.</p>
             </div>
             <div className="side-note">
-              <strong>Tier 2 — Staging Ledger (Zero Money Movement)</strong>
-              <p>Autonomous AI drafts credit applications and stages proposals into an immutable audit ledger. No funds move.</p>
+              <strong>Draft Proposal Staging</strong>
+              <p>Financing options and transfer requests are staged in an immutable ledger. Zero funds move automatically.</p>
             </div>
             <div className="side-note">
-              <strong>Tier 3 — Human-in-the-Loop Biometric Verification</strong>
-              <p>Drawdowns and fund transfers halt strictly until approved via biometric WebAuthn FIDO2 passkey verification.</p>
+              <strong>Biometric Passkey Approval</strong>
+              <p>Drawdowns and fund disbursements require explicit physical WebAuthn passkey confirmation before execution.</p>
             </div>
           </aside>
         </div>
@@ -1300,7 +1305,7 @@ export default function HomePage() {
                       {activeSessionItem.title}
                     </span>
                     <span className="session-count-badge">
-                      {messages.length} msgs
+                      {conversationMessages.length} msgs
                     </span>
                   </div>
                   <svg
@@ -1435,120 +1440,123 @@ export default function HomePage() {
           </div>
 
           <div className="chat-body">
-            {messages.map((m, idx) => (
-              <Fragment key={idx}>
-                {idx > 0 && idx % SESSION_MESSAGE_LIMIT === 0 && (
-                  <div className="session-breakline" role="separator" aria-label="Session limit reached">
-                    <div className="breakline-divider" />
-                    <div className="breakline-content">
-                      <span className="breakline-pill">
-                        <span className="breakline-icon">⚡</span>
-                        <span>Session Context Boundary ({idx} messages reached)</span>
-                      </span>
-                      <span className="breakline-sub">
-                        Continuing conversation below · Prior context compressed for optimal agent reasoning
-                      </span>
-                    </div>
-                    <div className="breakline-divider" />
-                  </div>
-                )}
-                <div className={`chat-msg ${m.role}`}>
-                  <div className="chat-bubble">
-                    <FormattedChatBubble text={m.text} />
-                  </div>
-
-                  {/* Predictive Early-Warning Alert Card */}
-                  {m.data?.metrics?.has_projected_deficit && (
-                    <div className="chat-card" style={{ borderColor: '#e0837b', background: '#fdf2f1' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9b3d37', fontWeight: 700 }}>
-                        <span>🚨</span>
-                        <span>{m.data.metrics.deficit_severity} DEFICIT EARLY WARNING</span>
-                      </div>
-                      <div style={{ marginTop: 4, color: '#172b2d' }}>
-                        Projected shortfall of <strong>${m.data.metrics.projected_shortfall_amount}</strong> in <strong>{m.data.metrics.days_until_deficit} days</strong> ({m.data.metrics.projected_deficit_date}).
-                      </div>
-                      {m.data.metrics.recommended_bridge_amount && (
-                        <div style={{ marginTop: 6, fontSize: 11, color: '#5e7071' }}>
-                          💡 Recommended working capital bridge: <strong>${m.data.metrics.recommended_bridge_amount}</strong>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Structured Metrics Card */}
-                  {m.data?.metrics && (
-                    <div className="chat-card">
-                      <strong>Calculated Cash Metrics</strong>
-                      {m.data.metrics.current_balance && <div>Balance: ${m.data.metrics.current_balance}</div>}
-                      {m.data.metrics.average_daily_burn && <div>Burn: ${m.data.metrics.average_daily_burn}/day</div>}
-                      {m.data.metrics.runway_days !== undefined && <div>Runway: {m.data.metrics.runway_days} days</div>}
-                      {m.data.metrics.daily_average_balance && <div>Daily Avg Balance: ${m.data.metrics.daily_average_balance}</div>}
-                      {m.data.metrics.risk_tier && <div>Risk Tier: {m.data.metrics.risk_tier}</div>}
-                    </div>
-                  )}
-
-
-                  {/* Pre-Qualified Financing Options */}
-                  {m.data?.matched_options && m.data.matched_options.length > 0 && (
-                    <div className="chat-card">
-                      <strong>Pre-Qualified Financing Facilities:</strong>
-                      <ul style={{ paddingLeft: 18, margin: '6px 0 0' }}>
-                        {m.data.matched_options.map((opt, oIdx) => (
-                          <li key={oIdx} style={{ marginTop: 4 }}>
-                            <strong>{opt.facility_name}</strong> ({opt.provider})<br />
-                            Limit: ${Number(opt.max_amount).toLocaleString()} · APR: {opt.apr_percent}% · Term: {opt.term_days}d
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Tier 3 Biometric Approval Card */}
-                  {m.data?.staged_action && (
-                    <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
-                      <strong>
-                        {executedIntents[m.data.staged_action.intent_id]
-                          ? '✅ Execution Completed (WebAuthn Signed)'
-                          : '⚠️ Tier 3 HITL Biometric Approval Required'}
-                      </strong>
-                      <div style={{ marginTop: 4 }}>
-                        Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-                      </div>
-                      {!executedIntents[m.data.staged_action.intent_id] && (
-                        <button
-                          className="biometric-btn"
-                          type="button"
-                          onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
-                        >
-                          👆 Confirm Biometric WebAuthn Passkey
-                        </button>
-                      )}
-                    </div>
-                  )}
+            {!hasUserMessages ? (
+              <div className="chat-empty-state">
+                <div className="chat-empty-greeting">
+                  <h3>How can I help with your business finances today?</h3>
+                  <p>Ask about cash runway, deficit forecasts, or select a suggested inquiry below.</p>
                 </div>
-              </Fragment>
-            ))}
-            {/* Starter Prompt Cards (Only visible before user asks a question) */}
-            {!messages.some((m) => m.role === 'user') && (
-              <div className="starter-prompts">
-                <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 2 }}>
-                  Suggested Financial Inquiries
-                </span>
-                {STARTER_PROMPTS.map((item, pIdx) => (
-                  <button
-                    key={pIdx}
-                    type="button"
-                    className="starter-prompt-card"
-                    onClick={() => sendChatMessage(item.prompt)}
-                  >
-                    <span className="starter-prompt-icon" aria-hidden="true">{item.icon}</span>
-                    <div className="starter-prompt-content">
-                      <span className="starter-prompt-title">{item.title}</span>
-                      <span className="starter-prompt-desc">{item.desc}</span>
-                    </div>
-                  </button>
-                ))}
+                <div className="starter-prompts">
+                  <span className="starter-prompts-label">Suggested Financial Inquiries</span>
+                  {STARTER_PROMPTS.map((item, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      className="starter-prompt-card"
+                      onClick={() => sendChatMessage(item.prompt)}
+                    >
+                      <span className="starter-prompt-icon" aria-hidden="true">{item.icon}</span>
+                      <div className="starter-prompt-content">
+                        <span className="starter-prompt-title">{item.title}</span>
+                        <span className="starter-prompt-desc">{item.desc}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
+            ) : (
+              conversationMessages.map((m, idx) => (
+                <Fragment key={idx}>
+                  {idx > 0 && idx % SESSION_MESSAGE_LIMIT === 0 && (
+                    <div className="session-breakline" role="separator" aria-label="Session limit reached">
+                      <div className="breakline-divider" />
+                      <div className="breakline-content">
+                        <span className="breakline-pill">
+                          <span className="breakline-icon">⚡</span>
+                          <span>Session Context Boundary ({idx} messages reached)</span>
+                        </span>
+                        <span className="breakline-sub">
+                          Continuing conversation below · Prior context compressed for optimal agent reasoning
+                        </span>
+                      </div>
+                      <div className="breakline-divider" />
+                    </div>
+                  )}
+                  <div className={`chat-msg ${m.role}`}>
+                    <div className="chat-bubble">
+                      <FormattedChatBubble text={m.text} />
+                    </div>
+
+                    {/* Predictive Early-Warning Alert Card */}
+                    {m.data?.metrics?.has_projected_deficit && (
+                      <div className="chat-card" style={{ borderColor: '#e0837b', background: '#fdf2f1' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9b3d37', fontWeight: 700 }}>
+                          <span>🚨</span>
+                          <span>{m.data.metrics.deficit_severity} DEFICIT EARLY WARNING</span>
+                        </div>
+                        <div style={{ marginTop: 4, color: '#172b2d' }}>
+                          Projected shortfall of <strong>${m.data.metrics.projected_shortfall_amount}</strong> in <strong>{m.data.metrics.days_until_deficit} days</strong> ({m.data.metrics.projected_deficit_date}).
+                        </div>
+                        {m.data.metrics.recommended_bridge_amount && (
+                          <div style={{ marginTop: 6, fontSize: 11, color: '#5e7071' }}>
+                            💡 Recommended working capital bridge: <strong>${m.data.metrics.recommended_bridge_amount}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Structured Metrics Card */}
+                    {m.data?.metrics && (
+                      <div className="chat-card">
+                        <strong>Calculated Cash Metrics</strong>
+                        {m.data.metrics.current_balance && <div>Balance: ${m.data.metrics.current_balance}</div>}
+                        {m.data.metrics.average_daily_burn && <div>Burn: ${m.data.metrics.average_daily_burn}/day</div>}
+                        {m.data.metrics.runway_days !== undefined && <div>Runway: {m.data.metrics.runway_days} days</div>}
+                        {m.data.metrics.daily_average_balance && <div>Daily Avg Balance: ${m.data.metrics.daily_average_balance}</div>}
+                        {m.data.metrics.risk_tier && <div>Risk Rating: {m.data.metrics.risk_tier}</div>}
+                      </div>
+                    )}
+
+                    {/* Pre-Qualified Financing Options */}
+                    {m.data?.matched_options && m.data.matched_options.length > 0 && (
+                      <div className="chat-card">
+                        <strong>Pre-Qualified Financing Facilities:</strong>
+                        <ul style={{ paddingLeft: 18, margin: '6px 0 0' }}>
+                          {m.data.matched_options.map((opt, oIdx) => (
+                            <li key={oIdx} style={{ marginTop: 4 }}>
+                              <strong>{opt.facility_name}</strong> ({opt.provider})<br />
+                              Limit: ${Number(opt.max_amount).toLocaleString()} · APR: {opt.apr_percent}% · Term: {opt.term_days}d
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Biometric Approval Card */}
+                    {m.data?.staged_action && (
+                      <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
+                        <strong>
+                          {executedIntents[m.data.staged_action.intent_id]
+                            ? '✅ Execution Completed (Passkey Signed)'
+                            : '⚠️ Biometric Approval Required'}
+                        </strong>
+                        <div style={{ marginTop: 4 }}>
+                          Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                        </div>
+                        {!executedIntents[m.data.staged_action.intent_id] && (
+                          <button
+                            className="biometric-btn"
+                            type="button"
+                            onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
+                          >
+                            👆 Confirm Biometric Passkey
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Fragment>
+              ))
             )}
 
             {chatLoading && (
