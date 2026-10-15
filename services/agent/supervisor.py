@@ -20,6 +20,7 @@ from services.agent.prompts import (
     get_cash_diagnostic_prompt,
     get_conversational_system_prompt,
     get_credit_underwriting_prompt,
+    sanitize_cfo_reply,
 )
 from services.agent.schema import (
     AgentActionProposal,
@@ -116,12 +117,13 @@ def run_copilot_supervisor(
                 if prompt_type == "underwriting"
                 else get_cash_diagnostic_prompt(base_reply)
             )
-            local_advice = generate_local_reply(
+            raw_advice = generate_local_reply(
                 prompt=request.message,
                 system_instruction=sys_directive,
                 history=request.history,
                 max_new_tokens=160,
             )
+            local_advice = sanitize_cfo_reply(raw_advice) if raw_advice else None
             if local_advice:
                 return f"{base_reply}\n\nExecutive Advisory:\n{local_advice}"
             return base_reply
@@ -142,7 +144,9 @@ def run_copilot_supervisor(
             config=effective_config,
             history=request.history,
         )
-        return ai_reply if ai_reply else base_reply
+        if ai_reply:
+            return sanitize_cfo_reply(ai_reply)
+        return base_reply
 
     # 0. Prompt Injection Defense Barrier
     if intent == "SECURITY_DEFENSE_TRIGGERED":
@@ -209,17 +213,17 @@ def run_copilot_supervisor(
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
                     "The business owner is inquiring about financing or credit underwriting, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond conversationally and concisely in 2 sentences. Explain how digital underwriting evaluates Daily Average Balance (DAB) and revenue volatility to match pre-qualified credit lines, and invite them to upload their bank statement to see their actual credit limits and APR options."
+                    "Respond in 2 concise, executive sentences. State directly how transactional underwriting evaluates Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity. Advise uploading their bank statement CSV to compute firm credit limits and true APR disclosures."
                 )
                 local_reply = generate_local_reply(
                     prompt=request.message,
                     system_instruction=sys_directive,
                     history=request.history,
-                    max_new_tokens=160,
+                    max_new_tokens=220,
                 )
                 if local_reply:
                     return CopilotResponse(
-                        reply=local_reply,
+                        reply=sanitize_cfo_reply(local_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
                     )
@@ -228,7 +232,7 @@ def run_copilot_supervisor(
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
                     "The business owner is inquiring about financing or credit underwriting, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond conversationally and concisely in 2 sentences. Explain how digital underwriting evaluates Daily Average Balance (DAB) and revenue volatility to match pre-qualified credit lines, and invite them to upload their bank statement to see their actual credit limits and APR options."
+                    "Respond in 2 concise, executive sentences. State directly how transactional underwriting evaluates Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity. Advise uploading their bank statement CSV to compute firm credit limits and true APR disclosures."
                 )
                 ai_reply = query_external_llm(
                     prompt=request.message,
@@ -238,7 +242,7 @@ def run_copilot_supervisor(
                 )
                 if ai_reply:
                     return CopilotResponse(
-                        reply=ai_reply,
+                        reply=sanitize_cfo_reply(ai_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
                     )
@@ -300,18 +304,18 @@ def run_copilot_supervisor(
             if is_local:
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The user is asking a financial question, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond conversationally, helpfully, and concisely in 2 sentences. Answer their inquiry directly and explain that uploading a bank statement CSV allows you to calculate their exact daily burn rate, runway days, and overdraft alerts."
+                    "The business owner is inquiring about liquidity, cash flow, or runway, but has not yet uploaded a bank statement CSV.\n"
+                    "Respond in 2 concise, executive sentences. Answer their inquiry directly from a CFO working-capital perspective, and state that uploading a bank statement CSV will execute deterministic Daily Average Balance (DAB), net burn rate, and projected cash deficit calculations."
                 )
                 local_reply = generate_local_reply(
                     prompt=request.message,
                     system_instruction=sys_directive,
                     history=request.history,
-                    max_new_tokens=160,
+                    max_new_tokens=220,
                 )
                 if local_reply:
                     return CopilotResponse(
-                        reply=local_reply,
+                        reply=sanitize_cfo_reply(local_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
                     )
@@ -319,8 +323,8 @@ def run_copilot_supervisor(
             if effective_config and (effective_config.provider or "").lower() != "offline":
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The user is asking a financial question, but has not yet uploaded a bank statement CSV.\n"
-                    "Respond conversationally, helpfully, and concisely in 2 sentences. Answer their inquiry directly and explain that uploading a bank statement CSV allows you to calculate their exact daily burn rate, runway days, and overdraft alerts."
+                    "The business owner is inquiring about liquidity, cash flow, or runway, but has not yet uploaded a bank statement CSV.\n"
+                    "Respond in 2 concise, executive sentences. Answer their inquiry directly from a CFO working-capital perspective, and state that uploading a bank statement CSV will execute deterministic Daily Average Balance (DAB), net burn rate, and projected cash deficit calculations."
                 )
                 ai_reply = query_external_llm(
                     prompt=request.message,
@@ -330,7 +334,7 @@ def run_copilot_supervisor(
                 )
                 if ai_reply:
                     return CopilotResponse(
-                        reply=ai_reply,
+                        reply=sanitize_cfo_reply(ai_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
                     )
@@ -496,11 +500,11 @@ def run_copilot_supervisor(
             prompt=request.message,
             system_instruction=sys_directive,
             history=request.history,
-            max_new_tokens=160,
+            max_new_tokens=220,
         )
         if local_reply:
             return CopilotResponse(
-                reply=local_reply,
+                reply=sanitize_cfo_reply(local_reply),
                 intent_detected="GENERAL_ASSISTANCE",
                 requires_biometric_hitl=False,
             )
@@ -517,7 +521,7 @@ def run_copilot_supervisor(
         )
         if ai_reply:
             return CopilotResponse(
-                reply=ai_reply,
+                reply=sanitize_cfo_reply(ai_reply),
                 intent_detected="GENERAL_ASSISTANCE",
                 requires_biometric_hitl=False,
             )
