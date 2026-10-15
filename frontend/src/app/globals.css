@@ -1862,5 +1862,410 @@ input[type='number'].threshold-custom-input {
   line-height: 1.5;
 }
 
+/* Institutional Executive Dashboard Styles */
+.onboarding-container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.onboarding-panel {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.executive-workspace {
+  width: 100%;
+}
+
+.statement-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.statement-context-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.statement-context-icon {
+  font-size: 20px;
+}
+.statement-context-filename {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.statement-context-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+.statement-context-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.context-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+}
+.context-action-btn:hover {
+  background: #f7faf8;
+  border-color: #b7c6ba;
+}
+.context-action-btn.danger {
+  color: #9b3d37;
+}
+.context-action-btn.danger:hover {
+  background: #fae5e2;
+  border-color: #f0c3bf;
+}
+
+/* 3-Card Verdict Strip */
+.verdict-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+@media (max-width: 900px) {
+  .verdict-strip {
+    grid-template-columns: 1fr;
+  }
+}
+.verdict-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.verdict-card.hero-liquidity {
+  border-color: #b8d4c5;
+  background: linear-gradient(180deg, #ffffff 0%, #f4faf6 100%);
+}
+.verdict-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.verdict-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.verdict-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  margin: 4px 0 6px;
+}
+.verdict-card-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Segmented Workspace Navigation */
+.workspace-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  overflow-x: auto;
+}
+.workspace-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.workspace-tab-btn:hover {
+  color: var(--ink);
+  background: #eef3ef;
+}
+.workspace-tab-btn.active {
+  color: white;
+  background: var(--green);
+  box-shadow: 0 2px 6px rgba(20, 107, 85, 0.25);
+}
+
+/* Chart Container & Legends */
+.chart-wrapper-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-top: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.chart-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.chart-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+.chart-subtitle {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.chart-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-dot.historical {
+  background: #146b55;
+}
+.legend-dot.forecast {
+  background: #d97706;
+}
+.legend-dot.alert {
+  background: #dc2626;
+}
+
+/* Tooltip */
+.chart-tooltip-box {
+  background: rgba(23, 43, 45, 0.95);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  min-width: 170px;
+}
+.chart-tooltip-date {
+  font-size: 11px;
+  color: #a4b8ab;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 4px;
+}
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 3px 0;
+}
+.chart-tooltip-row.forecast strong {
+  color: #fbbf24;
+}
+.chart-tooltip-row.inflow strong {
+  color: #34d399;
+}
+.chart-tooltip-row.outflow strong {
+  color: #f87171;
+}
+
+/* Solvency Diagnostic Callout */
+.solvency-diagnostic-card {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.solvency-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.solvency-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.solvency-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Quick Threshold Horizon Selector in Context Bar */
+.threshold-quick-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.threshold-quick-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.threshold-quick-pills {
+  display: inline-flex;
+  align-items: center;
+  background: #f0f4f1;
+  padding: 2px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  gap: 2px;
+}
+.threshold-quick-pill {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.threshold-quick-pill:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.6);
+}
+.threshold-quick-pill.active {
+  background: white;
+  color: var(--green);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Working Capital & Cycle Cards */
+.tab-content-panel {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-top: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.wc-hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  background: #fbfdfc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.wc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.wc-badge.CASH_GENERATIVE {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid #b7e3ca;
+}
+.wc-badge.BALANCED {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.wc-badge.WORKING_CAPITAL_TRAP {
+  background: var(--amber-soft);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.wc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 800px) {
+  .wc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.wc-pillar-card {
+  padding: 16px 18px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.wc-pillar-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.wc-pillar-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+
 
 

@@ -1,6 +1,16 @@
 'use client';
 
-import { FormEvent, Fragment, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
 import type {
   CashAnalysisResponse,
   CopilotResponse,
@@ -14,6 +24,202 @@ import type {
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 const CSV_HEADER = 'transaction_id,posted_on,amount,currency,description,closing_balance';
 const SESSION_MESSAGE_LIMIT = 20;
+
+export interface ChartPoint {
+  date: string;
+  displayDate: string;
+  balance?: number;
+  projection?: number;
+  inflow?: number;
+  outflow?: number;
+  isProjection?: boolean;
+}
+
+function buildCashTrajectorySeries(
+  csv: string | null,
+  res: CashAnalysisResponse | null,
+  thresholdDays: number
+): ChartPoint[] {
+  if (!res) return [];
+
+  const points: ChartPoint[] = [];
+
+  if (csv) {
+    const lines = csv.trim().split('\n');
+    const rawParsed: { date: string; amount: number; balance?: number }[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const parts = line.split(/[;,]/);
+      if (parts.length >= 3) {
+        const datePart = parts.find((p) =>
+          /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}\/\d{4}$|^\d{1,2}\.\d{1,2}\.\d{4}$/.test(p.trim())
+        );
+        if (datePart) {
+          let normDate = datePart.trim();
+          if (normDate.includes('/')) {
+            const dp = normDate.split('/');
+            normDate = `${dp[2]}-${dp[0].padStart(2, '0')}-${dp[1].padStart(2, '0')}`;
+          } else if (normDate.includes('.')) {
+            const dp = normDate.split('.');
+            normDate = `${dp[2]}-${dp[1].padStart(2, '0')}-${dp[0].padStart(2, '0')}`;
+          }
+
+          const numParts = parts.filter((p) =>
+            /^[+-]?\$?€?£?\s*\(?\d+([.,]\d{2})?\)?$/.test(p.trim())
+          );
+          if (numParts.length > 0) {
+            const cleanNum = (s: string) => {
+              let v = s.replace(/[\$€£\s\(\)]/g, '');
+              if (v.includes(',') && !v.includes('.')) v = v.replace(',', '.');
+              else if (v.includes('.') && v.includes(',')) v = v.replace('.', '').replace(',', '.');
+              return parseFloat(v) || 0;
+            };
+            const amt = cleanNum(numParts[0]);
+            const bal = numParts.length > 1 ? cleanNum(numParts[numParts.length - 1]) : undefined;
+            rawParsed.push({ date: normDate, amount: amt, balance: bal });
+          }
+        }
+      }
+    }
+
+    if (rawParsed.length > 0) {
+      rawParsed.sort((a, b) => a.date.localeCompare(b.date));
+      const byDate = new Map<string, { lastBal: number; inflow: number; outflow: number }>();
+      let runningBal = parseFloat(res.current_balance) - parseFloat(res.net_period_change);
+
+      for (const item of rawParsed) {
+        if (item.balance !== undefined) {
+          runningBal = item.balance;
+        } else {
+          runningBal += item.amount;
+        }
+        const existing = byDate.get(item.date) || { lastBal: runningBal, inflow: 0, outflow: 0 };
+        existing.lastBal = runningBal;
+        if (item.amount > 0) existing.inflow += item.amount;
+        else existing.outflow += Math.abs(item.amount);
+        byDate.set(item.date, existing);
+      }
+
+      for (const [dStr, info] of Array.from(byDate.entries())) {
+        points.push({
+          date: dStr,
+          displayDate: dStr.slice(5),
+          balance: Math.round(info.lastBal * 100) / 100,
+          inflow: Math.round(info.inflow * 100) / 100,
+          outflow: Math.round(info.outflow * 100) / 100,
+          isProjection: false,
+        });
+      }
+    }
+  }
+
+  // Anchor fallback if no points parsed
+  if (points.length === 0) {
+    const curBal = parseFloat(res.current_balance);
+    const netChg = parseFloat(res.net_period_change);
+    const startBal = curBal - netChg;
+    if (res.start_date) {
+      points.push({
+        date: res.start_date,
+        displayDate: res.start_date.slice(5),
+        balance: Math.round(startBal * 100) / 100,
+        isProjection: false,
+      });
+    }
+    if (res.end_date) {
+      points.push({
+        date: res.end_date,
+        displayDate: res.end_date.slice(5),
+        balance: Math.round(curBal * 100) / 100,
+        isProjection: false,
+      });
+    }
+  }
+
+  // Forward Runway Projections
+  const curBal = parseFloat(res.current_balance);
+  const burn = parseFloat(res.average_daily_burn);
+  const lastDateStr =
+    res.end_date ||
+    (points.length > 0 ? points[points.length - 1].date : new Date().toISOString().slice(0, 10));
+
+  if (curBal > 0 && burn > 0) {
+    const lastDate = new Date(lastDateStr);
+    const maxDays = Math.min(90, res.runway_days ? res.runway_days + 15 : 90);
+    const lastPoint = points[points.length - 1];
+    if (lastPoint) {
+      lastPoint.projection = lastPoint.balance;
+    }
+
+    const intervals = [7, 14, 21, 30, 45, 60, 90].filter((d) => d <= maxDays);
+    if (res.runway_days && !intervals.includes(res.runway_days)) {
+      intervals.push(res.runway_days);
+      intervals.sort((a, b) => a - b);
+    }
+
+    for (const d of intervals) {
+      const projDate = new Date(lastDate.getTime() + d * 86400000);
+      const iso = projDate.toISOString().slice(0, 10);
+      const projBal = Math.max(0, curBal - burn * d);
+      points.push({
+        date: iso,
+        displayDate: `${iso.slice(5)} (+${d}d)`,
+        projection: Math.round(projBal * 100) / 100,
+        isProjection: true,
+      });
+    }
+  }
+
+  return points;
+}
+
+function CustomChartTooltip({
+  active,
+  payload,
+  currency,
+}: {
+  active?: boolean;
+  payload?: any[];
+  currency: string;
+}) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as ChartPoint;
+    return (
+      <div className="chart-tooltip-box">
+        <div className="chart-tooltip-date">
+          {data.isProjection ? `Forecast: ${data.date}` : `Ledger Date: ${data.date}`}
+        </div>
+        {data.balance !== undefined && (
+          <div className="chart-tooltip-row">
+            <span>Historical Balance:</span>
+            <strong className="tabular-num">{money(data.balance.toFixed(2), currency)}</strong>
+          </div>
+        )}
+        {data.projection !== undefined && (
+          <div className="chart-tooltip-row forecast">
+            <span>Projected Balance:</span>
+            <strong className="tabular-num">{money(data.projection.toFixed(2), currency)}</strong>
+          </div>
+        )}
+        {data.inflow !== undefined && data.inflow > 0 && (
+          <div className="chart-tooltip-row inflow">
+            <span>Day Inflow:</span>
+            <strong className="tabular-num">+{money(data.inflow.toFixed(2), currency)}</strong>
+          </div>
+        )}
+        {data.outflow !== undefined && data.outflow > 0 && (
+          <div className="chart-tooltip-row outflow">
+            <span>Day Outflow:</span>
+            <strong className="tabular-num">-{money(data.outflow.toFixed(2), currency)}</strong>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
 
 const RUNWAY_HORIZON_PRESETS = [
   { days: '30', label: '30d', sub: '1 mo' },
@@ -305,7 +511,12 @@ export default function HomePage() {
   const [result, setResult] = useState<CashAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pulse' | 'portfolio' | 'flows' | 'working_capital'>('pulse');
   const dynamicAlertDate = computeAlertBoundaryDate(result?.end_date, threshold) || result?.alert_boundary_date;
+
+  const trajectoryData = useMemo(() => {
+    return buildCashTrajectorySeries(csvText, result, Number(threshold) || 30);
+  }, [csvText, result, threshold]);
 
   // Staged Action Proposals State
   const [stagedIntents, setStagedIntents] = useState<StagedIntentItem[]>([]);
@@ -1220,206 +1431,220 @@ export default function HomePage() {
           </div>
         )}
 
-        <div className="content-grid">
-          <section className="panel" aria-labelledby="upload-title">
-            <h2 id="upload-title">Statement Ingestion</h2>
-            <p className="panel-intro">Processed in local memory · Ephemeral session</p>
-            <form onSubmit={analyze}>
-              <div className="threshold-group">
-                <label className="field-label" htmlFor="threshold">Alert threshold (runway warning days)</label>
-                <div className="threshold-container">
-                  <div className="threshold-pills" role="radiogroup" aria-label="Runway alert horizon presets">
-                    {RUNWAY_HORIZON_PRESETS.map((preset) => {
-                      const isSelected = threshold === preset.days;
-                      return (
-                        <button
-                          key={preset.days}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          className={`threshold-pill ${isSelected ? 'active' : ''}`}
-                          onClick={() => {
-                            setThreshold(preset.days);
-                            if (file || csvText) {
-                              const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
-                              executeAnalysis(target, preset.days);
-                            }
-                          }}
-                        >
-                          <span className="threshold-pill-days">{preset.label}</span>
-                          <span className="threshold-pill-sub">({preset.sub})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+        {!result ? (
+          <div className="onboarding-container">
+            <section className="panel onboarding-panel" aria-labelledby="upload-title">
+              <h2 id="upload-title">Statement Ingestion</h2>
+              <p className="panel-intro">Processed in local memory · Ephemeral session</p>
+              <form onSubmit={analyze}>
+                <div className="threshold-group">
+                  <label className="field-label" htmlFor="threshold">Alert threshold (runway warning days)</label>
+                  <div className="threshold-container">
+                    <div className="threshold-pills" role="radiogroup" aria-label="Runway alert horizon presets">
+                      {RUNWAY_HORIZON_PRESETS.map((preset) => {
+                        const isSelected = threshold === preset.days;
+                        return (
+                          <button
+                            key={preset.days}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            className={`threshold-pill ${isSelected ? 'active' : ''}`}
+                            onClick={() => {
+                              setThreshold(preset.days);
+                              if (file || csvText) {
+                                const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                                executeAnalysis(target, preset.days);
+                              }
+                            }}
+                          >
+                            <span className="threshold-pill-days">{preset.label}</span>
+                            <span className="threshold-pill-sub">({preset.sub})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                  <div className="threshold-custom-wrap">
-                    <span className="threshold-custom-prefix">Custom:</span>
-                    <input
-                      id="threshold"
-                      name="alert_threshold_days"
-                      type="number"
-                      min="1"
-                      max="365"
-                      step="1"
-                      aria-label="Custom runway alert days"
-                      className="threshold-custom-input"
-                      placeholder="30"
-                      value={threshold}
-                      onChange={(event) => setThreshold(event.target.value)}
-                      onBlur={() => {
-                        const num = Number(threshold);
-                        if (!threshold || isNaN(num) || num < 1) {
-                          setThreshold('30');
-                        } else if (file || csvText) {
-                          const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
-                          executeAnalysis(target, threshold);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (file || csvText) {
+                    <div className="threshold-custom-wrap">
+                      <span className="threshold-custom-prefix">Custom:</span>
+                      <input
+                        id="threshold"
+                        name="alert_threshold_days"
+                        type="number"
+                        min="1"
+                        max="365"
+                        step="1"
+                        aria-label="Custom runway alert days"
+                        className="threshold-custom-input"
+                        placeholder="30"
+                        value={threshold}
+                        onChange={(event) => setThreshold(event.target.value)}
+                        onBlur={() => {
+                          const num = Number(threshold);
+                          if (!threshold || isNaN(num) || num < 1) {
+                            setThreshold('30');
+                          } else if (file || csvText) {
                             const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
                             executeAnalysis(target, threshold);
                           }
-                        }
-                      }}
-                    />
-                    <span className="threshold-custom-suffix">days</span>
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (file || csvText) {
+                              const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                              executeAnalysis(target, threshold);
+                            }
+                          }
+                        }}
+                      />
+                      <span className="threshold-custom-suffix">days</span>
+                    </div>
+                  </div>
+                  <div className="threshold-helper">
+                    Triggers warning if burn velocity depletes cash balance within{' '}
+                    <strong>{threshold || '30'} days</strong>
+                    {dynamicAlertDate && (
+                      <span> (before <time dateTime={dynamicAlertDate}>{dynamicAlertDate}</time>)</span>
+                    )}
+                    .
                   </div>
                 </div>
-                <div className="threshold-helper">
-                  Triggers warning if burn velocity depletes cash balance within{' '}
-                  <strong>{threshold || '30'} days</strong>
-                  {dynamicAlertDate && (
-                    <span> (before <time dateTime={dynamicAlertDate}>{dynamicAlertDate}</time>)</span>
-                  )}
-                  .
-                </div>
-              </div>
 
-              {file || filesList.length > 0 || csvText ? (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    id="csv-file"
-                    className="file-input"
-                    aria-label="Choose bank statement CSV files"
-                    type="file"
-                    accept=".csv,text/csv"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={handleFileInputChange}
-                  />
-                  <div className="uploaded-file-card" role="region" aria-label="Active uploaded bank statement">
-                    <div className="uploaded-file-info">
-                      <span className="uploaded-file-icon" aria-hidden="true">
-                        {filesList.length > 1 ? '📚' : '📄'}
-                      </span>
-                      <div className="uploaded-file-meta">
-                        <span className="uploaded-file-name">
-                          {filesList.length > 1
-                            ? `${filesList.length} Statements (Consolidated Treasury)`
-                            : file
-                            ? file.name
-                            : 'Active_Statement.csv'}
+                {file || filesList.length > 0 || csvText ? (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      id="csv-file"
+                      className="file-input"
+                      aria-label="Choose bank statement CSV files"
+                      type="file"
+                      accept=".csv,text/csv"
+                      multiple
+                      style={{ display: 'none' }}
+                      onChange={handleFileInputChange}
+                    />
+                    <div className="uploaded-file-card" role="region" aria-label="Active uploaded bank statement">
+                      <div className="uploaded-file-info">
+                        <span className="uploaded-file-icon" aria-hidden="true">
+                          {filesList.length > 1 ? '📚' : '📄'}
                         </span>
-                        <span className="uploaded-file-size">
-                          {filesList.length > 1
-                            ? `${filesList.map((f) => f.name).join(', ')} · ${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
-                            : file
-                            ? `${(file.size / 1024).toFixed(1)} KB · Active in Session`
-                            : csvText
-                            ? `${(csvText.length / 1024).toFixed(1)} KB · Active in Session`
-                            : 'Statement Loaded'}
-                        </span>
+                        <div className="uploaded-file-meta">
+                          <span className="uploaded-file-name">
+                            {filesList.length > 1
+                              ? `${filesList.length} Statements (Consolidated Treasury)`
+                              : file
+                              ? file.name
+                              : 'Active_Statement.csv'}
+                          </span>
+                          <span className="uploaded-file-size">
+                            {filesList.length > 1
+                              ? `${filesList.map((f) => f.name).join(', ')} · ${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
+                              : file
+                              ? `${(file.size / 1024).toFixed(1)} KB · Active in Session`
+                              : csvText
+                              ? `${(csvText.length / 1024).toFixed(1)} KB · Active in Session`
+                              : 'Statement Loaded'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="uploaded-file-actions">
+                        <button
+                          type="button"
+                          className="change-csv-btn"
+                          onClick={handleChangeCsv}
+                          title="Replace with another CSV statement"
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          className="remove-csv-btn"
+                          onClick={handleRemoveCsv}
+                          title="Remove statement from active session"
+                        >
+                          <span aria-hidden="true">✕</span> Remove
+                        </button>
                       </div>
                     </div>
-                    <div className="uploaded-file-actions">
-                      <button
-                        type="button"
-                        className="change-csv-btn"
-                        onClick={handleChangeCsv}
-                        title="Replace with another CSV statement"
-                      >
-                        Change
-                      </button>
-                      <button
-                        type="button"
-                        className="remove-csv-btn"
-                        onClick={handleRemoveCsv}
-                        title="Remove statement from active session"
-                      >
-                        <span aria-hidden="true">✕</span> Remove
-                      </button>
-                    </div>
+                  </>
+                ) : (
+                  <div className="dropzone">
+                    <span className="upload-icon" aria-hidden="true">↑</span>
+                    <label className="field-label" htmlFor="csv-file">Choose CSV statements (single or multiple)</label>
+                    <input
+                      ref={fileInputRef}
+                      id="csv-file"
+                      className="file-input"
+                      aria-label="Choose bank statement CSV file"
+                      type="file"
+                      accept=".csv,text/csv"
+                      multiple
+                      onChange={handleFileInputChange}
+                    />
+                    <div className="file-name">Universal format · Multi-file supported · Max 1 MB</div>
                   </div>
-                </>
-              ) : (
-                <div className="dropzone">
-                  <span className="upload-icon" aria-hidden="true">↑</span>
-                  <label className="field-label" htmlFor="csv-file">Choose CSV statements (single or multiple)</label>
-                  <input
-                    ref={fileInputRef}
-                    id="csv-file"
-                    className="file-input"
-                    aria-label="Choose bank statement CSV file"
-                    type="file"
-                    accept=".csv,text/csv"
-                    multiple
-                    onChange={handleFileInputChange}
-                  />
-                  <div className="file-name">Universal format · Multi-file supported · Max 1 MB</div>
+                )}
+
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+                  Universal Ingestion: Compatible with CSV exports from any financial institution, bank, payment gateway, or accounting system worldwide. Automatically resolves column layouts, date formats, currencies, and multi-account portfolios.
                 </div>
-              )}
 
-              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-                Universal Ingestion: Compatible with CSV exports from any financial institution, bank, payment gateway, or accounting system worldwide. Automatically resolves column layouts, date formats, currencies, and multi-account portfolios.
-              </div>
-
-              <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
-                {loading ? 'Analyzing statement…' : 'Analyze cash activity'}
-              </button>
-            </form>
-            {loading && <div className="notice loading" role="status" aria-live="polite">Reading statement and calculating cash metrics…</div>}
-            {error && <div className="notice error" role="alert">{error}</div>}
-          </section>
-
-          <section className="panel" aria-labelledby="result-title">
-            <div className="result-head">
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <h2 id="result-title">Cash Summary</h2>
-                  {result?.analysis_mode && (
-                    <span
-                      className={`mode-badge ${result.analysis_mode === 'HISTORICAL_AUDIT' ? 'audit' : 'live'}`}
-                      role="status"
-                      title={
-                        result.analysis_mode === 'HISTORICAL_AUDIT'
-                          ? `Statement closed ${result.statement_age_days} days ago. Metrics and projections evaluate historical liquidity from that closing baseline.`
-                          : `Statement is current (closed ${result.statement_age_days ?? 0} days ago).`
-                      }
-                    >
-                      <span className="mode-dot" aria-hidden="true" />
-                      {result.analysis_mode === 'HISTORICAL_AUDIT'
-                        ? `Historical Audit · Closed ${result.statement_age_days}d ago`
-                        : 'Live Operating'}
-                    </span>
-                  )}
+                <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
+                  {loading ? 'Analyzing statement…' : 'Analyze cash activity'}
+                </button>
+              </form>
+              {loading && <div className="notice loading" role="status" aria-live="polite">Reading statement and calculating cash metrics…</div>}
+              {error && <div className="notice error" role="alert">{error}</div>}
+            </section>
+          </div>
+        ) : (
+          <div className="executive-workspace">
+            {/* Statement Context Bar */}
+            <div className="statement-context-bar" role="region" aria-label="Statement Context">
+              <div className="statement-context-left">
+                <span className="statement-context-icon" aria-hidden="true">
+                  {filesList.length > 1 ? '📚' : '📄'}
+                </span>
+                <div>
+                  <div className="statement-context-filename">
+                    {filesList.length > 1
+                      ? `${filesList.length} Statements (Consolidated Treasury)`
+                      : file
+                      ? file.name
+                      : 'Active_Statement.csv'}
+                  </div>
+                  <div className="statement-context-meta">
+                    {filesList.length > 1
+                      ? `${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
+                      : file
+                      ? `${(file.size / 1024).toFixed(1)} KB`
+                      : csvText
+                      ? `${(csvText.length / 1024).toFixed(1)} KB`
+                      : ''}
+                    {result.start_date && result.end_date && (
+                      <> · <time dateTime={result.start_date}>{result.start_date}</time> to <time dateTime={result.end_date}>{result.end_date}</time></>
+                    )}
+                  </div>
                 </div>
-                {result?.start_date && result?.end_date ? (
-                  <p className="result-as-of">
-                    Statement period: <time dateTime={result.start_date}>{result.start_date}</time> to{' '}
-                    <time dateTime={result.end_date}>{result.end_date}</time>
-                  </p>
-                ) : result?.end_date ? (
-                  <p className="result-as-of">
-                    As of statement close: <time dateTime={result.end_date}>{result.end_date}</time>
-                  </p>
-                ) : null}
-              </div>
-              {result && (
+
+                {result.analysis_mode && (
+                  <span
+                    className={`mode-badge ${result.analysis_mode === 'HISTORICAL_AUDIT' ? 'audit' : 'live'}`}
+                    role="status"
+                    title={
+                      result.analysis_mode === 'HISTORICAL_AUDIT'
+                        ? `Statement closed ${result.statement_age_days} days ago. Metrics evaluate historical liquidity.`
+                        : `Statement is current (closed ${result.statement_age_days ?? 0} days ago).`
+                    }
+                  >
+                    <span className="mode-dot" aria-hidden="true" />
+                    {result.analysis_mode === 'HISTORICAL_AUDIT'
+                      ? `Audit · Closed ${result.statement_age_days}d ago`
+                      : 'Live Operating'}
+                  </span>
+                )}
+
                 <span
                   className={`status ${result.cash_status}`}
                   role="status"
@@ -1428,111 +1653,376 @@ export default function HomePage() {
                   <span className="status-dot" aria-hidden="true" />
                   {CASH_STATUS_LABELS[result.cash_status] || result.cash_status.replaceAll('_', ' ')}
                 </span>
-              )}
+              </div>
+
+              <div className="statement-context-actions">
+                <div className="threshold-quick-select" title="Runway alert horizon">
+                  <span className="threshold-quick-label">Horizon:</span>
+                  <div className="threshold-quick-pills">
+                    {RUNWAY_HORIZON_PRESETS.map((preset) => {
+                      const isSelected = threshold === preset.days;
+                      return (
+                        <button
+                          key={preset.days}
+                          type="button"
+                          className={`threshold-quick-pill ${isSelected ? 'active' : ''}`}
+                          onClick={() => {
+                            setThreshold(preset.days);
+                            if (file || csvText) {
+                              const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                              executeAnalysis(target, preset.days);
+                            }
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  id="csv-file-active"
+                  className="file-input"
+                  aria-label="Upload CSV statements"
+                  type="file"
+                  accept=".csv,text/csv"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={handleFileInputChange}
+                />
+                <button
+                  type="button"
+                  className="context-action-btn"
+                  onClick={handleChangeCsv}
+                  title="Upload another statement"
+                >
+                  <span>+ New Statement</span>
+                </button>
+                <button
+                  type="button"
+                  className="context-action-btn danger"
+                  onClick={handleRemoveCsv}
+                  title="Remove statement"
+                >
+                  <span aria-hidden="true">✕</span> Remove
+                </button>
+              </div>
             </div>
 
-            {result ? (
-              <div className="result" aria-live="polite">
-                {result.analysis_mode === 'HISTORICAL_AUDIT' && (
-                  <div className="audit-mode-banner" role="note">
-                    <span className="audit-icon" aria-hidden="true">🏛️</span>
-                    <div>
-                      <strong>Historical Diagnostic Mode:</strong> This statement closed{' '}
-                      <span className="tabular-num">{result.statement_age_days}</span> days ago ({result.end_date}). Metrics evaluate performance over the reviewed window. Runway and deficit projections benchmark liquidity from that closing baseline.
-                    </div>
-                  </div>
-                )}
-                <div className="metrics">
-                  <Metric
-                    label="Current balance"
-                    value={money(result.current_balance, result.currency)}
-                    sub={result.end_date ? `Closing ledger on ${result.end_date}` : undefined}
-                  />
-                  <Metric
-                    label="Historical net change"
-                    value={money(result.net_period_change, result.currency)}
-                    sub={Number(result.net_period_change) >= 0 ? 'Net positive inflow' : 'Net cash outflow'}
-                  />
-                  <Metric
-                    label="Average daily burn"
-                    value={money(result.average_daily_burn, result.currency)}
-                    sub={result.runway_days === null ? 'Zero net burn rate' : 'Daily operational burn'}
-                  />
-                  <Metric
-                    label={
-                      result.analysis_mode === 'HISTORICAL_AUDIT'
-                        ? 'Historical runway (Days remaining)'
-                        : 'Estimated runway (Days remaining)'
-                    }
-                    value={result.runway_days === null ? 'No burn' : `${result.runway_days} days`}
-                    sub={
-                      result.runway_days === null
-                        ? 'Net cash-positive · Inflows ≥ Outflows'
-                        : result.projected_depletion_date
-                        ? `Projected zero-cash: ${result.projected_depletion_date}`
-                        : `Cash depletes in ${result.runway_days} days`
-                    }
-                  />
-                  <Metric label="Period reviewed" value={`${result.period_days} days`} />
-                  <Metric label="Rows accepted" value={`${result.accepted_count}`} />
+            {/* 3-Card Verdict Strip */}
+            <div className="verdict-strip">
+              <div className="verdict-card hero-liquidity">
+                <div className="verdict-card-head">
+                  <span className="verdict-card-label">Total Treasury Liquidity</span>
+                  <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
+                    {result.accounts_breakdown && result.accounts_breakdown.length > 1
+                      ? `${result.accounts_breakdown.length} Accounts`
+                      : 'Primary Treasury'}
+                  </span>
                 </div>
-                {result.rejected_rows.length > 0 && (
-                  <div className="rejections">
-                    <h3>Rows not included ({result.rejected_rows.length})</h3>
-                    <ul>{result.rejected_rows.map((row) => <li key={`${row.row_number}-${row.reason_code}`}>Row {row.row_number}: {row.reason_code.replaceAll('_', ' ').toLowerCase()}</li>)}</ul>
-                  </div>
-                )}
+                <div className="verdict-card-value">
+                  {money(result.current_balance, result.currency)}
+                </div>
+                <div className="verdict-card-sub">
+                  {result.end_date
+                    ? `Closing ledger balance as of ${result.end_date}`
+                    : 'Active operational cash balance'}
+                </div>
+              </div>
 
-                {result.accounts_breakdown && result.accounts_breakdown.length > 1 && (
-                  <div className="treasury-portfolio-section" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)' }}>
-                        🏛️ Consolidated Multi-Account Portfolio ({result.accounts_breakdown.length} Accounts)
-                      </h3>
-                      {result.has_overlaps_deduped && (
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-                          ✓ Overlaps Deduplicated
-                        </span>
+              <div
+                className={`verdict-card ${
+                  result.cash_status === 'LOW_RUNWAY' || result.cash_status === 'CASH_NONPOSITIVE'
+                    ? 'critical'
+                    : result.cash_status === 'WATCH'
+                    ? 'warning'
+                    : 'safe'
+                }`}
+              >
+                <div className="verdict-card-head">
+                  <span className="verdict-card-label">
+                    {result.analysis_mode === 'HISTORICAL_AUDIT' ? 'Historical Runway' : 'Cash Runway Horizon'}
+                  </span>
+                  <span
+                    className={`status ${result.cash_status}`}
+                    style={{ padding: '2px 8px', fontSize: 11 }}
+                  >
+                    <span className="status-dot" aria-hidden="true" />
+                    {CASH_STATUS_LABELS[result.cash_status] || result.cash_status.replaceAll('_', ' ')}
+                  </span>
+                </div>
+                <div className="verdict-card-value">
+                  {result.runway_days === null ? 'No Burn' : `${result.runway_days} Days`}
+                </div>
+                <div className="verdict-card-sub">
+                  {result.runway_days === null
+                    ? 'Net cash-positive · Inflows exceed burn'
+                    : result.projected_depletion_date
+                    ? `Projected zero-cash: ${result.projected_depletion_date}`
+                    : `Cash depletes within ${result.runway_days} days`}
+                </div>
+              </div>
+
+              <div className={`verdict-card ${Number(result.net_period_change) < 0 ? 'warning' : 'safe'}`}>
+                <div className="verdict-card-head">
+                  <span className="verdict-card-label">Daily Operational Burn</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: Number(result.net_period_change) >= 0 ? '#146b55' : '#b45309',
+                    }}
+                  >
+                    {Number(result.net_period_change) >= 0 ? 'Net Positive' : 'Net Outflow'}
+                  </span>
+                </div>
+                <div className="verdict-card-value">
+                  {money(result.average_daily_burn, result.currency)}
+                  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted)', marginLeft: 4 }}>
+                    / day
+                  </span>
+                </div>
+                <div className="verdict-card-sub">
+                  Period change: {money(result.net_period_change, result.currency)} over {result.period_days}d
+                </div>
+              </div>
+            </div>
+
+            {/* Segmented Workspace Navigation */}
+            <div className="workspace-tabs-bar" role="tablist" aria-label="Executive Workspace Deep-Dives">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'pulse'}
+                className={`workspace-tab-btn ${activeTab === 'pulse' ? 'active' : ''}`}
+                onClick={() => setActiveTab('pulse')}
+              >
+                <span>📈</span> Treasury Pulse & Trajectory
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'portfolio'}
+                className={`workspace-tab-btn ${activeTab === 'portfolio' ? 'active' : ''}`}
+                onClick={() => setActiveTab('portfolio')}
+              >
+                <span>🏛️</span> Portfolio Accounts {result.accounts_breakdown && result.accounts_breakdown.length > 1 ? `(${result.accounts_breakdown.length})` : ''}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'flows'}
+                className={`workspace-tab-btn ${activeTab === 'flows' ? 'active' : ''}`}
+                onClick={() => setActiveTab('flows')}
+              >
+                <span>💸</span> Cash Flow Breakdown
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'working_capital'}
+                className={`workspace-tab-btn ${activeTab === 'working_capital' ? 'active' : ''}`}
+                onClick={() => setActiveTab('working_capital')}
+              >
+                <span>⏱️</span> Working Capital & Cycles
+              </button>
+            </div>
+
+            {/* Tab 1: Treasury Pulse & Trajectory */}
+            {activeTab === 'pulse' && (
+              <div>
+                <div className="chart-wrapper-card">
+                  <div className="chart-header-row">
+                    <div>
+                      <h3 className="chart-title">Treasury Pulse & Forward Runway Projection</h3>
+                      <p className="chart-subtitle">
+                        Historical daily balance ledger corridor with forward burn depletion trajectory
+                      </p>
+                    </div>
+                    <div className="chart-legend-row">
+                      <div className="legend-item">
+                        <span className="legend-dot historical" />
+                        <span>Historical Ledger</span>
+                      </div>
+                      {result.runway_days !== null && (
+                        <div className="legend-item">
+                          <span className="legend-dot forecast" />
+                          <span>Forward Depletion Corridor</span>
+                        </div>
+                      )}
+                      {dynamicAlertDate && (
+                        <div className="legend-item">
+                          <span className="legend-dot alert" />
+                          <span>Alert Horizon ({threshold}d)</span>
+                        </div>
                       )}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-                      {result.accounts_breakdown.map((acc, idx) => (
-                        <div key={idx} style={{ padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 6, border: '1px solid var(--border)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <span style={{ fontWeight: 600, fontSize: 12 }}>{acc.account_id}</span>
-                            <span className="tabular-num" style={{ fontWeight: 600, fontSize: 13 }}>{money(acc.closing_balance, result.currency)}</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={acc.file_name}>
-                            {acc.file_name}
-                          </div>
-                          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
-                            {acc.start_date} → {acc.end_date} · {acc.transaction_count} txs
-                          </div>
+                  </div>
+
+                  <div style={{ width: '100%', height: 320, marginTop: 16 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trajectoryData} margin={{ top: 12, right: 16, left: 0, bottom: 4 }}>
+                        <defs>
+                          <linearGradient id="historicalGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#146b55" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#146b55" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#d97706" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#d97706" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" vertical={false} />
+                        <XAxis
+                          dataKey="displayDate"
+                          stroke="#718779"
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={{ stroke: '#dce3de' }}
+                        />
+                        <YAxis
+                          stroke="#718779"
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={{ stroke: '#dce3de' }}
+                          tickFormatter={(val: number) =>
+                            `$${Math.abs(val) >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`
+                          }
+                        />
+                        <Tooltip content={<CustomChartTooltip currency={result.currency} />} />
+                        <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
+                        <Area
+                          type="monotone"
+                          dataKey="balance"
+                          stroke="#146b55"
+                          strokeWidth={2.5}
+                          fillOpacity={1}
+                          fill="url(#historicalGradient)"
+                          name="Historical Balance"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="projection"
+                          stroke="#d97706"
+                          strokeWidth={2}
+                          strokeDasharray="4 4"
+                          fillOpacity={1}
+                          fill="url(#forecastGradient)"
+                          name="Projected Balance"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Solvency Diagnostic Callout */}
+                <div className="solvency-diagnostic-card">
+                  <span className="solvency-icon" aria-hidden="true">
+                    {result.cash_status === 'NO_BURN'
+                      ? '🛡️'
+                      : result.cash_status === 'WATCH'
+                      ? 'ℹ️'
+                      : '⚠️'}
+                  </span>
+                  <div>
+                    <h4 className="solvency-title">
+                      {result.cash_status === 'NO_BURN'
+                        ? 'Institutional Solvency Assessment: Sustainable Inflow Positive'
+                        : result.cash_status === 'WATCH'
+                        ? `Treasury Caution: Runway Within ${threshold}-Day Horizon`
+                        : 'Critical Liquidity Alert: Action Required'}
+                    </h4>
+                    <p className="solvency-text">
+                      {result.runway_days === null
+                        ? `Operating cash flows demonstrate net positive growth. Over the ${result.period_days}-day period reviewed, inflows have comfortably funded disbursements with no net operational burn.`
+                        : result.cash_status === 'WATCH'
+                        ? `At the current burn rate of ${money(result.average_daily_burn, result.currency)} per day, treasury reserves will last approximately ${result.runway_days} days. Review outstanding customer invoices or stage a contingency credit facility to avoid liquidity compression.`
+                        : `Daily operational burn of ${money(result.average_daily_burn, result.currency)}/day is projected to deplete cash reserves by ${result.projected_depletion_date || 'the near term'}. Immediate action recommended: factor outstanding receivables, draw an approved credit line, or defer discretionary expenses.`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Portfolio Accounts */}
+            {activeTab === 'portfolio' && (
+              <div className="tab-content-panel">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
+                      Portfolio Accounts Breakdown
+                    </h3>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                      Individual balances and multi-account sweep reconciliation
+                    </p>
+                  </div>
+                  {result.has_overlaps_deduped && (
+                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 6, background: 'rgba(34, 197, 94, 0.12)', color: '#15803d', border: '1px solid rgba(34, 197, 94, 0.25)', fontWeight: 600 }}>
+                      ✓ Overlaps Deduplicated
+                    </span>
+                  )}
+                </div>
+
+                {result.accounts_breakdown && result.accounts_breakdown.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+                    {result.accounts_breakdown.map((acc, idx) => (
+                      <div key={idx} style={{ padding: '14px 16px', background: '#fbfdfc', borderRadius: 10, border: '1px solid var(--line)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{acc.account_id}</span>
+                          <span className="tabular-num" style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>
+                            {money(acc.closing_balance, result.currency)}
+                          </span>
                         </div>
-                      ))}
+                        <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={acc.file_name}>
+                          {acc.file_name}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, borderTop: '1px solid #eef2ef', paddingTop: 6 }}>
+                          {acc.start_date} → {acc.end_date} · <strong className="tabular-num">{acc.transaction_count}</strong> transactions
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '16px 20px', background: '#fbfdfc', borderRadius: 10, border: '1px solid var(--line)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>Primary Operating Account</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{file?.name || 'Active Statement'}</div>
+                      </div>
+                      <div className="tabular-num" style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)' }}>
+                        {money(result.current_balance, result.currency)}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10, borderTop: '1px solid #eef2ef', paddingTop: 8 }}>
+                      {result.start_date} → {result.end_date} · <strong className="tabular-num">{result.accepted_count}</strong> transactions accepted
                     </div>
                   </div>
                 )}
 
                 {result.internal_transfers_excluded && (
-                  <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 16 }}>🔄</span>
-                    <div style={{ fontSize: 12, lineHeight: 1.4 }}>
-                      <strong>Contra-Transfers Eliminated:</strong>{' '}
-                      <span className="tabular-num" style={{ fontWeight: 600 }}>{money(result.internal_transfers_excluded, result.currency)}</span> in internal bank sweeps/transfers were identified and excluded from operational revenue and burn calculations.
+                  <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 8, background: 'rgba(59, 130, 246, 0.07)', border: '1px solid rgba(59, 130, 246, 0.22)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <span style={{ fontSize: 18, marginTop: 1 }}>🔄</span>
+                    <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                      <strong style={{ color: '#1d4ed8' }}>Contra-Transfers Eliminated:</strong>{' '}
+                      <span className="tabular-num" style={{ fontWeight: 700 }}>
+                        {money(result.internal_transfers_excluded, result.currency)}
+                      </span>{' '}
+                      in internal bank sweeps/transfers were identified across accounts and excluded to prevent double-counting of revenue and burn.
                       {result.operational_inflows && (
-                        <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11, marginTop: 2 }}>
-                          Operational Inflows: {money(result.operational_inflows, result.currency)} · Operational Outflows: {money(result.operational_outflows || '0.00', result.currency)}
-                        </span>
+                        <div style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 4 }}>
+                          Operational Inflows: <span className="tabular-num" style={{ fontWeight: 600, color: 'var(--ink)' }}>{money(result.operational_inflows, result.currency)}</span> · Operational Outflows: <span className="tabular-num" style={{ fontWeight: 600, color: 'var(--ink)' }}>{money(result.operational_outflows || '0.00', result.currency)}</span>
+                        </div>
                       )}
                     </div>
                   </div>
                 )}
 
                 {result.calendar_gaps && result.calendar_gaps.length > 0 && (
-                  <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{ fontSize: 16 }}>⚠️</span>
-                    <div style={{ fontSize: 12, lineHeight: 1.4, color: '#f59e0b' }}>
+                  <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 8, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <span style={{ fontSize: 18 }}>⚠️</span>
+                    <div style={{ fontSize: 12.5, lineHeight: 1.5, color: '#b45309' }}>
                       <strong>Statement Continuity Notice:</strong>
                       <ul style={{ margin: '4px 0 0 0', paddingLeft: 18 }}>
                         {result.calendar_gaps.map((gap, gIdx) => (
@@ -1543,15 +2033,150 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="empty-results-box">
-                <div className="empty-results-icon">📊</div>
-                <h3>No Statement Analyzed</h3>
-                <p>Upload a CSV file to view cash runway, burn rate, and liquidity status.</p>
+            )}
+
+            {/* Tab 3: Cash Flow Breakdown */}
+            {activeTab === 'flows' && (
+              <div className="tab-content-panel">
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
+                    Cash Flow Breakdown & Operational Decomposition
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                    Gross flow volume reconciled with operational inflows and expenses
+                  </p>
+                </div>
+
+                <div className="metrics" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                  <Metric
+                    label="Gross Period Inflows"
+                    value={money(result.gross_inflows || result.net_period_change, result.currency)}
+                    sub="Total customer deposits & credits"
+                  />
+                  <Metric
+                    label="Gross Period Outflows"
+                    value={money(result.gross_outflows || result.average_daily_burn, result.currency)}
+                    sub="Total debits & operational disbursements"
+                  />
+                  <Metric
+                    label="Net Period Change"
+                    value={money(result.net_period_change, result.currency)}
+                    sub={Number(result.net_period_change) >= 0 ? 'Net cash expansion' : 'Net cash contraction'}
+                  />
+                  <Metric
+                    label="Average Daily Burn"
+                    value={money(result.average_daily_burn, result.currency)}
+                    sub={result.runway_days === null ? 'Zero net burn rate' : 'Daily outflow velocity'}
+                  />
+                  <Metric
+                    label="Period Reviewed"
+                    value={`${result.period_days} Days`}
+                    sub={`${result.start_date || 'Start'} → ${result.end_date || 'End'}`}
+                  />
+                  <Metric
+                    label="Transactions Ingested"
+                    value={`${result.accepted_count} Rows`}
+                    sub="Deduplicated & validated"
+                  />
+                </div>
+
+                {result.rejected_rows.length > 0 && (
+                  <div className="rejections" style={{ marginTop: 20 }}>
+                    <h3>Excluded Rows ({result.rejected_rows.length})</h3>
+                    <ul>
+                      {result.rejected_rows.map((row) => (
+                        <li key={`${row.row_number}-${row.reason_code}`}>
+                          Row {row.row_number}: {row.reason_code.replaceAll('_', ' ').toLowerCase()}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
-          </section>
-        </div>
+
+            {/* Tab 4: Working Capital & Cycles */}
+            {activeTab === 'working_capital' && (
+              <div className="tab-content-panel">
+                <div className="wc-hero-card">
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>
+                        Working Capital & Cash Conversion Cycle
+                      </h3>
+                      {result.working_capital_status && (
+                        <span className={`wc-badge ${result.working_capital_status}`}>
+                          {result.working_capital_status.replaceAll('_', ' ')}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)', maxWidth: 640, lineHeight: 1.5 }}>
+                      {result.working_capital_rationale ||
+                        'Evaluates the operational velocity at which capital invested in operations is recovered back as liquid treasury cash.'}
+                    </p>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.05em' }}>
+                      Cash Conversion Cycle
+                    </div>
+                    <div className="tabular-num" style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', margin: '4px 0' }}>
+                      {result.cash_conversion_cycle_days !== undefined && result.cash_conversion_cycle_days !== null
+                        ? `${result.cash_conversion_cycle_days}d`
+                        : 'Healthy'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      {result.cash_conversion_cycle_days !== undefined && result.cash_conversion_cycle_days !== null && result.cash_conversion_cycle_days <= 30
+                        ? 'Rapid Cash Recovery'
+                        : 'Operating Cycle Benchmark'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="wc-grid">
+                  <div className="wc-pillar-card">
+                    <div className="wc-pillar-name">Days Sales Outstanding (DSO)</div>
+                    <div className="tabular-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
+                      Receivables Window
+                    </div>
+                    <div className="wc-pillar-desc">
+                      Average time required to collect receivables from client invoices into cash deposits. Lower DSO accelerates runway.
+                    </div>
+                  </div>
+
+                  <div className="wc-pillar-card">
+                    <div className="wc-pillar-name">Days Inventory Outstanding (DIO)</div>
+                    <div className="tabular-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
+                      Holding Period
+                    </div>
+                    <div className="wc-pillar-desc">
+                      Time working capital remains tied up in work-in-progress or inventory before generating cash revenue.
+                    </div>
+                  </div>
+
+                  <div className="wc-pillar-card">
+                    <div className="wc-pillar-name">Days Payable Outstanding (DPO)</div>
+                    <div className="tabular-num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
+                      Payables Window
+                    </div>
+                    <div className="wc-pillar-desc">
+                      Average duration before trade vendors and suppliers must be settled. Longer DPO preserves liquidity in treasury.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 20, padding: '12px 16px', background: '#f7faf8', borderRadius: 8, border: '1px solid var(--line)', fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <span>
+                    📐 <strong>Institutional Formula:</strong> Cash Conversion Cycle (CCC) = DSO + DIO − DPO
+                  </span>
+                  <span style={{ fontStyle: 'italic' }}>
+                    Negative or low CCC indicates self-funding operations.
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Interactive Copilot Chat Sidecar Drawer */}
