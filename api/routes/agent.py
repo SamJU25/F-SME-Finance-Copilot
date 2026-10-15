@@ -85,6 +85,8 @@ async def agent_chat(
         )
         return response
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Agent reasoning error: {str(exc)}",

@@ -429,9 +429,22 @@ export default function HomePage() {
         }),
       });
 
-      const body: CopilotResponse = await response.json();
-      setMessages([...newMsgs, { role: 'agent', text: body.reply, data: body }]);
-    } catch {
+      const body: any = await response.json();
+      if (!response.ok) {
+        const errorDetail = body?.detail || 'Agent service encountered an error. Please try again.';
+        setMessages([...newMsgs, { role: 'agent', text: `⚠️ ${errorDetail}` }]);
+        return;
+      }
+
+      setMessages([
+        ...newMsgs,
+        {
+          role: 'agent',
+          text: body.reply || 'No response received from the agent engine.',
+          data: body as CopilotResponse,
+        },
+      ]);
+    } catch (cause) {
       setMessages([
         ...newMsgs,
         {

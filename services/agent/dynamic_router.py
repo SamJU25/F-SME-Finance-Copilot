@@ -47,7 +47,7 @@ class FastEmbedSemanticRouter:
             "Inquiries evaluating business cash flow, cash runway duration in days, how many days left, "
             "days of cash remaining, daily net burn rate, bank account balance, projected cash deficits, "
             "working capital risk, cash conversion cycle, customer DSO payment terms, supplier DPO terms, "
-            "operating in the red, customer concentration risk, break-even sales, insolvency risk, "
+            "operating in the red, customer concentration risk, client revenue concentration, break-even sales, insolvency risk, "
             "bouncing payroll, running out of money, bleeding cash, and liquidity health from bank statements."
         ),
         "CREDIT_UNDERWRITING": (
@@ -62,6 +62,8 @@ class FastEmbedSemanticRouter:
         "GENERAL_ASSISTANCE": (
             "Conversational greetings, introductions, hello, hi, hey, who are you, how can you assist our business, "
             "how do you help my company, what can you do, explaining assistant capabilities, onboarding guides, "
+            "general financial concepts, business definitions, corporate finance terminology, market share formula, "
+            "accounting formulas, metrics explanations, financial education, business definitions, financial literacy questions, "
             "what is my financial status, general business financial status overview without statements, "
             "walkthrough, or general system help."
         ),
@@ -96,7 +98,7 @@ class FastEmbedSemanticRouter:
         "BREAK_EVEN_UNITS": "Calculate break-even units, break-even sales volume, how many units must we sell to break even.",
         "ATTRITION": "Calculate customer churn impact, lost client impact on burn rate and cash runway, revenue attrition.",
         "INVOICE_HASH": "Verify invoice hash, check invoice double financing, check blockchain invoice integrity, consortium registry check.",
-        "GENERAL": "General overview of financial health, cash diagnostics summary, and business accounting status.",
+        "GENERAL": "General overview of financial health, business concepts, definitions, market share formula, accounting formulas, metrics explanations, and general financial education.",
     }
 
     DISCLAIMER_PROTOTYPE = (
@@ -208,13 +210,19 @@ class FastEmbedSemanticRouter:
         if not has_csv and best_intent in ("CASH_DIAGNOSTIC", "CREDIT_UNDERWRITING") and (financial_score - greet_score) < 0.03:
             best_intent = "GENERAL_ASSISTANCE"
 
-        if has_csv and best_intent == "GENERAL_ASSISTANCE" and greet_score < 0.58:
-            best_intent = "CASH_DIAGNOSTIC"
+        if has_csv and best_intent == "GENERAL_ASSISTANCE":
+            if greet_score < 0.65 or any(term in m.lower() for term in ("statement", "csv", "transaction", "bank")):
+                best_intent = "CASH_DIAGNOSTIC"
 
         # Sub-intent classification
         sub_sims = np.dot(self._sub_norms, q_norm)
         best_sub_idx = int(np.argmax(sub_sims))
         best_sub = self._sub_keys[best_sub_idx]
+
+        if best_intent == "GENERAL_ASSISTANCE":
+            calc_keywords = ("calculate", "compute", "amortiz", "dscr", "fccr", "factor", "break-even", "break even", "wcr", "burn rate", "how many days")
+            if not any(k in m.lower() for k in calc_keywords):
+                best_sub = "GENERAL"
 
         return best_intent, best_sub, False
 
