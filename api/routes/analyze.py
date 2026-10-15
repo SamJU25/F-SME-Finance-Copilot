@@ -106,18 +106,29 @@ async def analyze_csv(
     upload_list: list[UploadFile] = []
     try:
         form = await request.form()
-        for key in ("files", "file"):
-            for item in form.getlist(key):
-                if hasattr(item, "filename") and hasattr(item, "read"):
-                    upload_list.append(item)
+        raw_items = form.getlist("files")
+        if not raw_items:
+            raw_items = form.getlist("file")
+        for item in raw_items:
+            if hasattr(item, "filename") and hasattr(item, "read"):
+                upload_list.append(item)
     except Exception:
         pass
 
     if not upload_list:
         if files:
             upload_list.extend(files)
-        if file:
+        elif file:
             upload_list.append(file)
+
+    seen_names: set[str] = set()
+    deduped_uploads: list[UploadFile] = []
+    for u in upload_list:
+        name = u.filename or "statement.csv"
+        if name not in seen_names:
+            seen_names.add(name)
+            deduped_uploads.append(u)
+    upload_list = deduped_uploads
 
     if not upload_list:
         return JSONResponse(

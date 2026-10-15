@@ -525,6 +525,31 @@ export default function HomePage() {
     return result;
   }, [result, selectedAccount, accountAnalysisCache]);
 
+  const uniqueAccountClusters = useMemo(() => {
+    if (!result?.accounts_breakdown || result.accounts_breakdown.length === 0) return [];
+    const map = new Map<string, { accountId: string; fileNames: string[]; latestBalance: string; latestDate: string }>();
+    result.accounts_breakdown.forEach((acc) => {
+      const existing = map.get(acc.account_id);
+      if (!existing) {
+        map.set(acc.account_id, {
+          accountId: acc.account_id,
+          fileNames: [acc.file_name],
+          latestBalance: acc.closing_balance,
+          latestDate: acc.end_date,
+        });
+      } else {
+        existing.fileNames.push(acc.file_name);
+        if (acc.end_date >= existing.latestDate) {
+          existing.latestBalance = acc.closing_balance;
+          existing.latestDate = acc.end_date;
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [result]);
+
+  const isSingleAccountPortfolio = uniqueAccountClusters.length === 1 && (result?.accounts_breakdown?.length || 0) > 1;
+
   const dynamicAlertDate = computeAlertBoundaryDate(displayResult?.end_date, threshold) || displayResult?.alert_boundary_date;
 
   const trajectoryData = useMemo(() => {
@@ -965,17 +990,10 @@ export default function HomePage() {
     try {
       const data = new FormData();
       if (Array.isArray(targetFile)) {
-        if (targetFile.length === 1) {
-          data.append('file', targetFile[0]);
-          data.append('files', targetFile[0]);
-        } else {
-          targetFile.forEach((f) => {
-            data.append('files', f);
-            data.append('file', f);
-          });
-        }
-      } else {
-        data.append('file', targetFile);
+        targetFile.forEach((f) => {
+          data.append('files', f);
+        });
+      } else if (targetFile) {
         data.append('files', targetFile);
       }
       data.append('alert_threshold_days', effectiveDays);
@@ -1979,12 +1997,16 @@ export default function HomePage() {
                     aria-label="Select treasury account view"
                   >
                     <option value="all">
-                      All Accounts (Consolidated Treasury) — {money(result.current_balance, result.currency)}
+                      {isSingleAccountPortfolio
+                        ? `Consolidated Timeline (All ${result.accounts_breakdown?.length} Statements) — ${money(result.current_balance, result.currency)}`
+                        : `All Accounts (Consolidated Treasury) — ${money(result.current_balance, result.currency)}`}
                     </option>
                     {result.accounts_breakdown &&
                       result.accounts_breakdown.map((acc, idx) => (
                         <option key={idx} value={acc.file_name}>
-                          {acc.account_id} ({acc.file_name}) — {money(acc.closing_balance, result.currency)}
+                          {isSingleAccountPortfolio
+                            ? `Statement: ${acc.file_name} — ${money(acc.closing_balance, result.currency)}`
+                            : `${acc.account_id} (${acc.file_name}) — ${money(acc.closing_balance, result.currency)}`}
                         </option>
                       ))}
                   </select>
@@ -2029,7 +2051,9 @@ export default function HomePage() {
                 )}
                 <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>
                   {selectedAccount === 'all'
-                    ? `${result.accounts_breakdown?.length || filesList.length || 1} Accounts Consolidated`
+                    ? isSingleAccountPortfolio
+                      ? `1 Account (${result.accounts_breakdown?.length} Statements Merged)`
+                      : `${uniqueAccountClusters.length || filesList.length || 1} Accounts Consolidated`
                     : `Viewing: ${selectedAccount}`}
                 </span>
               </div>
@@ -2060,8 +2084,10 @@ export default function HomePage() {
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
                     {selectedAccount === 'all'
-                      ? result.accounts_breakdown && result.accounts_breakdown.length > 1
-                        ? `${result.accounts_breakdown.length} Accounts`
+                      ? isSingleAccountPortfolio
+                        ? `1 Account (${result.accounts_breakdown?.length} Statements)`
+                        : uniqueAccountClusters.length > 1
+                        ? `${uniqueAccountClusters.length} Accounts`
                         : 'Primary Treasury'
                       : 'Account View'}
                   </span>
@@ -2152,7 +2178,11 @@ export default function HomePage() {
                 className={`workspace-tab-btn ${activeTab === 'portfolio' ? 'active' : ''}`}
                 onClick={() => setActiveTab('portfolio')}
               >
-                <span>🏛️</span> Portfolio Accounts {result.accounts_breakdown && result.accounts_breakdown.length > 1 ? `(${result.accounts_breakdown.length})` : ''}
+                <span>🏛️</span> {isSingleAccountPortfolio
+                  ? `Statement History (${result.accounts_breakdown?.length || 0})`
+                  : uniqueAccountClusters.length > 1
+                  ? `Portfolio Accounts (${uniqueAccountClusters.length})`
+                  : 'Portfolio Account'}
               </button>
               <button
                 type="button"
@@ -2296,10 +2326,16 @@ export default function HomePage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
-                      Portfolio Accounts Breakdown
+                      {isSingleAccountPortfolio
+                        ? `Single Account Statement Continuity (${result.accounts_breakdown?.length || 0} Periods)`
+                        : uniqueAccountClusters.length > 1
+                        ? `Portfolio Accounts Breakdown (${uniqueAccountClusters.length} Accounts)`
+                        : 'Portfolio Accounts Breakdown'}
                     </h3>
                     <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-                      Individual balances and multi-account sweep reconciliation
+                      {isSingleAccountPortfolio
+                        ? 'All statements belong to the same bank account and have been merged into a continuous timeline.'
+                        : 'Individual balances and multi-account sweep reconciliation'}
                     </p>
                   </div>
                   {result.has_overlaps_deduped && (
@@ -2314,7 +2350,9 @@ export default function HomePage() {
                     {result.accounts_breakdown.map((acc, idx) => (
                       <div key={idx} style={{ padding: '14px 16px', background: '#fbfdfc', borderRadius: 10, border: '1px solid var(--line)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>{acc.account_id}</span>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)' }}>
+                            {isSingleAccountPortfolio ? `Statement Period ${idx + 1}` : acc.account_id}
+                          </span>
                           <span className="tabular-num" style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>
                             {money(acc.closing_balance, result.currency)}
                           </span>

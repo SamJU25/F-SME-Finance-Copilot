@@ -230,5 +230,25 @@ def test_analyze_api_with_multiple_csv_files_under_file_field():
     assert len(body["accounts_breakdown"]) == 2
 
 
+def test_analyze_api_deduplicates_duplicate_uploaded_statement_files():
+    f1 = b"Date,Description,Amount,Running Bal.\n2026-10-01,Dep1,1000.00,5000.00\n"
+    f2 = b"Date,Description,Amount,Running Bal.\n2026-10-02,Dep2,2000.00,7000.00\n"
+
+    response = client.post(
+        "/api/v1/analyze",
+        data={"alert_threshold_days": "30"},
+        files=[
+            ("files", ("statement_a.csv", f1, "text/csv")),
+            ("files", ("statement_b.csv", f2, "text/csv")),
+            ("files", ("statement_b.csv", f2, "text/csv")),
+        ],
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accounts_breakdown"] is not None
+    assert len(body["accounts_breakdown"]) == 2
+
+
+
 
 
