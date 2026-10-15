@@ -206,14 +206,11 @@ def run_copilot_supervisor(
         )
 
         reply = (
-            "### 💼 WeBank Digital Underwriting Evaluation\n\n"
-            f"Underwriting evaluation complete. Your business is classified as **{dossier['risk_tier']}** "
-            f"with a Daily Average Balance (DAB) of **${float(dossier['daily_average_balance']):,.2f}** "
-            f"and maximum qualified limit of **${float(dossier['max_qualified_limit']):,.2f}**.\n\n"
-            "**Pre-Qualified Financing Matches:**\n"
-            f"• {opt_summary}\n\n"
-            "**Governance & Staging:**\n"
-            "To draw on this facility, ask to stage the proposal. Physical biometric passkey verification is required before execution."
+            f"Underwriting evaluation complete. Your business is classified as {dossier['risk_tier']} "
+            f"with a Daily Average Balance (DAB) of ${float(dossier['daily_average_balance']):,.2f} "
+            f"and maximum qualified limit of ${float(dossier['max_qualified_limit']):,.2f}. "
+            f"{opt_summary} "
+            "To apply, request staging for the chosen facility."
         )
 
         return CopilotResponse(
@@ -343,35 +340,17 @@ def run_copilot_supervisor(
         )
 
         if is_runway_or_days:
-            headline = f"You have **{runway_desc}** of cash runway remaining at an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day (current balance: ${float(cash_result['current_balance']):,.2f}, Status: {cash_result['cash_status']})."
+            headline = f"You have {runway_desc} of cash runway remaining at an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day (current balance: ${float(cash_result['current_balance']):,.2f}, Status: {cash_result['cash_status']})."
         elif is_balance_only:
-            headline = f"Your current cash balance is **${float(cash_result['current_balance']):,.2f} {cash_result['currency']}** (net change across reviewed period: ${float(cash_result['net_period_change']):,.2f})."
+            headline = f"Your current cash balance is ${float(cash_result['current_balance']):,.2f} {cash_result['currency']} (net change across reviewed period: ${float(cash_result['net_period_change']):,.2f})."
         elif is_burn_only:
-            headline = f"Your average daily burn rate is **${float(cash_result['average_daily_burn']):,.2f}/day** (gross outflows: ${float(cash_result['gross_outflows']):,.2f} vs inflows: ${float(cash_result['gross_inflows']):,.2f})."
+            headline = f"Your average daily burn rate is ${float(cash_result['average_daily_burn']):,.2f}/day (gross outflows: ${float(cash_result['gross_outflows']):,.2f} vs inflows: ${float(cash_result['gross_inflows']):,.2f})."
         elif is_advice_question:
-            headline = f"Financial Health Assessment: Your cash status is **{cash_result['cash_status']}** with {runway_desc} of runway."
+            headline = f"Financial Health Assessment: Your cash status is {cash_result['cash_status']} with {runway_desc} of runway."
         else:
             headline = f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} (Threshold: {cash_result['alert_threshold_days']} days)."
 
-        # Structured Executive Summary
-        sections = [
-            "### 📊 Cash Runway & Liquidity Diagnostic\n",
-            headline,
-            "\n**Key Financial Indicators:**\n"
-            f"• Current Balance: **${float(cash_result['current_balance']):,.2f} {cash_result['currency']}**\n"
-            f"• Daily Net Burn: **${float(cash_result['average_daily_burn']):,.2f}/day**\n"
-            f"• Estimated Runway: **{runway_desc}** (Alert Threshold: {cash_result['alert_threshold_days']} days)\n"
-            f"• Cash Status: **{cash_result['cash_status']}**"
-        ]
-
-        if pred_snippet:
-            sections.append(f"\n**Deficit Early-Warning:**{pred_snippet}")
-        if target_snippet:
-            sections.append(f"\n**Target Horizon Projection:**{target_snippet}")
-        if wc_snippet:
-            sections.append(f"\n**Working Capital Analysis:**{wc_snippet}")
-
-        reply = "\n".join(sections)
+        reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
 
         return CopilotResponse(
             reply=_enrich_reply(reply),
@@ -384,13 +363,11 @@ def run_copilot_supervisor(
     # 4. General Financial Dialogue
     if request.csv_content:
         general_reply = (
-            "### 💬 SME Finance Copilot Ready\n\n"
             "Statement loaded. You can ask follow-up questions such as 'how many days left?', "
             "'what is my daily burn?', 'what loan options can I qualify for?', or request to stage a line of credit."
         )
     else:
         general_reply = (
-            "### 💬 SME Finance Copilot\n\n"
             "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
             "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
             "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."

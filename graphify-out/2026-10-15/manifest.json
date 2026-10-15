@@ -1322,7 +1322,7 @@
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
     "seen": 1792052544.9530206,
-    "ast_hash": "571b58b08346dc437d70e4123ec7925c",
+    "ast_hash": "",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -1458,9 +1458,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792052467.8572934,
-    "seen": 1792052527.3240905,
-    "ast_hash": "2ab31d41f0691b642fcc9248733d334e",
+    "mtime": 1792054144.4235835,
+    "seen": 1792054222.3767884,
+    "ast_hash": "a816d841cfec2ba5e5d3d58f20869da2",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1491,6 +1491,12 @@
     "mtime": 1792047982.26435,
     "seen": 1792048033.3672888,
     "ast_hash": "4983ef1876237996dde07b1119c571dd",
+    "semantic_hash": ""
+  },
+  "services/agent/semantic_router.py": {
+    "mtime": 1792053987.3423088,
+    "seen": 1792054222.3767858,
+    "ast_hash": "9431b858213826af0e3367fdf3c1ab3e",
     "semantic_hash": ""
   }
 }
