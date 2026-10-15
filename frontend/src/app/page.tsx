@@ -79,6 +79,18 @@ function money(value: string, currency: string): string {
   }
 }
 
+function getEngineDisplayName(config: LLMConfig): string {
+  if (config.provider === 'offline') {
+    return 'Private On-Device Engine';
+  }
+  const preset = PRESETS[config.provider as LLMProviderId];
+  const providerName = preset ? preset.name : config.provider;
+  if (config.model_name && !config.model_name.startsWith('http')) {
+    return `${providerName} (${config.model_name})`;
+  }
+  return `${providerName} Engine`;
+}
+
 const STARTER_PROMPTS = [
   {
     icon: '📊',
@@ -553,11 +565,50 @@ export default function HomePage() {
         <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Chat Drawer">
           <div className="chat-header">
             <div>
-              <h3>🤖 AI Finance Copilot</h3>
-              <div style={{ marginTop: 4 }}>
-                <span className="badge">
-                  {llmConfig.provider.toUpperCase()} · {llmConfig.model_name || 'deterministic'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 16 }}>🤖</span>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>AI Finance Copilot</h3>
+              </div>
+              <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    fontSize: 11.5,
+                    color: 'var(--muted)',
+                    fontWeight: 500,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--green)',
+                      display: 'inline-block',
+                    }}
+                  />
+                  {getEngineDisplayName(llmConfig)}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 2px',
+                    fontSize: 11,
+                    color: 'var(--green)',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                    fontWeight: 500,
+                  }}
+                  title="Configure AI Engine"
+                >
+                  Change
+                </button>
               </div>
             </div>
             <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
