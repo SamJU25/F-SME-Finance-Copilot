@@ -167,3 +167,112 @@ def test_agent_prompt_injection_defense():
     assert data["staged_action"] is None
     assert data["requires_biometric_hitl"] is False
 
+
+def test_agent_test_connection_offline():
+    """Verify offline provider connection probe succeeds immediately with 0ms latency."""
+    response = client.post(
+        "/api/v1/agent/test-connection",
+        json={"provider": "offline"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["provider"] == "offline"
+    assert "deterministic" in data["message"].lower()
+
+
+def test_agent_test_connection_missing_api_key():
+    """Verify cloud provider validation flags missing API key before network attempts."""
+    response = client.post(
+        "/api/v1/agent/test-connection",
+        json={"provider": "gemini"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is False
+    assert "API key is required" in data["message"]
+
+
+def test_agent_test_connection_custom_missing_base_url():
+    """Verify custom provider validation flags missing Base URL before network attempts."""
+    response = client.post(
+        "/api/v1/agent/test-connection",
+        json={"provider": "custom", "api_key": "some-key"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is False
+    assert "Base URL is required" in data["message"]
+
+
+def test_agent_chat_with_header_llm_config():
+    """Verify chat route parses X-LLM-Config header and maintains deterministic financial invariants."""
+    import json
+
+    llm_header = json.dumps({"provider": "offline", "model_name": "deterministic-v1"})
+    response = client.post(
+        "/api/v1/agent/chat",
+        headers={"X-LLM-Config": llm_header},
+        json={"message": "What is my financial status?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "GENERAL_ASSISTANCE"
+    assert "Autonomous SME Finance Copilot" in data["reply"]
+
+
+def test_pii_masking_defense():
+    """Verify PII sanitization removes account numbers, SSNs, and emails before outbound LLM dispatch."""
+    from services.agent.llm_bridge import mask_pii
+
+    raw_text = "Please send funds to account 1234567890123456, contact ceo@smecompany.com, SSN 123-45-6789."
+    scrubbed = mask_pii(raw_text)
+
+    assert "1234567890123456" not in scrubbed
+    assert "[REDACTED_ACCOUNT]" in scrubbed
+    assert "ceo@smecompany.com" not in scrubbed
+    assert "[REDACTED_EMAIL]" in scrubbed
+    assert "123-45-6789" not in scrubbed
+    assert "[REDACTED_TAX_ID]" in scrubbed
+
+
+def test_agent_fetch_models_offline():
+    """Verify offline provider returns deterministic local model catalog immediately."""
+    response = client.post(
+        "/api/v1/agent/fetch-models",
+        json={"provider": "offline"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["provider"] == "offline"
+    assert len(data["models"]) >= 1
+    assert data["models"][0]["id"] == "deterministic-v1"
+
+
+def test_agent_fetch_models_missing_key():
+    """Verify missing API key returns fallback models gracefully without server failure."""
+    response = client.post(
+        "/api/v1/agent/fetch-models",
+        json={"provider": "gemini"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is False
+    assert len(data["models"]) >= 1
+    assert "API key required" in data["message"]
+
+
+def test_agent_fetch_models_custom_missing_base_url():
+    """Verify custom provider without base URL returns fallback gracefully."""
+    response = client.post(
+        "/api/v1/agent/fetch-models",
+        json={"provider": "custom"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is False
+    assert "Base URL required" in data["message"]
+
+
+

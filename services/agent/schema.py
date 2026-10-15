@@ -6,6 +6,59 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class LLMConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(default="offline", description="Provider identifier: offline, gemini, anthropic, openai, deepseek, groq, ollama, or custom")
+    api_key: Optional[str] = Field(default=None, description="API Key for cloud LLM")
+    base_url: Optional[str] = Field(default=None, description="Custom base URL ending in /v1")
+    model_name: Optional[str] = Field(default=None, description="Target model identifier")
+
+
+class TestConnectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(default="offline", description="offline, gemini, anthropic, openai, deepseek, groq, ollama, custom")
+    api_key: Optional[str] = Field(default=None, description="API Key for provider")
+    base_url: Optional[str] = Field(default=None, description="Base URL for custom endpoint")
+    model_name: Optional[str] = Field(default=None, description="Model identifier")
+
+
+class TestConnectionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    message: str
+    provider: str
+    model_name: Optional[str] = None
+    latency_ms: Optional[int] = None
+
+
+class ModelItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+
+
+class FetchModelsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(default="offline")
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+
+
+class FetchModelsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    provider: str
+    models: List[ModelItem] = Field(default_factory=list)
+    message: Optional[str] = None
+
+
+
 class AgentChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -17,6 +70,8 @@ class AgentChatRequest(BaseModel):
     staged_action_type: Optional[str] = Field(default=None, description="Explicit financial action to stage (e.g. DRAW_CREDIT_LINE)")
     staged_amount_cents: Optional[int] = Field(default=None, gt=0, description="Action amount in cents")
     staged_target: Optional[str] = Field(default=None, description="Action recipient or lender name")
+    llm_config: Optional[LLMConfig] = Field(default=None, description="Optional LLM provider configuration")
+
 
 
 class AgentMetricsSummary(BaseModel):

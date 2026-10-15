@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792042182.630761,
-    "seen": 1792042362.8110604,
-    "ast_hash": "9499c11ae47683bea1f8a046dd159ea0",
+    "mtime": 1792044226.406192,
+    "seen": 1792044610.4835234,
+    "ast_hash": "8c8e1a3e088a274c4ad16741b700f048",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "frontend/src/types/api.ts": {
-    "mtime": 1792042262.2583265,
-    "seen": 1792042362.78443,
-    "ast_hash": "a5968d247433511453ef93b414b64e3c",
+    "mtime": 1792044520.9752073,
+    "seen": 1792044610.4617074,
+    "ast_hash": "86bb9ea5ce9fe1af22484285dd97eeed",
     "semantic_hash": ""
   },
   "services/__init__.py": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "docs/team_execution_plan.md": {
-    "mtime": 1792042195.0525398,
-    "seen": 1792042362.8146605,
-    "ast_hash": "55f019be00f5270b5bae89b41127078d",
+    "mtime": 1792044239.141107,
+    "seen": 1792044610.4865866,
+    "ast_hash": "8cb403314d31dda0a69eb725e69f2bd8",
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792042345.667968,
-    "seen": 1792042362.7842915,
-    "ast_hash": "07367d545408afa8cd5ffa4191f17c43",
+    "mtime": 1792044578.4728124,
+    "seen": 1792044610.4615977,
+    "ast_hash": "bc97c00c8db5d7600cef4626cc819eef",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1440,9 +1440,9 @@
     "semantic_hash": ""
   },
   "api/routes/agent.py": {
-    "mtime": 1792042103.9198325,
-    "seen": 1792042166.3240192,
-    "ast_hash": "678fac2f4584339ac3ad09e3188e1a80",
+    "mtime": 1792044501.6186802,
+    "seen": 1792044610.4609601,
+    "ast_hash": "a19e3dc345b2027152836749a9a47b35",
     "semantic_hash": ""
   },
   "services/agent/__init__.py": {
@@ -1452,15 +1452,15 @@
     "semantic_hash": ""
   },
   "services/agent/schema.py": {
-    "mtime": 1792000335.33569,
-    "seen": 1792000497.1960232,
-    "ast_hash": "168cd3f933d8d0a22e8dab8ac01c7edc",
+    "mtime": 1792044433.8227797,
+    "seen": 1792044610.462233,
+    "ast_hash": "ad7d64a90a87415343751bd6173301ab",
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792042088.2699351,
-    "seen": 1792042166.325565,
-    "ast_hash": "d3428255da3eb586975f2ed6d8354500",
+    "mtime": 1792043846.9366872,
+    "seen": 1792044210.339751,
+    "ast_hash": "8a4ff89f380064cd5dee11b21db47650",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1470,9 +1470,15 @@
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
-    "mtime": 1792042137.2932189,
-    "seen": 1792042166.3272555,
-    "ast_hash": "2d3df1aa9a6e78416487cdc667b8384c",
+    "mtime": 1792044591.1923661,
+    "seen": 1792044610.4640803,
+    "ast_hash": "fcad8377bdddbaf000475ff63fc9adc7",
+    "semantic_hash": ""
+  },
+  "services/agent/llm_bridge.py": {
+    "mtime": 1792044487.0540025,
+    "seen": 1792044610.4622316,
+    "ast_hash": "f51bf9d889dbb356325a7b6ca42553df",
     "semantic_hash": ""
   }
 }

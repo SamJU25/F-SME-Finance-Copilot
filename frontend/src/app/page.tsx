@@ -1,10 +1,68 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import type { CashAnalysisResponse, CopilotResponse } from '../types/api';
+import { FormEvent, useEffect, useState } from 'react';
+import type {
+  CashAnalysisResponse,
+  CopilotResponse,
+  FetchModelsResponse,
+  LLMConfig,
+  LLMProviderId,
+  ModelItem,
+  TestConnectionResponse,
+} from '../types/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 const CSV_HEADER = 'transaction_id,posted_on,amount,currency,description,closing_balance';
+
+const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defaultUrl?: string; description: string }> = {
+  offline: {
+    name: 'Offline Local Engine (Zero Keys)',
+    defaultModel: 'deterministic-v1',
+    description: '100% private and offline. Pure Python Decimal calculation with zero external API calls.',
+  },
+  gemini: {
+    name: 'Google Gemini',
+    defaultModel: 'gemini-2.0-flash',
+    defaultUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    description: '1M+ context window. Recommended for scanning multi-month bank statement CSVs.',
+  },
+  anthropic: {
+    name: 'Anthropic Claude',
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    defaultUrl: 'https://api.anthropic.com/v1/messages',
+    description: 'High precision on debt covenants, underwriting guidelines, and financial statements.',
+  },
+  openai: {
+    name: 'OpenAI (GPT-4o)',
+    defaultModel: 'gpt-4o-mini',
+    defaultUrl: 'https://api.openai.com/v1',
+    description: 'Standard enterprise LLM for executive summaries and cash flow advice.',
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    defaultModel: 'deepseek-chat',
+    defaultUrl: 'https://api.deepseek.com/v1',
+    description: 'Low-cost commercial reasoning ($0.14/1M tokens) suitable for budget-conscious SMEs.',
+  },
+  groq: {
+    name: 'Groq (Llama 3.3)',
+    defaultModel: 'llama-3.3-70b-versatile',
+    defaultUrl: 'https://api.groq.com/openai/v1',
+    description: 'Sub-second latency (<300ms) for real-time interactive financial Q&A.',
+  },
+  ollama: {
+    name: 'Local Ollama',
+    defaultModel: 'qwen2.5:14b',
+    defaultUrl: 'http://localhost:11434/v1',
+    description: 'Self-hosted local inference engine. Zero cloud egress for strict compliance.',
+  },
+  custom: {
+    name: 'Custom (OpenAI-Compatible)',
+    defaultModel: 'custom-model',
+    defaultUrl: 'https://openrouter.ai/api/v1',
+    description: 'Universal adapter for OpenRouter, Together AI, vLLM, LM Studio, or private VPCs.',
+  },
+};
 
 function money(value: string, currency: string): string {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
@@ -40,6 +98,106 @@ export default function HomePage() {
       text: 'Hello, I am your Autonomous SME Finance Copilot. Upload your bank statement or click a quick prompt below to diagnose your runway, evaluate financing facilities, or stage credit applications.',
     },
   ]);
+
+  // Multi-Provider AI Settings State
+  const [llmConfig, setLlmConfig] = useState<LLMConfig>({
+    provider: 'offline',
+    model_name: 'deterministic-v1',
+  });
+  const [draftConfig, setDraftConfig] = useState<LLMConfig>({
+    provider: 'offline',
+    model_name: 'deterministic-v1',
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestConnectionResponse | null>(null);
+
+  // Dynamic Model Discovery State
+  const [availableModels, setAvailableModels] = useState<ModelItem[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [customModelMode, setCustomModelMode] = useState(false);
+  const [modelsMessage, setModelsMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sme_copilot_llm_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setLlmConfig(parsed);
+        setDraftConfig(parsed);
+      }
+    } catch {
+      // LocalStorage access fallback
+    }
+  }, []);
+
+  async function fetchModels(cfg: LLMConfig) {
+    if (cfg.provider === 'offline') {
+      setAvailableModels([{ id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' }]);
+      setModelsMessage(null);
+      return;
+    }
+    setLoadingModels(true);
+    setModelsMessage(null);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/agent/fetch-models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: cfg.provider,
+          api_key: cfg.api_key,
+          base_url: cfg.base_url,
+        }),
+      });
+      const data: FetchModelsResponse = await res.json();
+      if (data.models && data.models.length > 0) {
+        setAvailableModels(data.models);
+        setModelsMessage(data.message || `Discovered ${data.models.length} models.`);
+        // If current model isn't in fetched list, keep it as valid
+        const match = data.models.find((m) => m.id === cfg.model_name);
+        if (!match && !customModelMode && data.models[0]) {
+          setDraftConfig((prev) => ({ ...prev, model_name: data.models[0].id }));
+        }
+      }
+    } catch (cause) {
+      setModelsMessage(cause instanceof Error ? cause.message : 'Could not fetch remote models.');
+    } finally {
+      setLoadingModels(false);
+    }
+  }
+
+  async function handleTestConnection() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/agent/test-connection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draftConfig),
+      });
+      const data: TestConnectionResponse = await res.json();
+      setTestResult(data);
+    } catch (cause) {
+      setTestResult({
+        success: false,
+        message: cause instanceof Error ? cause.message : 'Network failure testing connection.',
+        provider: draftConfig.provider,
+      });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  function handleSaveSettings() {
+    setLlmConfig(draftConfig);
+    try {
+      localStorage.setItem('sme_copilot_llm_config', JSON.stringify(draftConfig));
+    } catch {
+      // LocalStorage fallback
+    }
+    setShowSettings(false);
+    setTestResult(null);
+  }
 
   async function analyze(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,11 +241,13 @@ export default function HomePage() {
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': 'SME-COFFEE-001',
+          'X-LLM-Config': JSON.stringify(llmConfig),
         },
         body: JSON.stringify({
           message: textToSend,
           csv_content: csvText,
           alert_threshold_days: Number(threshold) || 30,
+          llm_config: llmConfig,
         }),
       });
 
@@ -128,8 +288,26 @@ export default function HomePage() {
           <span className="brand-mark" aria-hidden="true">$</span>
           <span>SME Finance Copilot</span>
         </div>
-        <span className="demo-tag">Autonomous AI Participant · Local privacy mode</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            className="settings-btn"
+            onClick={() => {
+              setDraftConfig(llmConfig);
+              setShowSettings(true);
+              fetchModels(llmConfig);
+            }}
+            type="button"
+            title="Configure AI model provider and credentials"
+          >
+            <span>⚙️ AI Provider:</span>
+            <span className={`provider-badge ${llmConfig.provider === 'custom' ? 'custom' : ''}`}>
+              {llmConfig.provider.toUpperCase()}
+            </span>
+          </button>
+          <span className="demo-tag">Autonomous AI Participant</span>
+        </div>
       </header>
+
       <main>
         <div className="eyebrow">Autonomous AI CFO · FinTechathon 2026 Topic E</div>
         <h1>Continuous cash protection & liquidity matching.</h1>
@@ -218,134 +396,127 @@ export default function HomePage() {
             <h2 id="steps-title">Three-Tier Security Architecture</h2>
             <p className="panel-intro">How the Autonomous AI Copilot protects your business funds:</p>
             <div className="side-note">
-              <span className="note-index">01</span>
-              <div>
-                <strong>Tier 1: Read-Only Observation</strong>
-                <p>Pure Decimal calculations for runway, burn, and WeBank Daily Average Balance (DAB). Autonomous execution.</p>
-              </div>
+              <strong>Tier 1 — Autonomous Observation</strong>
+              <p>Continuous transaction ingestion, daily average balance calculation, and cash burn metrics. 100% read-only.</p>
             </div>
             <div className="side-note">
-              <span className="note-index">02</span>
-              <div>
-                <strong>Tier 2: Staged Queue Only</strong>
-                <p>Loan drafts, factoring offers, and cash actions are placed in an immutable staging ledger. Zero money moves.</p>
-              </div>
+              <strong>Tier 2 — Staging Ledger (Zero Money Movement)</strong>
+              <p>Autonomous AI drafts credit applications and stages proposals into an immutable audit ledger. No funds move.</p>
             </div>
             <div className="side-note">
-              <span className="note-index">03</span>
-              <div>
-                <strong>Tier 3: Hardware Biometric Touch</strong>
-                <p>Irreversible fund disbursements require explicit WebAuthn FIDO2 passkey authorization from the business owner.</p>
-              </div>
+              <strong>Tier 3 — Human-in-the-Loop Biometric Verification</strong>
+              <p>Drawdowns and fund transfers halt strictly until approved via biometric WebAuthn FIDO2 passkey verification.</p>
             </div>
-            <p className="caveat">Required CSV header format:</p>
-            <code className="file-name">{CSV_HEADER}</code>
           </aside>
         </div>
-        <p className="footer">Privacy-first · files processed locally in-memory · Zero external LLM arithmetic authority</p>
+
+        <section className="schema" aria-labelledby="schema-title">
+          <h2 id="schema-title">Required CSV headers</h2>
+          <p className="schema-intro">Your file must include these column names in any order:</p>
+          <pre><code>{CSV_HEADER}</code></pre>
+        </section>
       </main>
 
-      {/* Floating Copilot Chat Toggle Button */}
+      {/* Floating Copilot Button */}
       <button
-        className="chat-toggle-btn"
+        className="copilot-fab"
         onClick={() => setChatOpen(!chatOpen)}
-        aria-label="Toggle Autonomous AI Copilot"
+        type="button"
+        aria-label="Toggle Autonomous AI Copilot Drawer"
       >
         <span>🤖</span>
-        <span>{chatOpen ? 'Close Copilot' : 'Ask AI Copilot'}</span>
+        <span>Ask AI Copilot</span>
       </button>
 
-      {/* Copilot Chat Drawer */}
+      {/* Interactive Copilot Chat Drawer */}
       {chatOpen && (
-        <div className="chat-drawer" role="dialog" aria-label="Autonomous AI Copilot Drawer">
+        <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Chat Drawer">
           <div className="chat-header">
-            <h3>
-              <span>🤖</span>
-              <span>AI Copilot</span>
-              <span className="badge">Active</span>
-            </h3>
-            <button className="chat-close" onClick={() => setChatOpen(false)} aria-label="Close chat">✕</button>
+            <div>
+              <h3>AI Finance Copilot</h3>
+              <div className="chat-provider-tag">
+                Provider: {llmConfig.provider.toUpperCase()} ({llmConfig.model_name || 'deterministic'})
+              </div>
+            </div>
+            <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
+              ✕
+            </button>
           </div>
 
-          <div className="chat-body">
-            {messages.map((m, i) => (
-              <div key={i} className={`chat-msg ${m.role}`}>
-                <div className="chat-bubble">{m.text}</div>
+          <div className="chat-messages">
+            {messages.map((m, idx) => (
+              <div key={idx} className={`chat-msg ${m.role}`}>
+                <div>{m.text}</div>
 
-                {/* Structured Metrics Card if provided by agent */}
+                {/* Structured Metrics Card */}
                 {m.data?.metrics && (
                   <div className="chat-card">
-                    {m.data.metrics.current_balance && <div><strong>Balance:</strong> ${m.data.metrics.current_balance}</div>}
-                    {m.data.metrics.runway_days !== undefined && <div><strong>Runway:</strong> {m.data.metrics.runway_days ?? 'N/A'} days</div>}
-                    {m.data.metrics.average_daily_burn && <div><strong>Daily Burn:</strong> ${m.data.metrics.average_daily_burn}/day</div>}
-                    {m.data.metrics.risk_tier && <div><strong>WeBank Tier:</strong> {m.data.metrics.risk_tier}</div>}
+                    <strong>Calculated Cash Metrics</strong>
+                    {m.data.metrics.current_balance && <div>Balance: ${m.data.metrics.current_balance}</div>}
+                    {m.data.metrics.average_daily_burn && <div>Burn: ${m.data.metrics.average_daily_burn}/day</div>}
+                    {m.data.metrics.runway_days !== undefined && <div>Runway: {m.data.metrics.runway_days} days</div>}
+                    {m.data.metrics.daily_average_balance && <div>Daily Avg Balance: ${m.data.metrics.daily_average_balance}</div>}
+                    {m.data.metrics.risk_tier && <div>Risk Tier: {m.data.metrics.risk_tier}</div>}
                   </div>
                 )}
 
-                {/* Pre-qualified Credit Facilities if matched */}
+                {/* Pre-Qualified Financing Options */}
                 {m.data?.matched_options && m.data.matched_options.length > 0 && (
                   <div className="chat-card">
-                    <strong>Pre-Qualified Facilities:</strong>
-                    {m.data.matched_options.map((opt, idx) => (
-                      <div key={idx} style={{ marginTop: '6px', borderTop: '1px solid #eee', paddingTop: '4px' }}>
-                        <div>{opt.facility_name} ({opt.provider})</div>
-                        <div style={{ color: '#146b55' }}>APR: {opt.apr_percent}% · Max: ${opt.max_amount}</div>
-                      </div>
-                    ))}
+                    <strong>Pre-Qualified Financing Facilities:</strong>
+                    <ul style={{ paddingLeft: 18, margin: '6px 0 0' }}>
+                      {m.data.matched_options.map((opt, oIdx) => (
+                        <li key={oIdx} style={{ marginTop: 4 }}>
+                          <strong>{opt.facility_name}</strong> ({opt.provider})<br />
+                          Limit: ${Number(opt.max_amount).toLocaleString()} · APR: {opt.apr_percent}% · Term: {opt.term_days}d
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
-                {/* Tier 2 Staged Proposal & Tier 3 Biometric Approval */}
+                {/* Tier 3 Biometric Approval Card */}
                 {m.data?.staged_action && (
                   <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
-                    <div>
-                      <strong>
-                        {executedIntents[m.data.staged_action.intent_id]
-                          ? '✅ Executed on Consortium Ledger'
-                          : '🔒 Staged in Tier 2 Queue (Pending Biometric 2FA)'}
-                      </strong>
+                    <strong>
+                      {executedIntents[m.data.staged_action.intent_id]
+                        ? '✅ Execution Completed (WebAuthn Signed)'
+                        : '⚠️ Tier 3 HITL Biometric Approval Required'}
+                    </strong>
+                    <div style={{ marginTop: 4 }}>
+                      Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                     </div>
-                    <div style={{ marginTop: '4px' }}>
-                      {m.data.staged_action.action_type} · ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </div>
-                    <div style={{ fontSize: '11px', opacity: 0.85, marginTop: '2px' }}>
-                      Intent ID: {m.data.staged_action.intent_id}
-                    </div>
-
                     {!executedIntents[m.data.staged_action.intent_id] && (
                       <button
                         className="biometric-btn"
+                        type="button"
                         onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
                       >
-                        👆 Touch WebAuthn Biometric Passkey (Tier 3)
+                        👆 Confirm Biometric WebAuthn Passkey
                       </button>
                     )}
                   </div>
                 )}
               </div>
             ))}
-
-            {chatLoading && (
-              <div className="chat-msg agent">
-                <div className="chat-bubble">Thinking and evaluating deterministic tools…</div>
-              </div>
-            )}
+            {chatLoading && <div className="chat-msg agent">Analyzing with Three-Tier Security Gate…</div>}
           </div>
 
-          {/* Quick Suggestion Pills */}
-          <div style={{ padding: '0 16px 8px' }}>
-            <div className="chat-pills">
+          {/* Quick Action Suggestion Pills */}
+          <div className="chat-suggestions">
+            <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Quick Prompts:</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button
                 className="pill-btn"
                 onClick={() => sendChatMessage('What is my current runway and daily burn rate?')}
               >
-                💡 Diagnose Runway
+                📊 Check Runway
               </button>
               <button
                 className="pill-btn"
                 onClick={() => sendChatMessage('What loan or credit line options can my business qualify for?')}
               >
-                📊 Match Credit
+                💼 Match Credit Facilities
               </button>
               <button
                 className="pill-btn"
@@ -374,6 +545,206 @@ export default function HomePage() {
               Send
             </button>
           </form>
+        </div>
+      )}
+
+      {/* AI Provider Settings Modal */}
+      {showSettings && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+          <div className="modal-card">
+            <div className="modal-head">
+              <h3 id="settings-title">AI Provider & Model Settings</h3>
+              <button
+                className="modal-close-btn"
+                type="button"
+                onClick={() => {
+                  setShowSettings(false);
+                  setTestResult(null);
+                }}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <div>
+                <label className="field-label" htmlFor="provider-select">Select Provider</label>
+                <select
+                  id="provider-select"
+                  className="select-input"
+                  value={draftConfig.provider}
+                  onChange={(e) => {
+                    const p = e.target.value as LLMProviderId;
+                    const info = PRESETS[p];
+                    const nextCfg: LLMConfig = {
+                      ...draftConfig,
+                      provider: p,
+                      model_name: info.defaultModel,
+                      base_url: info.defaultUrl || '',
+                    };
+                    setDraftConfig(nextCfg);
+                    setTestResult(null);
+                    setCustomModelMode(false);
+                    fetchModels(nextCfg);
+                  }}
+                >
+                  {Object.entries(PRESETS).map(([id, info]) => (
+                    <option key={id} value={id}>
+                      {info.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="provider-desc">
+                {PRESETS[draftConfig.provider]?.description}
+              </div>
+
+              {draftConfig.provider !== 'offline' && (
+                <div>
+                  <label className="field-label" htmlFor="api-key-input">
+                    API Key {draftConfig.provider === 'ollama' ? '(Optional)' : '(Required)'}
+                  </label>
+                  <input
+                    id="api-key-input"
+                    className="text-input"
+                    type="password"
+                    placeholder={draftConfig.provider === 'ollama' ? 'ollama' : 'Paste API Key (e.g. AIzaSy..., sk-ant..., sk-...)'}
+                    value={draftConfig.api_key || ''}
+                    onChange={(e) => {
+                      const updated = { ...draftConfig, api_key: e.target.value };
+                      setDraftConfig(updated);
+                    }}
+                  />
+                </div>
+              )}
+
+              {(draftConfig.provider === 'custom' || draftConfig.provider === 'ollama') && (
+                <div>
+                  <label className="field-label" htmlFor="base-url-input">Base URL</label>
+                  <input
+                    id="base-url-input"
+                    className="text-input"
+                    type="text"
+                    placeholder="e.g. http://localhost:11434/v1 or https://openrouter.ai/api/v1"
+                    value={draftConfig.base_url || ''}
+                    onChange={(e) => setDraftConfig({ ...draftConfig, base_url: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {draftConfig.provider !== 'offline' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="field-label" style={{ margin: 0 }} htmlFor="model-select">Target Model</label>
+                    <button
+                      type="button"
+                      style={{ fontSize: 11, background: 'none', border: 0, color: 'var(--green)', cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => fetchModels(draftConfig)}
+                      disabled={loadingModels}
+                    >
+                      {loadingModels ? 'Fetching…' : '🔄 Discover Live Models'}
+                    </button>
+                  </div>
+
+                  {!customModelMode ? (
+                    <div>
+                      <select
+                        id="model-select"
+                        className="select-input"
+                        value={draftConfig.model_name || ''}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setCustomModelMode(true);
+                          } else {
+                            setDraftConfig({ ...draftConfig, model_name: e.target.value });
+                          }
+                        }}
+                      >
+                        {availableModels.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                        <option value="__custom__">➕ Custom / Fine-Tuned Model Name…</option>
+                      </select>
+                      {modelsMessage && (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{modelsMessage}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          id="custom-model-input"
+                          className="text-input"
+                          type="text"
+                          placeholder="e.g. ft:gpt-4o-mini:my-org::123 or qwen2.5:32b"
+                          value={draftConfig.model_name || ''}
+                          onChange={(e) => setDraftConfig({ ...draftConfig, model_name: e.target.value })}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ whiteSpace: 'nowrap', padding: '0 12px', fontSize: 12 }}
+                          onClick={() => setCustomModelMode(false)}
+                        >
+                          List
+                        </button>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                        Enter any model identifier or private fine-tune snapshot.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {testResult && (
+                <div className={`test-status ${testResult.success ? 'success' : 'error'}`} role="status">
+                  <span>{testResult.success ? '✅' : '❌'}</span>
+                  <div>
+                    <strong>{testResult.success ? 'Connected' : 'Connection Failed'}</strong>
+                    {testResult.latency_ms !== null && testResult.latency_ms !== undefined && (
+                      <span style={{ marginLeft: 6, opacity: 0.8 }}>({testResult.latency_ms}ms)</span>
+                    )}
+                    <div style={{ fontSize: 12, marginTop: 2 }}>{testResult.message}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-foot">
+              <button
+                className="btn-secondary"
+                type="button"
+                disabled={testing}
+                onClick={handleTestConnection}
+              >
+                {testing ? 'Testing connection…' : '⚡ Test Connection'}
+              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn-secondary"
+                  type="button"
+                  onClick={() => {
+                    setShowSettings(false);
+                    setTestResult(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-primary"
+                  type="button"
+                  onClick={handleSaveSettings}
+                >
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

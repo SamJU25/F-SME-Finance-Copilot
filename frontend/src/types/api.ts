@@ -106,3 +106,55 @@ export interface CopilotResponse {
   requires_biometric_hitl: boolean;
 }
 
+export type LLMProviderId =
+  | 'offline'
+  | 'gemini'
+  | 'anthropic'
+  | 'openai'
+  | 'deepseek'
+  | 'groq'
+  | 'ollama'
+  | 'custom';
+
+export interface LLMConfig {
+  provider: LLMProviderId;
+  api_key?: string;
+  base_url?: string;
+  model_name?: string;
+}
+
+export interface TestConnectionRequest {
+  provider: LLMProviderId;
+  api_key?: string;
+  base_url?: string;
+  model_name?: string;
+}
+
+export interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+  provider: string;
+  model_name?: string;
+  latency_ms?: number | null;
+}
+
+export interface ModelItem {
+  id: string;
+  name: string;
+}
+
+export interface FetchModelsRequest {
+  provider: LLMProviderId;
+  api_key?: string;
+  base_url?: string;
+}
+
+export interface FetchModelsResponse {
+  success: boolean;
+  provider: string;
+  models: ModelItem[];
+  message?: string;
+}
+
+
+

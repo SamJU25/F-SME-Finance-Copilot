@@ -12,12 +12,14 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from services.agent.llm_bridge import query_external_llm
 from services.agent.schema import (
     AgentActionProposal,
     AgentChatRequest,
     AgentMatchedOption,
     AgentMetricsSummary,
     CopilotResponse,
+    LLMConfig,
 )
 from services.agent.tools import (
     tool_analyze_cash_flow,
@@ -54,10 +56,31 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     return "GENERAL_ASSISTANCE"
 
 
-def run_copilot_supervisor(request: AgentChatRequest, tenant_id: Optional[str] = None) -> CopilotResponse:
+def run_copilot_supervisor(
+    request: AgentChatRequest,
+    tenant_id: Optional[str] = None,
+    llm_config: Optional[LLMConfig] = None,
+) -> CopilotResponse:
     """Core reasoning supervisor dispatching requests to deterministic tools and formatting responses."""
     intent = detect_intent(request.message, request)
     effective_tenant = tenant_id or request.tenant_id or "SME-DEFAULT"
+    effective_config = llm_config or request.llm_config
+
+    def _enrich_reply(base_reply: str) -> str:
+        if not effective_config or (effective_config.provider or "offline").lower() == "offline":
+            return base_reply
+        sys_directive = (
+            "You are the executive AI copilot for an SME finance team. "
+            f"Here are the verified calculation outputs from our internal financial engine: '{base_reply}'. "
+            "Explain and contextualize these metrics directly to the business owner. "
+            "Never contradict or hallucinate different financial numbers."
+        )
+        ai_reply = query_external_llm(
+            prompt=request.message,
+            system_instruction=sys_directive,
+            config=effective_config,
+        )
+        return ai_reply if ai_reply else base_reply
 
     # 0. Prompt Injection Defense Barrier
     if intent == "SECURITY_DEFENSE_TRIGGERED":
@@ -162,7 +185,7 @@ def run_copilot_supervisor(request: AgentChatRequest, tenant_id: Optional[str] =
         )
 
         return CopilotResponse(
-            reply=reply,
+            reply=_enrich_reply(reply),
             intent_detected=intent,
             metrics=metrics,
             matched_options=matched_opts,
@@ -205,19 +228,20 @@ def run_copilot_supervisor(request: AgentChatRequest, tenant_id: Optional[str] =
         )
 
         return CopilotResponse(
-            reply=reply,
+            reply=_enrich_reply(reply),
             intent_detected=intent,
             metrics=metrics,
             requires_biometric_hitl=False,
         )
 
     # 4. General Financial Dialogue
+    general_reply = (
+        "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
+        "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
+        "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
+    )
     return CopilotResponse(
-        reply=(
-            "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
-            "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
-            "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
-        ),
+        reply=_enrich_reply(general_reply),
         intent_detected="GENERAL_ASSISTANCE",
         requires_biometric_hitl=False,
     )
