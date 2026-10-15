@@ -1,0 +1,7 @@
+Date,Transaction ID,Description,Amount,Balance
+2026-10-01,ch_101,Stripe Customer Charge Batch,1450.00,2650.00
+2026-10-02,fee_101,Stripe Processing Fees,-42.05,2607.95
+2026-10-03,po_101,Daily Automatic Bank Payout,-2000.00,607.95
+2026-10-04,ch_102,Stripe Customer Charge Batch,2100.00,2707.95
+2026-10-05,fee_102,Stripe Processing Fees,-60.90,2647.05
+2026-10-06,po_102,Daily Automatic Bank Payout,-2200.00,447.05

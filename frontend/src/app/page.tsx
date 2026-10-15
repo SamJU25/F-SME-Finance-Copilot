@@ -783,6 +783,42 @@ export default function HomePage() {
     }
   }
 
+  async function loadSampleDataset(sampleFiles: { path: string; name: string }[]) {
+    try {
+      setLoading(true);
+      setError(null);
+      const loaded: File[] = [];
+      let firstText = '';
+
+      for (const item of sampleFiles) {
+        const res = await fetch(item.path);
+        if (!res.ok) throw new Error(`Failed to load ${item.name}`);
+        const blob = await res.blob();
+        const f = new File([blob], item.name, { type: 'text/csv' });
+        loaded.push(f);
+        if (!firstText) {
+          firstText = await blob.text();
+        }
+      }
+
+      setFile(loaded[0] || null);
+      setFilesList(loaded);
+      setCsvText(firstText);
+      try {
+        localStorage.setItem(`sme_copilot_csv_${sessionId}`, firstText);
+        localStorage.setItem('sme_copilot_csv_text', firstText);
+      } catch {
+        // LocalStorage fallback
+      }
+
+      await executeAnalysis(loaded.length > 1 ? loaded : loaded[0], threshold);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load sample dataset');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleChangeCsv() {
     fileInputRef.current?.click();
   }
@@ -1376,6 +1412,58 @@ export default function HomePage() {
 
               <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
                 Universal Ingestion: Commercial Banks (Chase, BofA, Citi, Wells Fargo), Processors (Stripe, Square, Shopify), Accounting (QuickBooks, Xero), or founder CSVs. Multi-account treasury consolidation supported.
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Or test with sample datasets:
+                </span>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => loadSampleDataset([{ path: '/samples/chase_operating_october.csv', name: 'chase_operating_october.csv' }])}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border)', cursor: 'pointer', color: 'inherit' }}
+                  >
+                    🏦 Chase Operating
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadSampleDataset([
+                      { path: '/samples/chase_operating_october.csv', name: 'chase_operating_october.csv' },
+                      { path: '/samples/svb_payroll_october.csv', name: 'svb_payroll_october.csv' },
+                    ])}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', cursor: 'pointer', color: 'inherit' }}
+                    title="Chase + SVB with automatic contra-transfer elimination"
+                  >
+                    🏛️ Multi-Account Portfolio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadSampleDataset([
+                      { path: '/samples/chase_operating_october.csv', name: 'chase_operating_october.csv' },
+                      { path: '/samples/chase_operating_november.csv', name: 'chase_operating_november.csv' },
+                    ])}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', cursor: 'pointer', color: 'inherit' }}
+                    title="Oct + Nov continuous 60-day timeline stitching"
+                  >
+                    📅 60-Day Timeline
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadSampleDataset([{ path: '/samples/stripe_payouts_processing.csv', name: 'stripe_payouts_processing.csv' }])}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border)', cursor: 'pointer', color: 'inherit' }}
+                  >
+                    💳 Stripe Payouts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadSampleDataset([{ path: '/samples/deutsche_bank_eur.csv', name: 'deutsche_bank_eur.csv' }])}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border)', cursor: 'pointer', color: 'inherit' }}
+                    title="European German format with comma decimals and EUR currency"
+                  >
+                    🇪🇺 Deutsche Bank (EUR)
+                  </button>
+                </div>
               </div>
 
               <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
