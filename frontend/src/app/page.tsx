@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, Fragment, useEffect, useState } from 'react';
+import { FormEvent, Fragment, useEffect, useRef, useState } from 'react';
 import type {
   CashAnalysisResponse,
   CopilotResponse,
@@ -20,6 +20,24 @@ export interface SessionItem {
   title: string;
   updatedAt: string;
   messageCount: number;
+}
+
+function formatSessionTime(isoString?: string): string {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
 }
 
 const DEFAULT_WELCOME_MESSAGE: { role: 'agent'; text: string } = {
@@ -216,6 +234,22 @@ export default function HomePage() {
   const [executedIntents, setExecutedIntents] = useState<Record<string, boolean>>({});
   const [sessionId, setSessionId] = useState<string>('');
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+  const [sessionSearch, setSessionSearch] = useState('');
+  const sessionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sessionMenuRef.current && !sessionMenuRef.current.contains(event.target as Node)) {
+        setSessionMenuOpen(false);
+      }
+    }
+    if (sessionMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [sessionMenuOpen]);
+
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([
     DEFAULT_WELCOME_MESSAGE,
   ]);
@@ -668,6 +702,42 @@ export default function HomePage() {
     }
   }
 
+  async function handleDeleteSession(idToDelete: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      await fetch(`${API_URL}/api/v1/agent/session/${idToDelete}`, { method: 'DELETE' });
+    } catch {
+      // Backend delete fallback
+    }
+    const remaining = sessions.filter((s) => s.id !== idToDelete);
+    try {
+      localStorage.removeItem(`sme_copilot_chat_${idToDelete}`);
+      localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(remaining));
+    } catch {
+      // LocalStorage fallback
+    }
+    setSessions(remaining);
+    if (idToDelete === sessionId) {
+      if (remaining.length > 0) {
+        handleSwitchSession(remaining[0].id);
+      } else {
+        handleCreateNewSession();
+      }
+    }
+  }
+
+  const activeSessionItem = sessions.find((s) => s.id === sessionId) || {
+    id: sessionId,
+    title: 'Session 1',
+    messageCount: messages.length,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const filteredSessions = sessions.filter((s) =>
+    s.title.toLowerCase().includes(sessionSearch.toLowerCase()) ||
+    s.id.toLowerCase().includes(sessionSearch.toLowerCase())
+  );
+
   async function executeBiometric(intentId: string) {
     try {
       const res = await fetch(`${API_URL}/api/v1/actions/${intentId}/execute`, {
@@ -868,21 +938,161 @@ export default function HomePage() {
         <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Chat Drawer">
           <div className="chat-header">
             <div className="chat-header-left">
-              <div className="session-selector-wrap">
-                <span className="session-icon" aria-hidden="true">💬</span>
-                <select
-                  className="session-combobox"
-                  aria-label="Select Chat Session"
-                  value={sessionId}
-                  onChange={(e) => handleSwitchSession(e.target.value)}
+              <div className="session-combobox-container" ref={sessionMenuRef}>
+                <button
+                  type="button"
+                  className={`session-trigger-btn ${sessionMenuOpen ? 'open' : ''}`}
+                  onClick={() => setSessionMenuOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={sessionMenuOpen}
+                  title="Select or switch chat sessions"
                 >
-                  <option value="__new__">➕ New Session</option>
-                  {sessions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.title} ({s.messageCount || 1} msgs)
-                    </option>
-                  ))}
-                </select>
+                  <div className="session-trigger-content">
+                    <svg
+                      className="session-trigger-icon"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span className="session-trigger-title">
+                      {activeSessionItem.title}
+                    </span>
+                    <span className="session-count-badge">
+                      {messages.length} msgs
+                    </span>
+                  </div>
+                  <svg
+                    className="session-chevron-icon"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+
+                {sessionMenuOpen && (
+                  <div className="session-menu-popover" role="listbox" aria-label="Chat Sessions">
+                    <button
+                      type="button"
+                      className="session-new-btn"
+                      onClick={() => {
+                        handleCreateNewSession();
+                        setSessionMenuOpen(false);
+                        setSessionSearch('');
+                      }}
+                    >
+                      <span className="session-new-icon" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                      </span>
+                      <span className="session-new-text">New Session</span>
+                      <span className="session-new-badge">Fresh Context</span>
+                    </button>
+
+                    {sessions.length > 2 && (
+                      <div className="session-search-box">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }} aria-hidden="true">
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input
+                          type="text"
+                          className="session-search-input"
+                          placeholder="Search sessions…"
+                          value={sessionSearch}
+                          onChange={(e) => setSessionSearch(e.target.value)}
+                          autoFocus
+                        />
+                        {sessionSearch && (
+                          <button
+                            type="button"
+                            className="session-search-clear"
+                            onClick={() => setSessionSearch('')}
+                            aria-label="Clear search"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="session-menu-section-header">
+                      <span>Session History</span>
+                      <span>{filteredSessions.length} total</span>
+                    </div>
+
+                    <div className="session-items-list">
+                      {filteredSessions.map((s) => {
+                        const isActive = s.id === sessionId;
+                        return (
+                          <div
+                            key={s.id}
+                            className={`session-menu-item ${isActive ? 'active' : ''}`}
+                            role="option"
+                            aria-selected={isActive}
+                            onClick={() => {
+                              handleSwitchSession(s.id);
+                              setSessionMenuOpen(false);
+                              setSessionSearch('');
+                            }}
+                          >
+                            <div className="session-item-left">
+                              <span className={`session-active-indicator ${isActive ? 'active' : ''}`} aria-hidden="true">
+                                {isActive ? '✓' : '•'}
+                              </span>
+                              <div className="session-item-info">
+                                <div className="session-item-title">{s.title}</div>
+                                <div className="session-item-meta">
+                                  <span>{s.messageCount || 1} msgs</span>
+                                  {s.updatedAt && (
+                                    <>
+                                      <span className="meta-dot">·</span>
+                                      <span>{formatSessionTime(s.updatedAt)}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {sessions.length > 1 && (
+                              <button
+                                type="button"
+                                className="session-delete-btn"
+                                title="Delete this session"
+                                onClick={(e) => handleDeleteSession(s.id, e)}
+                                aria-label={`Delete session ${s.title}`}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {filteredSessions.length === 0 && (
+                        <div className="session-empty-hint">No sessions found matching &ldquo;{sessionSearch}&rdquo;</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -895,12 +1105,26 @@ export default function HomePage() {
                   setShowSettings(true);
                   fetchModels(llmConfig);
                 }}
-                title="Configure AI Engine & Select Models"
+                title="Configure AI Engine & Discover Live Models"
                 aria-label="Configure AI Model Settings"
               >
                 <span className="model-chip-dot" />
                 <span className="model-chip-name">{getEngineDisplayName(llmConfig)}</span>
-                <span className="model-gear-icon" aria-hidden="true">⚙️</span>
+                <svg
+                  className="model-gear-svg"
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
               </button>
               <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
                 ✕
@@ -1065,7 +1289,13 @@ export default function HomePage() {
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <div className="modal-card">
             <div className="modal-head">
-              <h3 id="settings-title">AI Provider & Model Settings</h3>
+              <div>
+                <div className="modal-eyebrow">COGNITIVE ENGINE CONFIGURATION</div>
+                <h3 id="settings-title">AI Provider & Model Settings</h3>
+                <p className="modal-subtitle">
+                  Configure your LLM provider credentials, verify latency, and discover live fine-tuned models.
+                </p>
+              </div>
               <button
                 className="modal-close-btn"
                 type="button"
