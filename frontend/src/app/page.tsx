@@ -615,7 +615,14 @@ export default function HomePage() {
             ))}
             {chatLoading && (
               <div className="chat-msg agent">
-                <div className="chat-bubble">Analyzing with Three-Tier Security Gate…</div>
+                <div className="chat-bubble" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
+                  <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>Thinking</span>
+                  <span className="typing-dots" aria-label="Thinking">
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                  </span>
+                </div>
               </div>
             )}
           </div>
