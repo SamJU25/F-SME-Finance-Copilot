@@ -1398,12 +1398,33 @@ export default function HomePage() {
                   </div>
                 )}
                 <div className="metrics">
-                  <Metric label="Current balance" value={money(result.current_balance, result.currency)} />
-                  <Metric label="Historical net change" value={money(result.net_period_change, result.currency)} />
-                  <Metric label="Average daily burn" value={money(result.average_daily_burn, result.currency)} />
                   <Metric
-                    label={result.analysis_mode === 'HISTORICAL_AUDIT' ? 'Historical runway from close' : 'Estimated runway'}
+                    label="Current balance"
+                    value={money(result.current_balance, result.currency)}
+                    sub={result.end_date ? `Closing ledger on ${result.end_date}` : undefined}
+                  />
+                  <Metric
+                    label="Historical net change"
+                    value={money(result.net_period_change, result.currency)}
+                    sub={Number(result.net_period_change) >= 0 ? 'Net positive inflow' : 'Net cash outflow'}
+                  />
+                  <Metric
+                    label="Average daily burn"
+                    value={money(result.average_daily_burn, result.currency)}
+                    sub={result.runway_days === null ? 'Zero net burn rate' : 'Daily operational burn'}
+                  />
+                  <Metric
+                    label={
+                      result.analysis_mode === 'HISTORICAL_AUDIT'
+                        ? 'Historical runway (Days remaining)'
+                        : 'Estimated runway (Days remaining)'
+                    }
                     value={result.runway_days === null ? 'No burn' : `${result.runway_days} days`}
+                    sub={
+                      result.runway_days === null
+                        ? 'Net cash-positive · Inflows ≥ Outflows'
+                        : `Cash depletes in ${result.runway_days} days`
+                    }
                   />
                   <Metric label="Period reviewed" value={`${result.period_days} days`} />
                   <Metric label="Rows accepted" value={`${result.accepted_count}`} />
@@ -2026,11 +2047,12 @@ export default function HomePage() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="metric">
       <span className="metric-label">{label}</span>
       <strong className="metric-value">{value}</strong>
+      {sub && <span className="metric-sub">{sub}</span>}
     </div>
   );
 }

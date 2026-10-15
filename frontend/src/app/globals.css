@@ -447,6 +447,7 @@ input[type='number'].threshold-custom-input {
 .metric { min-height: 104px; padding: 16px; background: white; }
 .metric-label { display: block; color: var(--muted); font-size: 12px; font-weight: 500; }
 .metric-value { display: block; margin-top: 10px; font-family: var(--mono); font-size: clamp(19px, 2.4vw, 25px); font-weight: 600; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'zero' 1; letter-spacing: -0.01em; color: var(--ink); }
+.metric-sub { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); font-family: var(--sans); line-height: 1.4; }
 .caveat { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .rejections { margin-top: 20px; }
 .rejections h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
