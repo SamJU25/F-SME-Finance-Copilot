@@ -120,7 +120,7 @@ def run_copilot_supervisor(
                 prompt=request.message,
                 system_instruction=sys_directive,
                 history=request.history,
-                max_new_tokens=90,
+                max_new_tokens=160,
             )
             if local_advice:
                 return f"{base_reply}\n\nExecutive Advisory:\n{local_advice}"
@@ -215,7 +215,7 @@ def run_copilot_supervisor(
                     prompt=request.message,
                     system_instruction=sys_directive,
                     history=request.history,
-                    max_new_tokens=90,
+                    max_new_tokens=160,
                 )
                 if local_reply:
                     return CopilotResponse(
@@ -307,7 +307,7 @@ def run_copilot_supervisor(
                     prompt=request.message,
                     system_instruction=sys_directive,
                     history=request.history,
-                    max_new_tokens=90,
+                    max_new_tokens=160,
                 )
                 if local_reply:
                     return CopilotResponse(
@@ -496,7 +496,7 @@ def run_copilot_supervisor(
             prompt=request.message,
             system_instruction=sys_directive,
             history=request.history,
-            max_new_tokens=90,
+            max_new_tokens=160,
         )
         if local_reply:
             return CopilotResponse(

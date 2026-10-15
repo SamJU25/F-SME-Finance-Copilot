@@ -1458,9 +1458,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792061648.9118533,
-    "seen": 1792061714.6925714,
-    "ast_hash": "3d38bc197fdc965db1155ba5c4ccb89f",
+    "mtime": 1792064763.0048409,
+    "seen": 1792064898.8819227,
+    "ast_hash": "c865015c8b0ac6bb5185bc9766277dff",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1493,12 +1493,6 @@
     "ast_hash": "4983ef1876237996dde07b1119c571dd",
     "semantic_hash": ""
   },
-  "services/agent/semantic_router.py": {
-    "mtime": 1792061634.1022356,
-    "seen": 1792061714.6925688,
-    "ast_hash": "a59ad397cc8820c44b4171aa8ed962d9",
-    "semantic_hash": ""
-  },
   "scripts/download_llama.py": {
     "mtime": 1792058901.545901,
     "seen": 1792059439.9836152,
@@ -1515,6 +1509,12 @@
     "mtime": 1792062360.0780172,
     "seen": 1792062813.8140888,
     "ast_hash": "c445db00910051c24c4b18ff90b18968",
+    "semantic_hash": ""
+  },
+  "services/agent/dynamic_router.py": {
+    "mtime": 1792064818.560699,
+    "seen": 1792064898.881455,
+    "ast_hash": "becd3460adddd0ff2f99b256d03bc5a6",
     "semantic_hash": ""
   }
 }
