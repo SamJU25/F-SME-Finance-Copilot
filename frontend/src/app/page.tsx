@@ -760,9 +760,10 @@ export default function HomePage() {
           <span className="brand-mark" aria-hidden="true">$</span>
           <span>SME Finance Copilot</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="topbar-actions">
+          {/* Live AI Engine Selector Pill */}
           <button
-            className="settings-btn"
+            className="topbar-engine-btn"
             onClick={() => {
               setDraftConfig(llmConfig);
               setShowSettings(true);
@@ -770,21 +771,59 @@ export default function HomePage() {
             }}
             type="button"
             title="Configure AI model provider and credentials"
+            aria-label="Configure AI Model Settings"
           >
-            <span>⚙️ AI Provider:</span>
-            <span className={`provider-badge ${llmConfig.provider === 'custom' ? 'custom' : ''}`}>
-              {llmConfig.provider.toUpperCase()}
-            </span>
+            <span className="topbar-dot" aria-hidden="true" />
+            <span className="topbar-engine-label">Engine:</span>
+            <span className="topbar-engine-name">{getEngineDisplayName(llmConfig)}</span>
+            <svg
+              className="topbar-gear-svg"
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
           </button>
+
+          {/* Copilot Chat Toggle Button */}
           <button
-            className="settings-btn"
+            className={`topbar-chat-btn ${chatOpen ? 'active' : ''}`}
             onClick={() => setChatOpen((prev) => !prev)}
             type="button"
-            title="Toggle Copilot Chat"
+            title={chatOpen ? 'Close Copilot Drawer' : 'Open Autonomous Copilot Drawer'}
+            aria-expanded={chatOpen}
           >
-            <span>💬 Copilot Chat</span>
+            <svg
+              className="topbar-chat-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Copilot</span>
+            <span className="topbar-chat-badge">{messages.length}</span>
           </button>
-          <span className="demo-tag">Autonomous AI Participant</span>
+
+          {/* Institutional Security & Governance Badge */}
+          <div className="topbar-security-badge" title="Three-Tier Permission Gating & Consortium Audit Chain">
+            <span className="security-dot" aria-hidden="true" />
+            <span>Tier 3 FIDO2 · FISCO BCOS</span>
+          </div>
         </div>
       </header>
 
@@ -921,17 +960,6 @@ export default function HomePage() {
           <pre><code>{CSV_HEADER}</code></pre>
         </section>
       </main>
-
-      {/* Floating Copilot Button */}
-      <button
-        className="chat-toggle-btn"
-        onClick={() => setChatOpen(!chatOpen)}
-        type="button"
-        aria-label="Toggle Autonomous AI Copilot Drawer"
-      >
-        <span>🤖</span>
-        <span>{chatOpen ? 'Close Copilot' : 'Ask AI Copilot'}</span>
-      </button>
 
       {/* Interactive Copilot Chat Drawer */}
       {chatOpen && (

@@ -27,6 +27,163 @@ a { color: var(--green); }
 .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: -.03em; }
 .brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: var(--green); color: white; font-family: var(--mono); font-size: 15px; }
 .demo-tag { color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+
+/* Institutional Topbar Actions */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-engine-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.topbar-engine-btn:hover {
+  background: #f7faf8;
+  border-color: #b7c6ba;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+.topbar-engine-btn:active {
+  transform: scale(0.98);
+}
+
+.topbar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(20, 107, 85, 0.2);
+  flex-shrink: 0;
+}
+
+.topbar-engine-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.topbar-engine-name {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-gear-svg {
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform 0.3s ease, color 0.15s ease;
+}
+.topbar-engine-btn:hover .topbar-gear-svg {
+  color: var(--green);
+  transform: rotate(30deg);
+}
+
+.topbar-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.topbar-chat-btn:hover {
+  background: #f7faf8;
+  border-color: #b7c6ba;
+}
+.topbar-chat-btn:active {
+  transform: scale(0.98);
+}
+.topbar-chat-btn.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+  box-shadow: 0 2px 6px rgba(20, 107, 85, 0.25);
+}
+.topbar-chat-icon {
+  color: var(--green);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+.topbar-chat-btn.active .topbar-chat-icon {
+  color: white;
+}
+.topbar-chat-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: #eef3ef;
+  color: var(--green);
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.topbar-chat-btn.active .topbar-chat-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.topbar-security-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  background: #f0f4f1;
+  border: 1px solid #d4dfd7;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: #245749;
+  user-select: none;
+  letter-spacing: -0.01em;
+}
+.security-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #146b55;
+  box-shadow: 0 0 0 2px rgba(20, 107, 85, 0.2);
+}
+
+@media (max-width: 860px) {
+  .topbar-security-badge {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .topbar-engine-label {
+    display: none;
+  }
+  .topbar-engine-name {
+    max-width: 90px;
+  }
+}
 main { max-width: 1120px; margin: 0 auto; padding: 56px 24px 88px; }
 .eyebrow { color: var(--green); font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
 h1 { max-width: 680px; margin: 14px 0 12px; font-size: clamp(38px, 6vw, 68px); line-height: .99; letter-spacing: -.065em; }
@@ -100,11 +257,11 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
 
 .chat-drawer {
   position: fixed;
-  bottom: 84px;
+  bottom: 24px;
   right: 24px;
   z-index: 100;
   width: min(460px, calc(100vw - 32px));
-  height: min(640px, calc(100vh - 120px));
+  height: min(680px, calc(100vh - 80px));
   display: flex;
   flex-direction: column;
   background: var(--surface);

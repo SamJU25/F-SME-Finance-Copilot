@@ -1,7 +1,7 @@
 # Graph Report - SME Finance Copilot  (2026-10-15)
 
 ## Corpus Check
-- 262 files · ~148,677 words
+- 262 files · ~148,925 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 11 file(s) not represented in the graph (top: (none) 6, .example 1, .backend 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f0ad19b4`
+- Built from commit: `ec4460bd`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -242,7 +242,7 @@
 - fintech-engineer (Suite: 2-fintech-engine)
 - test_agent_api.py
 - csv_parser.py
-- dynamic_router.py
+- FastEmbedSemanticRouter
 - Member 1: Team Lead, API Integrator & Security Gatekeeper
 - ADR-001: Runtime Multi-Agent Topology & Isolation Protocol
 - Phase 2: Analysis (2-3 hours)
@@ -259,10 +259,11 @@
 - devDependencies
 - scripts
 - pytest
-- supervisor.py
+- dynamic_router.py
 - 5. Digital Underwriting & Truth-in-Lending
 - Superpowers Engineering Methodology
 - 8. Four-Person Team Roles, Ownership & Step-by-Step Guides
+- supervisor.py
 - Member 4: Quantitative FinTech Engine Specialist
 - 6. Consortium Blockchain & Double-Financing Defense
 - first-principles-thinking (Suite: 6-product-pitch)
@@ -273,16 +274,17 @@
 - Phase 1: Earnings Data Collection (30-60 minutes)
 - 8. Four-Person Team Roles, Ownership & Step-by-Step Guides
 - e2e/__init__.py
-- clear_session
+- session_store.py
 - test_agent_chat_sub_intent_burn_rate
 - Domain Alignment & Grilling Protocol
 - Team Distribution Guide
 - test_agent_chat_dscr_parameter_inheritance
-- FastEmbedSemanticRouter
+- V2EX (公开 API)
 - test_agent_chat_sub_intent_cfo_advice
 - test_agent_chat_loan_amortization_calculation
+- 小红书 / XiaoHongShu（多后端）
 - test_agent_fetch_models_offline
-- session_store.py
+- clear_session
 - LocalSLMEngine
 - concentration_risk.py
 - test_agent_chat_working_capital_cycle_detection
@@ -308,11 +310,9 @@
 - test_agent_chat_handles_natural_followup_balance_and_borrowing
 - test_agent_chat_contextual_history_followup
 - test_agent_credit_underwriting_flow
-- V2EX (公开 API)
 - test_agent_chat_client_concentration_with_csv
 - test_agent_chat_defensive_interval_ratio
 - test_agent_chat_fccr
-- 小红书 / XiaoHongShu（多后端）
 - test_agent_chat_operating_cash_flow_ratio
 - test_pii_masking_defense
 - test_agent_chat_customer_attrition_impact
@@ -1184,9 +1184,9 @@ Nodes (11): Integration tests for the Autonomous SME Finance Copilot Agent API. 
 Cohesion: 0.18
 Nodes (14): csv, Shared contract — agree before implementation, IngestionResult, NormalizedTransaction, parse_bank_records(), Any, BaseModel, Bank statement CSV data ingestion and sanitization service. (+6 more)
 
-### Community 228 - "dynamic_router.py"
-Cohesion: 0.19
-Nodes (13): numpy, classify_intent_dynamic(), _parse_intent_label(), _query_llm_for_intent(), Dynamic Vector Semantic & LLM Intent Router for Autonomous SME Finance Copilot.…, Queries either local on-device SLM or cloud LLM to classify user intent…, Extracts valid intent enum name from raw LLM output., Dynamically classifies user message into a financial intent using vector… (+5 more)
+### Community 228 - "FastEmbedSemanticRouter"
+Cohesion: 0.15
+Nodes (13): classify_sub_intent_dynamic(), FastEmbedSemanticRouter, is_in_domain_finance_query(), Any, Classifies intent, sub-intent, and domain alignment using vector embeddings., Determines if query is out of domain using semantic distance., Determines if text is an unhelpful AI capability disclaimer or refusal via…, Classifies cash diagnostic sub-intent via semantic prototype matching. (+5 more)
 
 ### Community 229 - "Member 1: Team Lead, API Integrator & Security Gatekeeper"
 Cohesion: 0.22
@@ -1240,9 +1240,9 @@ Nodes (12): scripts, build, dev, docker:build, docker:down, docker:up, graph:upd
 Cohesion: 0.10
 Nodes (12): fastapi_testclient, io, pytest, End-to-End user flow test validating the complete SME Copilot journey: 1.…, Validates the complete SME user journey orchestrated through the Autonomous AI…, test_complete_conversational_agent_user_journey(), Integration tests for new Backbone APIs: - Tier 2/3 Action Staging and…, clean_sessions() (+4 more)
 
-### Community 246 - "supervisor.py"
-Cohesion: 0.20
-Nodes (12): re, get_conversational_system_prompt(), get_credit_underwriting_prompt(), Unified Agent Persona and System Directives for the Autonomous SME Finance…, Prompt for general greetings, onboarding, and casual conversational dialogue., Prompt for explaining credit underwriting tiers and pre-qualified financing…, Agentic Supervisor for the Autonomous SME Finance Copilot. Enforces: 1. Pure…, Stage a financial action into the immutable staging queue (Tier 2). No money… (+4 more)
+### Community 246 - "dynamic_router.py"
+Cohesion: 0.19
+Nodes (13): numpy, classify_intent_dynamic(), _parse_intent_label(), _query_llm_for_intent(), Dynamic Vector Semantic & LLM Intent Router for Autonomous SME Finance Copilot.…, Queries either local on-device SLM or cloud LLM to classify user intent…, Extracts valid intent enum name from raw LLM output., Dynamically classifies user message into a financial intent using vector… (+5 more)
 
 ### Community 247 - "5. Digital Underwriting & Truth-in-Lending"
 Cohesion: 0.40
@@ -1255,6 +1255,10 @@ Nodes (4): 1. Intent & Spec Gate, 2. Root Cause Debugging Invariant, 3. Verifica
 ### Community 249 - "8. Four-Person Team Roles, Ownership & Step-by-Step Guides"
 Cohesion: 0.67
 Nodes (3): 8. Four-Person Team Roles, Ownership & Step-by-Step Guides, Cross-Team Integration Protocol, Team Ownership Matrix
+
+### Community 250 - "supervisor.py"
+Cohesion: 0.20
+Nodes (12): re, get_conversational_system_prompt(), get_credit_underwriting_prompt(), Unified Agent Persona and System Directives for the Autonomous SME Finance…, Prompt for general greetings, onboarding, and casual conversational dialogue., Prompt for explaining credit underwriting tiers and pre-qualified financing…, Agentic Supervisor for the Autonomous SME Finance Copilot. Enforces: 1. Pure…, Stage a financial action into the immutable staging queue (Tier 2). No money… (+4 more)
 
 ### Community 251 - "Member 4: Quantitative FinTech Engine Specialist"
 Cohesion: 0.22
@@ -1288,9 +1292,9 @@ Nodes (5): Phase 1: Earnings Data Collection (30-60 minutes), Step 1: Identify t
 Cohesion: 0.67
 Nodes (3): 8. Four-Person Team Roles, Ownership & Step-by-Step Guides, Cross-Team Integration Protocol, Team Ownership Matrix
 
-### Community 261 - "clear_session"
-Cohesion: 0.67
-Nodes (3): clear_session(), Clears session record from memory and removes serialized disk cache., delete
+### Community 261 - "session_store.py"
+Cohesion: 0.36
+Nodes (6): json, logging, os, On-device local SLM inference engine powered by onnxruntime-genai. Runs Meta…, In-memory and persistent session store for Autonomous SME Finance Copilot.…, threading
 
 ### Community 263 - "Domain Alignment & Grilling Protocol"
 Cohesion: 0.50
@@ -1300,13 +1304,17 @@ Nodes (3): 1. Grilling Rounds, 2. Ubiquitous Vocabulary, Domain Alignment & Gril
 Cohesion: 0.67
 Nodes (3): How to start today, Rules for every coding-agent task, Team Distribution Guide
 
-### Community 266 - "FastEmbedSemanticRouter"
-Cohesion: 0.15
-Nodes (13): classify_sub_intent_dynamic(), FastEmbedSemanticRouter, is_in_domain_finance_query(), Any, Classifies intent, sub-intent, and domain alignment using vector embeddings., Determines if query is out of domain using semantic distance., Determines if text is an unhelpful AI capability disclaimer or refusal via…, Classifies cash diagnostic sub-intent via semantic prototype matching. (+5 more)
+### Community 266 - "V2EX (公开 API)"
+Cohesion: 0.29
+Nodes (7): Python 调用示例, V2EX (公开 API), 主题回复, 主题详情, 热门主题, 用户信息, 节点主题
 
-### Community 272 - "session_store.py"
-Cohesion: 0.36
-Nodes (6): json, logging, os, On-device local SLM inference engine powered by onnxruntime-genai. Runs Meta…, In-memory and persistent session store for Autonomous SME Finance Copilot.…, threading
+### Community 269 - "小红书 / XiaoHongShu（多后端）"
+Cohesion: 0.40
+Nodes (5): 后端 A：OpenCLI（桌面首选）, 后端 B：xiaohongshu-mcp（服务器场景）, 后端 C：xhs-cli（存量备选，上游 2026-03 起停更）, 小红书 / XiaoHongShu（多后端）, 通用注意事项
+
+### Community 272 - "clear_session"
+Cohesion: 0.67
+Nodes (3): clear_session(), Clears session record from memory and removes serialized disk cache., delete
 
 ### Community 273 - "LocalSLMEngine"
 Cohesion: 0.21
@@ -1335,14 +1343,6 @@ Nodes (11): datetime, CSVIngestionError, parse_bank_csv(), A file-level input er
 ### Community 300 - "6. Consortium Blockchain & Double-Financing Defense"
 Cohesion: 0.50
 Nodes (4): 6. Consortium Blockchain & Double-Financing Defense, The Consortium Blockchain Solution (FISCO BCOS), The Fraud Problem (Invoice Double-Financing), What is Invoice Factoring?
-
-### Community 305 - "V2EX (公开 API)"
-Cohesion: 0.29
-Nodes (7): Python 调用示例, V2EX (公开 API), 主题回复, 主题详情, 热门主题, 用户信息, 节点主题
-
-### Community 310 - "小红书 / XiaoHongShu（多后端）"
-Cohesion: 0.40
-Nodes (5): 后端 A：OpenCLI（桌面首选）, 后端 B：xiaohongshu-mcp（服务器场景）, 后端 C：xhs-cli（存量备选，上游 2026-03 起停更）, 小红书 / XiaoHongShu（多后端）, 通用注意事项
 
 ## Knowledge Gaps
 - **1313 isolated node(s):** `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE`, `SUBAGENT_CATALOG_REPO_URL`, `metadata` (+1308 more)
