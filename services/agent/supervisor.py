@@ -9,11 +9,18 @@ Enforces:
 
 from __future__ import annotations
 
+import os
 import re
 from typing import Optional
 
 from services.agent.llm_bridge import query_external_llm
-from services.agent.local_slm import generate_local_reply
+from services.agent.local_slm import LocalSLMEngine, generate_local_reply
+from services.agent.prompts import (
+    COPILOT_PERSONA_BASE,
+    get_cash_diagnostic_prompt,
+    get_conversational_system_prompt,
+    get_credit_underwriting_prompt,
+)
 from services.agent.schema import (
     AgentActionProposal,
     AgentChatRequest,
@@ -95,7 +102,18 @@ def run_copilot_supervisor(
     effective_tenant = tenant_id or request.tenant_id or "SME-DEFAULT"
     effective_config = llm_config or request.llm_config
 
-    def _enrich_reply(base_reply: str) -> str:
+    # Default to Local SLM (Llama 3.2 1B ONNX) if available and not in automated test harness
+    if (
+        (
+            effective_config is None
+            or ((effective_config.provider or "").lower() == "offline" and not effective_config.model_name)
+        )
+        and "PYTEST_CURRENT_TEST" not in os.environ
+        and LocalSLMEngine.get_instance().is_available()
+    ):
+        effective_config = LLMConfig(provider="offline", model_name="llama-3.2-1b-instruct-onnx")
+
+    def _enrich_reply(base_reply: str, prompt_type: str = "diagnostic") -> str:
         # 1. On-Device Local SLM Execution (Meta Llama-3.2-1B-Instruct ONNX)
         is_explicit_local = (
             effective_config
@@ -104,11 +122,9 @@ def run_copilot_supervisor(
         )
         if is_explicit_local:
             sys_directive = (
-                "You are an executive CFO advisor for a small business. "
-                "The business has received this financial diagnosis from our internal accounting engine: "
-                f"'{base_reply}'. "
-                "Provide 2 concise sentences of actionable executive commentary advising the business owner on operational priorities. "
-                "Do not invent or quote conflicting numbers or dollar amounts."
+                get_credit_underwriting_prompt(base_reply)
+                if prompt_type == "underwriting"
+                else get_cash_diagnostic_prompt(base_reply)
             )
             local_advice = generate_local_reply(
                 prompt=request.message,
@@ -126,10 +142,9 @@ def run_copilot_supervisor(
 
         # 3. External Cloud LLM Execution (Gemini, Claude, OpenAI, etc.)
         sys_directive = (
-            "You are the executive AI copilot for an SME finance team. "
-            f"Here are the verified calculation outputs from our internal financial engine: '{base_reply}'. "
-            "Explain and contextualize these metrics directly to the business owner in a clear, executive, concise manner. "
-            "Never contradict or hallucinate different financial numbers."
+            get_credit_underwriting_prompt(base_reply)
+            if prompt_type == "underwriting"
+            else get_cash_diagnostic_prompt(base_reply)
         )
         ai_reply = query_external_llm(
             prompt=request.message,
@@ -244,7 +259,7 @@ def run_copilot_supervisor(
         )
 
         return CopilotResponse(
-            reply=_enrich_reply(reply),
+            reply=_enrich_reply(reply, prompt_type="underwriting"),
             intent_detected=intent,
             metrics=metrics,
             matched_options=matched_opts,
@@ -408,20 +423,35 @@ def run_copilot_supervisor(
         and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
     )
     if is_local:
-        sys_directive = (
-            "You are the Autonomous SME Finance Copilot, an AI assistant for business owners. "
-            "Respond conversationally, warmly, and concisely in 2 sentences. "
-            "Mention that you can analyze cash runway, check financing options, or forecast cash shortfalls."
-        )
+        sys_directive = get_conversational_system_prompt()
+        if request.csv_content:
+            sys_directive += "\nNote: A transactional bank statement is already loaded into session."
         local_reply = generate_local_reply(
             prompt=request.message,
             system_instruction=sys_directive,
             history=request.history,
-            max_new_tokens=70,
+            max_new_tokens=90,
         )
         if local_reply:
             return CopilotResponse(
                 reply=local_reply,
+                intent_detected="GENERAL_ASSISTANCE",
+                requires_biometric_hitl=False,
+            )
+
+    if effective_config and (effective_config.provider or "").lower() != "offline":
+        sys_directive = get_conversational_system_prompt()
+        if request.csv_content:
+            sys_directive += "\nNote: A transactional bank statement is already loaded into session."
+        ai_reply = query_external_llm(
+            prompt=request.message,
+            system_instruction=sys_directive,
+            config=effective_config,
+            history=request.history,
+        )
+        if ai_reply:
+            return CopilotResponse(
+                reply=ai_reply,
                 intent_detected="GENERAL_ASSISTANCE",
                 requires_biometric_hitl=False,
             )
@@ -438,7 +468,7 @@ def run_copilot_supervisor(
             "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
         )
     return CopilotResponse(
-        reply=_enrich_reply(general_reply),
+        reply=general_reply,
         intent_detected="GENERAL_ASSISTANCE",
         requires_biometric_hitl=False,
     )
