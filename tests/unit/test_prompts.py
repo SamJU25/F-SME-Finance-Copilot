@@ -32,7 +32,7 @@ def test_sanitize_cfo_reply_removes_throat_clearing():
         ),
         (
             "Sure thing! Based on your statements, your cash conversion cycle is 42 days.",
-            "Based on your statements, your cash conversion cycle is 42 days.",
+            "Your cash conversion cycle is 42 days.",
         ),
         (
             "I'd love to assist you. Your burn rate requires immediate attention.",
@@ -47,6 +47,24 @@ def test_sanitize_cfo_reply_removes_throat_clearing():
     for dirty, expected in dirty_replies:
         cleaned = sanitize_cfo_reply(dirty)
         assert cleaned == expected, f"Expected '{expected}', got '{cleaned}'"
+
+
+def test_sanitize_cfo_reply_removes_user_screenshot_slop():
+    """Verify quotes, slop openers, metric echoes, and fluff from user screenshot are stripped."""
+    slop_input = (
+        '"Your bank statement CSV has been successfully uploaded. Now, let\'s dive into the numbers. Here are the results:\n\n'
+        '- **Current Balance**: $9,500.00\n'
+        '- **Average Daily Burn**: $100.00/day\n'
+        '- **Estimated Historical Runway**: 95 days\n'
+        '- **Status**: WATCH (Threshold: 30 days)\n'
+        '- **Healthiest Liquidity**: Operations solvent across all 90-day forecast windows\n'
+        '- **Projected 90-day Reserve**: $500.00\n\n'
+        'Operations remain solvent across the 90-day window, but your $500 reserve provides minimal cushion.\n\n'
+        'These verified accounting metrics provide a clear picture of your business\'s financial health. '
+        'With this information, you can make informed decisions to optimize your cash runway, manage your working capital effectively, and mitigate potential cash deficits."'
+    )
+    expected = "Operations remain solvent across the 90-day window, but your $500 reserve provides minimal cushion."
+    assert sanitize_cfo_reply(slop_input) == expected
 
 
 def test_sanitize_cfo_reply_strips_dangling_list_numbers():

@@ -85,6 +85,83 @@ function getEngineDisplayName(config: LLMConfig): string {
   return `${providerName} Engine`;
 }
 
+function FormattedChatBubble({ text }: { text: string }) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentList: React.ReactNode[] = [];
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className="chat-list">
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  const renderInline = (lineText: string): React.ReactNode[] => {
+    const parts = lineText.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+    return parts.map((part, pIdx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={pIdx}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return (
+          <code key={pIdx} className="chat-inline-code">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return part;
+    });
+  };
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      elements.push(<div key={`space-${idx}`} style={{ height: 6 }} />);
+      return;
+    }
+
+    if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
+      flushList();
+      const heading = trimmed.replace(/^#+\s*/, '');
+      elements.push(
+        <h4 key={`h-${idx}`} className="chat-heading">
+          {heading}
+        </h4>
+      );
+      return;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const content = trimmed.slice(2);
+      currentList.push(
+        <li key={`li-${idx}`} className="chat-list-item">
+          <span className="chat-bullet-dot">•</span>
+          <span>{renderInline(content)}</span>
+        </li>
+      );
+      return;
+    }
+
+    flushList();
+    elements.push(
+      <p key={`p-${idx}`} style={{ margin: '3px 0' }}>
+        {renderInline(trimmed)}
+      </p>
+    );
+  });
+
+  flushList();
+  return <>{elements}</>;
+}
+
 const STARTER_PROMPTS = [
   {
     icon: '📊',
@@ -621,7 +698,9 @@ export default function HomePage() {
           <div className="chat-body">
             {messages.map((m, idx) => (
               <div key={idx} className={`chat-msg ${m.role}`}>
-                <div className="chat-bubble">{m.text}</div>
+                <div className="chat-bubble">
+                  <FormattedChatBubble text={m.text} />
+                </div>
 
                 {/* Predictive Early-Warning Alert Card */}
                 {m.data?.metrics?.has_projected_deficit && (

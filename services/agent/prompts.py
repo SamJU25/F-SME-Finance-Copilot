@@ -37,11 +37,17 @@ def get_cash_diagnostic_prompt(base_reply: str) -> str:
     """Prompt for contextualizing cash flow, burn rate, runway, and deficit early-warnings."""
     return (
         f"{COPILOT_PERSONA_BASE}\n\n"
-        f"Verified Financial Calculation Engine Outputs:\n'{base_reply}'\n\n"
+        f"Verified Financial Engine Outputs:\n{base_reply}\n\n"
         "Executive Advisory Guidelines:\n"
-        "1. Contextualize these verified accounting metrics directly for the business owner.\n"
-        "2. Deliver 2 concise sentences of actionable executive CFO guidance on working capital preservation, burn rate control, and deficit mitigation.\n"
-        "3. Strictly cite the exact dollar amounts and runway days provided above; never contradict or approximate verified figures."
+        "1. Deliver strictly 2 concise sentences of strategic CFO advisory directly for the business owner.\n"
+        "2. Sentence 1: Risk assessment of the current burn rate and runway reserve.\n"
+        "3. Sentence 2: Concrete next action on working-capital preservation (e.g. invoice collections or credit facility).\n"
+        "4. Strictly cite verified metrics if referencing numbers; never contradict or approximate verified figures.\n\n"
+        "STRICT PROHIBITIONS:\n"
+        "- DO NOT say 'Your bank statement CSV has been uploaded', 'Now let's dive into the numbers', or 'Here are the results'.\n"
+        "- DO NOT repeat metrics in bullet points (they are already displayed).\n"
+        "- DO NOT wrap text in quotation marks.\n"
+        "- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions')."
     )
 
 
@@ -49,11 +55,15 @@ def get_credit_underwriting_prompt(base_reply: str) -> str:
     """Prompt for explaining credit underwriting tiers and pre-qualified financing options."""
     return (
         f"{COPILOT_PERSONA_BASE}\n\n"
-        f"Verified Underwriting Dossier & Matched Options:\n'{base_reply}'\n\n"
+        f"Verified Underwriting Dossier:\n{base_reply}\n\n"
         "Underwriting Advisory Guidelines:\n"
-        "1. Explain the business's credit classification, Daily Average Balance (DAB), and maximum qualified limit clearly.\n"
-        "2. Highlight the top matched financing facility and explicitly disclose the true APR.\n"
-        "3. Reassure the business owner that proposals are staged in the ledger without moving funds until they provide physical biometric/passkey authorization."
+        "1. Deliver strictly 2 concise sentences of executive credit guidance.\n"
+        "2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\n"
+        "3. Sentence 2: State the concrete staging step (reminding that proposals are staged safely in Tier 2 without moving funds until biometric passkey approval).\n\n"
+        "STRICT PROHIBITIONS:\n"
+        "- DO NOT repeat facilities in bullet points.\n"
+        "- DO NOT wrap text in quotation marks.\n"
+        "- DO NOT use conversational throat-clearing."
     )
 
 
@@ -63,24 +73,51 @@ THROAT_CLEARING_PATTERNS = [
     re.compile(r"^(?:i'?d(?:\s+be)?|i would(?:\s+be)?|i am|i'm)\s+(?:happy|glad|delighted|pleased|here|excited|love)\s+to\s+[^.!?\n]+[.!?\n]+\s*", re.IGNORECASE),
     re.compile(r"^(?:as an?\s+(?:ai|financial copilot|assistant|language model)[^,.]+[,.]\s*)", re.IGNORECASE),
     re.compile(r"^(?:great|excellent)\s+question[!,.]\s*", re.IGNORECASE),
-    re.compile(r"^(?:here'?s\s+(?:what\s+you\s+need\s+to\s+know|the\s+breakdown|the\s+details))[:.]\s*", re.IGNORECASE),
+    re.compile(r"^(?:here\s+(?:are|is)|here'?s)\s+(?:what\s+you\s+need\s+to\s+know|the\s+breakdown|the\s+details|the\s+results|the\s+numbers)[:.]*\s*", re.IGNORECASE),
+    re.compile(r"^(?:your\s+)?bank\s+statement\s+(?:csv\s+)?(?:has\s+been\s+)?(?:successfully\s+)?uploaded[.!?:-]*\s*", re.IGNORECASE),
+    re.compile(r"^now[!,.]?\s*let'?s\s+(?:dive|look)\s+into\s+the\s+numbers[.!?:-]*\s*", re.IGNORECASE),
+    re.compile(r"^based\s+on\s+(?:the|your)\s+(?:bank\s+)?statement(?:s)?(?: provided)?[,!.]*\s*", re.IGNORECASE),
+    re.compile(r"^based\s+on\s+these\s+(?:verified\s+)?(?:accounting\s+)?metrics[,.]*\s*", re.IGNORECASE),
+]
+
+AI_SLOP_PHRASES = [
+    re.compile(r"these\s+verified\s+accounting\s+metrics\s+provide\s+a\s+clear\s+picture[^\n.]*[\n.]*", re.IGNORECASE),
+    re.compile(r"with\s+this\s+information,?\s+you\s+can\s+make\s+informed\s+decisions[^\n.]*[\n.]*", re.IGNORECASE),
+    re.compile(r"to\s+optimize\s+your\s+cash\s+runway,?\s+manage\s+your\s+working\s+capital[^\n.]*[\n.]*", re.IGNORECASE),
 ]
 
 
 def sanitize_cfo_reply(text: str) -> str:
-    """Post-processing sanitizer that removes accidental chatbot throat-clearing from smaller SLMs."""
+    """Post-processing sanitizer that removes accidental chatbot throat-clearing and slop from smaller SLMs."""
     if not text:
         return ""
 
-    cleaned = text.strip()
+    # Strip surrounding quotation marks or backticks first
+    cleaned = text.strip().strip("'\"“”`").strip()
+
+    # Strip repeating bullet points of metrics that were already computed
+    cleaned = re.sub(
+        r"(?im)^[-*•]\s*\*{0,2}(?:Current Balance|Average Daily Burn|Estimated Historical Runway|Status|Healthiest Liquidity|Projected \d+-day Reserve|Daily Average Balance)[^\n]*\n?",
+        "",
+        cleaned,
+    ).strip()
+
+    # Strip corporate filler sentences
+    for slop_pat in AI_SLOP_PHRASES:
+        cleaned = slop_pat.sub("", cleaned).strip()
+
     changed = True
     while changed:
         changed = False
+        cleaned = cleaned.strip("'\"“”`").strip()
         for pat in THROAT_CLEARING_PATTERNS:
             new_text = pat.sub("", cleaned).strip()
             if new_text != cleaned and new_text:
                 cleaned = new_text
                 changed = True
+
+    # Strip surrounding quotation marks again in case they enclosed stripped text
+    cleaned = cleaned.strip("'\"“”`").strip()
 
     if cleaned:
         cleaned = cleaned[0].upper() + cleaned[1:]
@@ -91,5 +128,7 @@ def sanitize_cfo_reply(text: str) -> str:
         if last_punct > 40:
             cleaned = cleaned[: last_punct + 1]
         cleaned = re.sub(r"\n+[-*•\d]+[.)]?\s*$", "", cleaned).strip()
-    return cleaned if cleaned else text.strip()
+        cleaned = cleaned.strip("'\"“”`").strip()
+
+    return cleaned if cleaned else text.strip().strip("'\"“”`").strip()
 

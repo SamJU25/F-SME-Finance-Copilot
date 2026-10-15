@@ -124,8 +124,8 @@ def run_copilot_supervisor(
                 max_new_tokens=160,
             )
             local_advice = sanitize_cfo_reply(raw_advice) if raw_advice else None
-            if local_advice:
-                return f"{base_reply}\n\nExecutive Advisory:\n{local_advice}"
+            if local_advice and len(local_advice) > 20:
+                return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{local_advice}"
             return base_reply
 
         # 2. Pure offline fallback (deterministic templates)
@@ -145,7 +145,11 @@ def run_copilot_supervisor(
             history=request.history,
         )
         if ai_reply:
-            return sanitize_cfo_reply(ai_reply)
+            cleaned_ai = sanitize_cfo_reply(ai_reply)
+            if cleaned_ai and len(cleaned_ai) > 20:
+                if "runway" not in cleaned_ai.lower() and "balance" not in cleaned_ai.lower():
+                    return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{cleaned_ai}"
+                return cleaned_ai
         return base_reply
 
     # 0. Prompt Injection Defense Barrier
@@ -283,10 +287,11 @@ def run_copilot_supervisor(
         )
 
         reply = (
-            f"Underwriting evaluation complete. Your business is classified as {dossier['risk_tier']} "
-            f"with a Daily Average Balance (DAB) of ${float(dossier['daily_average_balance']):,.2f} "
-            f"and maximum qualified limit of ${float(dossier['max_qualified_limit']):,.2f}. "
-            f"{opt_summary} "
+            f"### Credit Underwriting Assessment\n\n"
+            f"- **Underwriting evaluation complete**. Classification: `{dossier['risk_tier']}`\n"
+            f"- **Daily Average Balance (DAB)**: ${float(dossier['daily_average_balance']):,.2f}\n"
+            f"- **Maximum Qualified Limit**: ${float(dossier['max_qualified_limit']):,.2f}\n"
+            f"- **Matched Facility**: {opt_summary}\n\n"
             "To apply, request staging for the chosen facility."
         )
 
@@ -440,10 +445,13 @@ def run_copilot_supervisor(
 
         if sub_intent == "RUNWAY":
             headline = f"You have {runway_desc} of cash runway remaining at an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day (current balance: ${float(cash_result['current_balance']):,.2f}, Status: {cash_result['cash_status']})."
+            reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         elif sub_intent == "BALANCE":
             headline = f"Your current cash balance is ${float(cash_result['current_balance']):,.2f} {cash_result['currency']} (net change across reviewed period: ${float(cash_result['net_period_change']):,.2f})."
+            reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         elif sub_intent == "BURN":
             headline = f"Your average daily burn rate is ${float(cash_result['average_daily_burn']):,.2f}/day (gross outflows: ${float(cash_result['gross_outflows']):,.2f} vs inflows: ${float(cash_result['gross_inflows']):,.2f}), providing {runway_desc} of cash runway remaining (Status: {cash_result['cash_status']})."
+            reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         elif sub_intent == "ADVICE":
             if cash_result.get("has_projected_deficit"):
                 headline = (
@@ -464,6 +472,7 @@ def run_copilot_supervisor(
                     f"Financial Health Assessment: Your cash status is HEALTHY with {runway_desc} of runway. "
                     f"Current balance of ${float(cash_result['current_balance']):,.2f} provides strong operational buffer against daily burn."
                 )
+            reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         elif sub_intent == "DEFICIT":
             if cash_result.get("has_projected_deficit"):
                 headline = (
@@ -473,10 +482,18 @@ def run_copilot_supervisor(
                 )
             else:
                 headline = f"No immediate deficit detected over the projected horizon. Your cash runway stands at {runway_desc} (Status: {cash_result['cash_status']})."
+            reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         else:
-            headline = f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} (Threshold: {cash_result['alert_threshold_days']} days)."
-
-        reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
+            pred_line = f"\n- **Liquidity Forecast**: {pred_snippet.strip()}" if pred_snippet else ""
+            target_line = f"\n- **Target Horizon**: {target_snippet.strip()}" if target_snippet else ""
+            wc_line = f"\n- **Working Capital**: {wc_snippet.strip()}" if wc_snippet else ""
+            reply = (
+                f"### Financial Diagnostic Summary\n\n"
+                f"- **Current Balance**: ${float(cash_result['current_balance']):,.2f} {cash_result['currency']}\n"
+                f"- **Average Daily Burn**: ${float(cash_result['average_daily_burn']):,.2f}/day\n"
+                f"- **Estimated Historical Runway**: {runway_desc} (Status: `{cash_result['cash_status']}`, Threshold: {cash_result['alert_threshold_days']} days)"
+                f"{pred_line}{target_line}{wc_line}"
+            )
 
         return CopilotResponse(
             reply=_enrich_reply(reply),
