@@ -58,3 +58,6 @@ TEAM_CHEAT_SHEET*
 *_cheat_sheet*
 *.scratch.*
 
+# Local Model Weights
+models/
+

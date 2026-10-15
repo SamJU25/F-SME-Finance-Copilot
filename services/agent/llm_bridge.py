@@ -109,6 +109,25 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
     provider = (req.provider or "offline").lower()
 
     if provider == "offline":
+        model_req = (req.model_name or "deterministic-v1").lower()
+        if model_req in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama"):
+            from services.agent.local_slm import LocalSLMEngine
+            engine = LocalSLMEngine.get_instance()
+            if engine.is_available():
+                return TestConnectionResponse(
+                    success=True,
+                    message="Offline on-device AI ready: Meta Llama-3.2-1B-Instruct (CPU INT4, zero external keys).",
+                    provider="offline",
+                    model_name="llama-3.2-1b-instruct-onnx",
+                    latency_ms=0,
+                )
+            return TestConnectionResponse(
+                success=False,
+                message="Llama-3.2-1B ONNX weights not found on disk. Falling back to deterministic engine.",
+                provider="offline",
+                model_name="deterministic-v1",
+                latency_ms=0,
+            )
         return TestConnectionResponse(
             success=True,
             message="Offline deterministic financial engine ready (0 external keys needed).",
@@ -376,11 +395,16 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
     fallbacks = FALLBACK_CATALOG.get(provider, [ModelItem(id="custom-model", name="Custom Model")])
 
     if provider == "offline":
+        from services.agent.local_slm import LocalSLMEngine
+        engine = LocalSLMEngine.get_instance()
+        models = [ModelItem(id="deterministic-v1", name="Deterministic Financial Engine (Offline)")]
+        if engine.is_available():
+            models.append(ModelItem(id="llama-3.2-1b-instruct-onnx", name="Meta Llama-3.2-1B-Instruct (On-Device ONNX)"))
         return FetchModelsResponse(
             success=True,
             provider="offline",
-            models=[ModelItem(id="deterministic-v1", name="Deterministic Financial Engine (Offline)")],
-            message="Offline deterministic engine requires no remote models.",
+            models=models,
+            message="Offline engine ready with local on-device neural model." if engine.is_available() else "Offline deterministic engine ready.",
         )
 
     # If missing required credentials, return empty models list (never pretend with hardcoded list)

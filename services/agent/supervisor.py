@@ -13,6 +13,7 @@ import re
 from typing import Optional
 
 from services.agent.llm_bridge import query_external_llm
+from services.agent.local_slm import generate_local_reply
 from services.agent.schema import (
     AgentActionProposal,
     AgentChatRequest,
@@ -95,8 +96,35 @@ def run_copilot_supervisor(
     effective_config = llm_config or request.llm_config
 
     def _enrich_reply(base_reply: str) -> str:
+        # 1. On-Device Local SLM Execution (Meta Llama-3.2-1B-Instruct ONNX)
+        is_explicit_local = (
+            effective_config
+            and (effective_config.provider or "").lower() == "offline"
+            and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
+        )
+        if is_explicit_local:
+            sys_directive = (
+                "You are an executive CFO advisor for a small business. "
+                "The business has received this financial diagnosis from our internal accounting engine: "
+                f"'{base_reply}'. "
+                "Provide 2 concise sentences of actionable executive commentary advising the business owner on operational priorities. "
+                "Do not invent or quote conflicting numbers or dollar amounts."
+            )
+            local_advice = generate_local_reply(
+                prompt=request.message,
+                system_instruction=sys_directive,
+                history=request.history,
+                max_new_tokens=90,
+            )
+            if local_advice:
+                return f"{base_reply}\n\nExecutive Advisory:\n{local_advice}"
+            return base_reply
+
+        # 2. Pure offline fallback (deterministic templates)
         if not effective_config or (effective_config.provider or "offline").lower() == "offline":
             return base_reply
+
+        # 3. External Cloud LLM Execution (Gemini, Claude, OpenAI, etc.)
         sys_directive = (
             "You are the executive AI copilot for an SME finance team. "
             f"Here are the verified calculation outputs from our internal financial engine: '{base_reply}'. "

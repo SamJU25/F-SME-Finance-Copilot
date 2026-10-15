@@ -488,6 +488,30 @@ def test_agent_chat_sub_intent_deficit_warning():
     assert "runway stands at 75 days" in data["reply"] or "Deficit Early-Warning" in data["reply"]
 
 
+def test_agent_offline_llama_connection_and_discovery():
+    """Verify local Llama-3.2-1B model is detected and test-connection succeeds."""
+    res_test = client.post(
+        "/api/v1/agent/test-connection",
+        json={"provider": "offline", "model_name": "llama-3.2-1b-instruct-onnx"},
+    )
+    assert res_test.status_code == 200
+    data_test = res_test.json()
+    assert data_test["success"] is True
+    assert "Meta Llama-3.2-1B-Instruct" in data_test["message"]
+
+    res_models = client.post(
+        "/api/v1/agent/fetch-models",
+        json={"provider": "offline"},
+    )
+    assert res_models.status_code == 200
+    data_models = res_models.json()
+    assert data_models["success"] is True
+    model_ids = [m["id"] for m in data_models["models"]]
+    assert "deterministic-v1" in model_ids
+    assert "llama-3.2-1b-instruct-onnx" in model_ids
+
+
+
 
 
 
