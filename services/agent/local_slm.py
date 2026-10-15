@@ -151,6 +151,7 @@ def generate_local_reply(
     system_instruction: str,
     history: Optional[List[Any]] = None,
     max_new_tokens: int = 256,
+    temperature: float = 0.1,
 ) -> Optional[str]:
     """Convenience helper to generate an offline response using local Llama 3.2."""
     engine = LocalSLMEngine.get_instance()
@@ -159,4 +160,5 @@ def generate_local_reply(
         system_instruction=system_instruction,
         history=history,
         max_new_tokens=max_new_tokens,
+        temperature=temperature,
     )
