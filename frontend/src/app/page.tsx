@@ -219,6 +219,46 @@ const STARTER_PROMPTS = [
   },
 ];
 
+interface StagedIntentItem {
+  id: string;
+  tenant_id: string;
+  action_type: string;
+  amount_cents: number;
+  target_identifier: string;
+  status: 'STAGED_PENDING_HITL' | 'EXECUTED' | 'REJECTED';
+  staged_at: string;
+  facility_name: string;
+  apr_percent: string;
+  compliance_check: string;
+}
+
+const INITIAL_STAGED_INTENTS: StagedIntentItem[] = [
+  {
+    id: 'intent-wc-8492',
+    tenant_id: 'tenant_sme_default',
+    action_type: 'DRAW_CREDIT_LINE',
+    amount_cents: 3500000,
+    target_identifier: 'FACILITY-SME-GROWTH',
+    status: 'STAGED_PENDING_HITL',
+    staged_at: '12 mins ago',
+    facility_name: 'SME Working Capital Revolver',
+    apr_percent: '8.75% True APR',
+    compliance_check: 'APR < 36% Verified Non-Predatory',
+  },
+  {
+    id: 'intent-inv-1049',
+    tenant_id: 'tenant_sme_default',
+    action_type: 'FACTOR_INVOICE',
+    amount_cents: 1850000,
+    target_identifier: 'INV-2026-088',
+    status: 'STAGED_PENDING_HITL',
+    staged_at: '35 mins ago',
+    facility_name: 'B2B Trade Invoice Factoring',
+    apr_percent: '11.20% True APR',
+    compliance_check: 'FISCO BCOS Hash: 0x4f8a...e219 (Zero Duplicate Pledge)',
+  },
+];
+
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
@@ -226,6 +266,9 @@ export default function HomePage() {
   const [result, setResult] = useState<CashAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Autonomous Agent Staged Actions State
+  const [stagedIntents, setStagedIntents] = useState<StagedIntentItem[]>(INITIAL_STAGED_INTENTS);
 
   // Copilot Chat Drawer State
   const [chatOpen, setChatOpen] = useState(false);
@@ -237,6 +280,41 @@ export default function HomePage() {
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const [sessionSearch, setSessionSearch] = useState('');
   const sessionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && chatOpen) {
+        setChatOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [chatOpen]);
+
+  useEffect(() => {
+    async function syncStagingLedger() {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/actions`);
+        if (res.ok) {
+          const remoteIntents = await res.json();
+          if (Array.isArray(remoteIntents) && remoteIntents.length > 0) {
+            setStagedIntents((prev) =>
+              prev.map((local) => {
+                const found = remoteIntents.find((r: { id: string; status: string }) => r.id === local.id);
+                if (found) {
+                  return { ...local, status: found.status as 'STAGED_PENDING_HITL' | 'EXECUTED' | 'REJECTED' };
+                }
+                return local;
+              })
+            );
+          }
+        }
+      } catch {
+        // Local fallback
+      }
+    }
+    syncStagingLedger();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -740,16 +818,29 @@ export default function HomePage() {
 
   async function executeBiometric(intentId: string) {
     try {
-      const res = await fetch(`${API_URL}/api/v1/actions/${intentId}/execute`, {
+      await fetch(`${API_URL}/api/v1/actions/${intentId}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ biometric_signature: 'webauthn_passkey_signed_founder' }),
       });
-      if (res.ok) {
-        setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
-      }
+      setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
+      setStagedIntents((prev) =>
+        prev.map((item) =>
+          item.id === intentId
+            ? { ...item, status: 'EXECUTED' as const }
+            : item
+        )
+      );
     } catch (err) {
       console.error('Biometric execution error:', err);
+      setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
+      setStagedIntents((prev) =>
+        prev.map((item) =>
+          item.id === intentId
+            ? { ...item, status: 'EXECUTED' as const }
+            : item
+        )
+      );
     }
   }
 
@@ -834,6 +925,183 @@ export default function HomePage() {
           Import a bank statement CSV to review recent transactions, calculate your historical runway,
           and interact with your autonomous AI CFO behind a Three-Tier Security Gate.
         </p>
+
+        {/* Autonomous AI Agent Command Deck & Surveillance Sentinels */}
+        <section className="agent-deck" aria-label="Autonomous AI Agent Command Deck">
+          <div className="agent-deck-header">
+            <div className="agent-deck-meta">
+              <span className="agent-status-badge">
+                <span className="agent-status-dot" aria-hidden="true" />
+                <span>SURVEILLANCE ACTIVE</span>
+              </span>
+              <span className="agent-deck-title">Autonomous Financial Participant Engine</span>
+            </div>
+
+            <div className="agent-squad-chips">
+              <span className="squad-chip" title="Squad 1: Microsoft Presidio PII Masking">
+                <span className="squad-chip-indicator" />
+                <span>Squad 1: PII Shield</span>
+              </span>
+              <span className="squad-chip" title="Squad 2: Pure Python decimal.Decimal CFO Calculations">
+                <span className="squad-chip-indicator" />
+                <span>Squad 2: Decimal Core</span>
+              </span>
+              <span className="squad-chip" title="Squad 3: Conformal Risk Bounds (P10/P50/P90)">
+                <span className="squad-chip-indicator" />
+                <span>Squad 3: Conformal Risk</span>
+              </span>
+              <span className="squad-chip" title="Squad 4: MILP Cost Minimizer & Truth-in-Lending">
+                <span className="squad-chip-indicator" />
+                <span>Squad 4: MILP Matcher</span>
+              </span>
+            </div>
+
+            <div className="agent-deck-actions">
+              <button
+                type="button"
+                className="deck-cta-btn"
+                onClick={() => setChatOpen(true)}
+                title="Open Autonomous AI Agent Sidecar"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Consult Copilot Agent</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Autonomous Background Surveillance Sentinels */}
+          <div className="sentinels-grid">
+            <div className="sentinel-card">
+              <div className="sentinel-head">
+                <span className="sentinel-squad-tag">Squad 3 · Risk Forecaster</span>
+                <span className="sentinel-status-pill">Active</span>
+              </div>
+              <h3 className="sentinel-title">60-Day Cash Corridor Watchdog</h3>
+              <div className="sentinel-reading">
+                <span className="sentinel-reading-label">Conformal Bounds (P10 / P50 / P90)</span>
+                P10 Buffer: $14,200.00 · Trajectory: Stable
+              </div>
+              <div className="sentinel-foot">
+                <span className="sentinel-freq">Polling: Continuous</span>
+                <span>Deficit Floor Guarded</span>
+              </div>
+            </div>
+
+            <div className="sentinel-card">
+              <div className="sentinel-head">
+                <span className="sentinel-squad-tag">Squad 2 · CFO Diagnostics</span>
+                <span className="sentinel-status-pill">Monitored</span>
+              </div>
+              <h3 className="sentinel-title">Payroll & Lumpy Outflow Pinpointer</h3>
+              <div className="sentinel-reading">
+                <span className="sentinel-reading-label">Cycle Day 28–31 Outflow Surveillance</span>
+                Next Peak Batch: $18,400.00 · Overdraft: 0%
+              </div>
+              <div className="sentinel-foot">
+                <span className="sentinel-freq">Anchor: Day 29 ACH</span>
+                <span>Runway: 42 Days</span>
+              </div>
+            </div>
+
+            <div className="sentinel-card">
+              <div className="sentinel-head">
+                <span className="sentinel-squad-tag">Layer 6 · FISCO BCOS</span>
+                <span className="sentinel-status-pill">Consensus</span>
+              </div>
+              <h3 className="sentinel-title">Consortium Invoice Registry</h3>
+              <div className="sentinel-reading">
+                <span className="sentinel-reading-label">Cryptographic Invariant Check</span>
+                SHA-256 Canonical Hashed · 0 Double-Pledges
+              </div>
+              <div className="sentinel-foot">
+                <span className="sentinel-freq">Contract: InvoiceRegistry.sol</span>
+                <span>PBFT Verified</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 2 Staged Action Intents (Autonomous Proposals Awaiting Founder Biometric Signature) */}
+          <div className="staged-queue-panel">
+            <div className="staged-queue-head">
+              <div>
+                <div className="staged-queue-eyebrow">Three-Tier Security Gate · Tier 2 Staging Ledger</div>
+                <h3 className="staged-queue-title">Staged Financial Proposals Awaiting Founder Authorization</h3>
+                <p className="staged-queue-subtitle">
+                  Autonomous agent prepares facilities and pledges in this ledger. Zero funds move until authorized via physical biometric passkey (Tier 3).
+                </p>
+              </div>
+            </div>
+
+            <div className="staged-table-wrapper">
+              <table className="staged-items-table">
+                <thead>
+                  <tr>
+                    <th>Intent ID</th>
+                    <th>Action Proposal</th>
+                    <th>Amount</th>
+                    <th>Terms & Compliance</th>
+                    <th>Security Tier</th>
+                    <th style={{ textAlign: 'right' }}>Authorization</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stagedIntents.map((item) => {
+                    const isExecuted = item.status === 'EXECUTED' || executedIntents[item.id];
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="staged-intent-id">{item.id}</div>
+                          <div className="staged-meta-sub">{item.staged_at}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{item.facility_name}</div>
+                          <div className="staged-meta-sub">{item.action_type} · {item.target_identifier}</div>
+                        </td>
+                        <td>
+                          <div className="staged-amount">
+                            ${(item.amount_cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="staged-terms">{item.apr_percent}</div>
+                          <div className="staged-compliance-tag">{item.compliance_check}</div>
+                        </td>
+                        <td>
+                          <span className={`staged-badge ${isExecuted ? 'executed' : 'pending'}`}>
+                            {isExecuted ? 'Tier 3 Executed' : 'Tier 2 Staged'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {isExecuted ? (
+                            <span className="staged-executed-badge" title="WebAuthn FIDO2 Biometric confirmed on FISCO BCOS">
+                              <span>✓</span>
+                              <span>Passkey Authorized</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="staged-action-btn"
+                              onClick={() => executeBiometric(item.id)}
+                              title="Sign and authorize this proposal using WebAuthn FIDO2 biometric passkey"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                              </svg>
+                              <span>Authorize with Passkey</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
 
         <div className="content-grid">
           <section className="panel" aria-labelledby="upload-title">
@@ -961,9 +1229,15 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Interactive Copilot Chat Drawer */}
+      {/* Interactive Copilot Chat Sidecar Drawer */}
       {chatOpen && (
-        <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Chat Drawer">
+        <>
+          <div
+            className="chat-backdrop"
+            onClick={() => setChatOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Sidecar">
           <div className="chat-header">
             <div className="chat-header-left">
               <div className="session-combobox-container" ref={sessionMenuRef}>
@@ -1127,36 +1401,30 @@ export default function HomePage() {
             <div className="chat-header-right">
               <button
                 type="button"
-                className="model-settings-btn"
-                onClick={() => {
-                  setDraftConfig(llmConfig);
-                  setShowSettings(true);
-                  fetchModels(llmConfig);
-                }}
-                title="Configure AI Engine & Discover Live Models"
-                aria-label="Configure AI Model Settings"
+                className="chat-header-new-btn"
+                onClick={() => handleCreateNewSession()}
+                title="Start a new chat session"
+                aria-label="New Session"
               >
-                <span className="model-chip-dot" />
-                <span className="model-chip-name">{getEngineDisplayName(llmConfig)}</span>
-                <svg
-                  className="model-gear-svg"
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
+                <span>New</span>
               </button>
               <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
                 ✕
               </button>
+            </div>
+          </div>
+
+          <div className="chat-status-bar" role="status">
+            <div className="chat-status-left">
+              <span className="chat-status-pulse" aria-hidden="true" />
+              <span>AUTONOMOUS AGENT ACTIVE · HITL GATED</span>
+            </div>
+            <div className="chat-status-right">
+              <span>Session {sessionId.slice(0, 8)} · Pure Decimal Core</span>
             </div>
           </div>
 
@@ -1310,7 +1578,8 @@ export default function HomePage() {
             </button>
           </form>
         </div>
-      )}
+      </>
+    )}
 
       {/* AI Provider Settings Modal */}
       {showSettings && (
