@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
-    "mtime": 1792101682.5575547,
-    "seen": 1792101843.3403509,
-    "ast_hash": "407aa00ba581e3c3209f6961851fbe68",
+    "mtime": 1792103851.9413116,
+    "seen": 1792104135.7464602,
+    "ast_hash": "bbd52dea977c40f49268ad6caa1ddbba",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792103497.748667,
-    "seen": 1792103532.594424,
-    "ast_hash": "dcc3b7c6c1a658b43196b56a0cfaeea4",
+    "mtime": 1792104099.874447,
+    "seen": 1792104135.7470171,
+    "ast_hash": "6b217b1057bc182e5a26b192923d7643",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1290,9 +1290,9 @@
     "semantic_hash": ""
   },
   "tests/integration/test_analyze_api.py": {
-    "mtime": 1792101714.6261656,
-    "seen": 1792101843.346112,
-    "ast_hash": "fc8ab36b1dddc0d78f51c6e34993e34d",
+    "mtime": 1792103876.2759027,
+    "seen": 1792104135.7521412,
+    "ast_hash": "dda3fd1fc914468affac3824036e1626",
     "semantic_hash": ""
   },
   "tests/unit/test_cash_analysis.py": {

@@ -513,11 +513,96 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState<'pulse' | 'portfolio' | 'flows' | 'working_capital'>('pulse');
-  const dynamicAlertDate = computeAlertBoundaryDate(result?.end_date, threshold) || result?.alert_boundary_date;
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [accountAnalysisCache, setAccountAnalysisCache] = useState<Record<string, CashAnalysisResponse>>({});
+
+  const displayResult = useMemo(() => {
+    if (!result) return null;
+    if (selectedAccount !== 'all' && accountAnalysisCache[selectedAccount]) {
+      return accountAnalysisCache[selectedAccount];
+    }
+    return result;
+  }, [result, selectedAccount, accountAnalysisCache]);
+
+  const dynamicAlertDate = computeAlertBoundaryDate(displayResult?.end_date, threshold) || displayResult?.alert_boundary_date;
 
   const trajectoryData = useMemo(() => {
-    return buildCashTrajectorySeries(csvText, result, Number(threshold) || 30);
-  }, [csvText, result, threshold]);
+    return buildCashTrajectorySeries(csvText, displayResult, Number(threshold) || 30);
+  }, [csvText, displayResult, threshold]);
+
+  const availableMonths = useMemo(() => {
+    const monthsMap = new Map<string, string>();
+    trajectoryData.forEach((p) => {
+      if (p.date && !p.isProjection) {
+        const ym = p.date.slice(0, 7);
+        if (!monthsMap.has(ym)) {
+          try {
+            const [year, month] = ym.split('-');
+            const monthName = new Date(Number(year), Number(month) - 1, 1).toLocaleString('en-US', {
+              month: 'long',
+              year: 'numeric',
+            });
+            monthsMap.set(ym, monthName);
+          } catch {
+            monthsMap.set(ym, ym);
+          }
+        }
+      }
+    });
+    return Array.from(monthsMap.entries()).map(([key, label]) => ({ key, label }));
+  }, [trajectoryData]);
+
+  const displayedChartData = useMemo(() => {
+    if (selectedMonth === 'all') {
+      return trajectoryData;
+    }
+    const monthPoints = trajectoryData.filter(
+      (p) =>
+        p.date.startsWith(selectedMonth) ||
+        (p.isProjection && selectedMonth === availableMonths[availableMonths.length - 1]?.key)
+    );
+    return monthPoints.length > 0 ? monthPoints : trajectoryData;
+  }, [trajectoryData, selectedMonth, availableMonths]);
+
+  const selectedMonthStats = useMemo(() => {
+    if (selectedMonth === 'all') return null;
+    const monthPts = trajectoryData.filter((p) => p.date.startsWith(selectedMonth) && !p.isProjection);
+    if (monthPts.length === 0) return null;
+    const totalInflow = monthPts.reduce((acc, p) => acc + (p.inflow || 0), 0);
+    const totalOutflow = monthPts.reduce((acc, p) => acc + (p.outflow || 0), 0);
+    const firstPt = monthPts[0];
+    const lastPt = monthPts[monthPts.length - 1];
+    const startBal: number = firstPt && typeof firstPt.balance === 'number' ? firstPt.balance : 0;
+    const endBal: number = lastPt && typeof lastPt.balance === 'number' ? lastPt.balance : 0;
+    return {
+      inflow: totalInflow,
+      outflow: totalOutflow,
+      net: totalInflow - totalOutflow,
+      startBal,
+      endBal,
+    };
+  }, [trajectoryData, selectedMonth]);
+
+  async function handleSelectAccount(accountKey: string) {
+    setSelectedAccount(accountKey);
+    if (accountKey === 'all') return;
+    if (accountAnalysisCache[accountKey]) return;
+
+    const target = filesList.find((f) => f.name === accountKey);
+    if (target) {
+      try {
+        const data = new FormData();
+        data.append('file', target);
+        data.append('alert_threshold_days', threshold);
+        const res = await fetch(`${API_URL}/api/v1/analyze`, { method: 'POST', body: data });
+        if (res.ok) {
+          const body: CashAnalysisResponse = await res.json();
+          setAccountAnalysisCache((prev) => ({ ...prev, [accountKey]: body }));
+        }
+      } catch {}
+    }
+  }
 
   // Staged Action Proposals State
   const [stagedIntents, setStagedIntents] = useState<StagedIntentItem[]>([]);
@@ -1878,81 +1963,173 @@ export default function HomePage() {
               </div>
             )}
 
+            {/* Account & Month Filter Bar */}
+            <div className="workspace-filter-bar" role="region" aria-label="Account and Period Filters">
+              <div className="filter-controls-left">
+                {/* Account Combobox / Switcher */}
+                <div className="filter-group">
+                  <label className="filter-label" htmlFor="account-selector">
+                    <span>🏛️</span> Account:
+                  </label>
+                  <select
+                    id="account-selector"
+                    className="filter-select"
+                    value={selectedAccount}
+                    onChange={(e) => handleSelectAccount(e.target.value)}
+                    aria-label="Select treasury account view"
+                  >
+                    <option value="all">
+                      All Accounts (Consolidated Treasury) — {money(result.current_balance, result.currency)}
+                    </option>
+                    {result.accounts_breakdown &&
+                      result.accounts_breakdown.map((acc, idx) => (
+                        <option key={idx} value={acc.file_name}>
+                          {acc.account_id} ({acc.file_name}) — {money(acc.closing_balance, result.currency)}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Period / Month Selector */}
+                {availableMonths.length > 1 && (
+                  <div className="filter-group">
+                    <label className="filter-label" htmlFor="month-selector">
+                      <span>📅</span> Period:
+                    </label>
+                    <select
+                      id="month-selector"
+                      className="filter-select"
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      aria-label="Select statement calendar month"
+                    >
+                      <option value="all">
+                        Full Timeline ({result.period_days} Days)
+                      </option>
+                      {availableMonths.map((m) => (
+                        <option key={m.key} value={m.key}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {result.has_overlaps_deduped && (
+                  <span className="filter-badge deduped" title="Overlapping statement dates deduplicated automatically">
+                    ✓ Overlaps Auto-Merged
+                  </span>
+                )}
+                {result.calendar_gaps && result.calendar_gaps.length > 0 && (
+                  <span className="filter-badge continuity" title="Calendar continuity alert detected">
+                    ⚠️ {result.calendar_gaps.length} Statement Gap{result.calendar_gaps.length > 1 ? 's' : ''}
+                  </span>
+                )}
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>
+                  {selectedAccount === 'all'
+                    ? `${result.accounts_breakdown?.length || filesList.length || 1} Accounts Consolidated`
+                    : `Viewing: ${selectedAccount}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Calendar Month Focus Banner if a month is selected */}
+            {selectedMonthStats && (
+              <div style={{ marginTop: 12, padding: '10px 16px', background: 'white', border: '1px solid var(--line)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ fontSize: 13, color: 'var(--ink)' }}>
+                  <strong>Calendar Month Focus:</strong> {availableMonths.find((m) => m.key === selectedMonth)?.label}
+                </div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+                  <span>Inflows: <strong className="tabular-num" style={{ color: '#15803d' }}>+{money(selectedMonthStats.inflow.toFixed(2), result.currency)}</strong></span>
+                  <span>Outflows: <strong className="tabular-num" style={{ color: '#b91c1c' }}>-{money(selectedMonthStats.outflow.toFixed(2), result.currency)}</strong></span>
+                  <span>Net Change: <strong className="tabular-num" style={{ color: selectedMonthStats.net >= 0 ? '#15803d' : '#b91c1c' }}>{money(selectedMonthStats.net.toFixed(2), result.currency)}</strong></span>
+                </div>
+              </div>
+            )}
+
             {/* 3-Card Verdict Strip */}
             <div className="verdict-strip">
               <div className="verdict-card hero-liquidity">
                 <div className="verdict-card-head">
-                  <span className="verdict-card-label">Total Treasury Liquidity</span>
+                  <span className="verdict-card-label">
+                    {selectedAccount === 'all'
+                      ? 'Total Treasury Liquidity'
+                      : `${displayResult?.accounts_breakdown?.[0]?.account_id || selectedAccount} Balance`}
+                  </span>
                   <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
-                    {result.accounts_breakdown && result.accounts_breakdown.length > 1
-                      ? `${result.accounts_breakdown.length} Accounts`
-                      : 'Primary Treasury'}
+                    {selectedAccount === 'all'
+                      ? result.accounts_breakdown && result.accounts_breakdown.length > 1
+                        ? `${result.accounts_breakdown.length} Accounts`
+                        : 'Primary Treasury'
+                      : 'Account View'}
                   </span>
                 </div>
                 <div className="verdict-card-value">
-                  {money(result.current_balance, result.currency)}
+                  {money(displayResult?.current_balance || result.current_balance, displayResult?.currency || result.currency)}
                 </div>
                 <div className="verdict-card-sub">
-                  {result.end_date
-                    ? `Closing ledger balance as of ${result.end_date}`
+                  {(displayResult || result).end_date
+                    ? `Closing ledger balance as of ${(displayResult || result).end_date}`
                     : 'Active operational cash balance'}
                 </div>
               </div>
 
               <div
                 className={`verdict-card ${
-                  result.cash_status === 'LOW_RUNWAY' || result.cash_status === 'CASH_NONPOSITIVE'
+                  (displayResult || result).cash_status === 'LOW_RUNWAY' || (displayResult || result).cash_status === 'CASH_NONPOSITIVE'
                     ? 'critical'
-                    : result.cash_status === 'WATCH'
+                    : (displayResult || result).cash_status === 'WATCH'
                     ? 'warning'
                     : 'safe'
                 }`}
               >
                 <div className="verdict-card-head">
                   <span className="verdict-card-label">
-                    {result.analysis_mode === 'HISTORICAL_AUDIT' ? 'Historical Runway' : 'Cash Runway Horizon'}
+                    {(displayResult || result).analysis_mode === 'HISTORICAL_AUDIT' ? 'Historical Runway' : 'Cash Runway Horizon'}
                   </span>
                   <span
-                    className={`status ${result.cash_status}`}
+                    className={`status ${(displayResult || result).cash_status}`}
                     style={{ padding: '2px 8px', fontSize: 11 }}
                   >
                     <span className="status-dot" aria-hidden="true" />
-                    {CASH_STATUS_LABELS[result.cash_status] || result.cash_status.replaceAll('_', ' ')}
+                    {CASH_STATUS_LABELS[(displayResult || result).cash_status] || (displayResult || result).cash_status.replaceAll('_', ' ')}
                   </span>
                 </div>
                 <div className="verdict-card-value">
-                  {result.runway_days === null ? 'No Burn' : `${result.runway_days} Days`}
+                  {(displayResult || result).runway_days === null ? 'No Burn' : `${(displayResult || result).runway_days} Days`}
                 </div>
                 <div className="verdict-card-sub">
-                  {result.runway_days === null
+                  {(displayResult || result).runway_days === null
                     ? 'Net cash-positive · Inflows exceed burn'
-                    : result.projected_depletion_date
-                    ? `Projected zero-cash: ${result.projected_depletion_date}`
-                    : `Cash depletes within ${result.runway_days} days`}
+                    : (displayResult || result).projected_depletion_date
+                    ? `Projected zero-cash: ${(displayResult || result).projected_depletion_date}`
+                    : `Cash depletes within ${(displayResult || result).runway_days} days`}
                 </div>
               </div>
 
-              <div className={`verdict-card ${Number(result.net_period_change) < 0 ? 'warning' : 'safe'}`}>
+              <div className={`verdict-card ${Number((displayResult || result).net_period_change) < 0 ? 'warning' : 'safe'}`}>
                 <div className="verdict-card-head">
                   <span className="verdict-card-label">Daily Operational Burn</span>
                   <span
                     style={{
                       fontSize: 12,
                       fontWeight: 600,
-                      color: Number(result.net_period_change) >= 0 ? '#146b55' : '#b45309',
+                      color: Number((displayResult || result).net_period_change) >= 0 ? '#146b55' : '#b45309',
                     }}
                   >
-                    {Number(result.net_period_change) >= 0 ? 'Net Positive' : 'Net Outflow'}
+                    {Number((displayResult || result).net_period_change) >= 0 ? 'Net Positive' : 'Net Outflow'}
                   </span>
                 </div>
                 <div className="verdict-card-value">
-                  {money(result.average_daily_burn, result.currency)}
+                  {money((displayResult || result).average_daily_burn, (displayResult || result).currency)}
                   <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted)', marginLeft: 4 }}>
                     / day
                   </span>
                 </div>
                 <div className="verdict-card-sub">
-                  Period change: {money(result.net_period_change, result.currency)} over {result.period_days}d
+                  Period change: {money((displayResult || result).net_period_change, (displayResult || result).currency)} over {(displayResult || result).period_days}d
                 </div>
               </div>
             </div>
@@ -2013,7 +2190,7 @@ export default function HomePage() {
                         <span className="legend-dot historical" />
                         <span>Historical Ledger</span>
                       </div>
-                      {result.runway_days !== null && (
+                      {(displayResult || result).runway_days !== null && (
                         <div className="legend-item">
                           <span className="legend-dot forecast" />
                           <span>Forward Depletion Corridor</span>
@@ -2030,7 +2207,7 @@ export default function HomePage() {
 
                   <div style={{ width: '100%', height: 320, marginTop: 16 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={trajectoryData} margin={{ top: 12, right: 16, left: 0, bottom: 4 }}>
+                      <AreaChart data={displayedChartData} margin={{ top: 12, right: 16, left: 0, bottom: 4 }}>
                         <defs>
                           <linearGradient id="historicalGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#146b55" stopOpacity={0.25} />
@@ -2058,7 +2235,7 @@ export default function HomePage() {
                             `$${Math.abs(val) >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`
                           }
                         />
-                        <Tooltip content={<CustomChartTooltip currency={result.currency} />} />
+                        <Tooltip content={<CustomChartTooltip currency={(displayResult || result).currency} />} />
                         <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
                         <Area
                           type="monotone"
@@ -2087,26 +2264,26 @@ export default function HomePage() {
                 {/* Solvency Diagnostic Callout */}
                 <div className="solvency-diagnostic-card">
                   <span className="solvency-icon" aria-hidden="true">
-                    {result.cash_status === 'NO_BURN'
+                    {(displayResult || result).cash_status === 'NO_BURN'
                       ? '🛡️'
-                      : result.cash_status === 'WATCH'
+                      : (displayResult || result).cash_status === 'WATCH'
                       ? 'ℹ️'
                       : '⚠️'}
                   </span>
                   <div>
                     <h4 className="solvency-title">
-                      {result.cash_status === 'NO_BURN'
+                      {(displayResult || result).cash_status === 'NO_BURN'
                         ? 'Institutional Solvency Assessment: Sustainable Inflow Positive'
-                        : result.cash_status === 'WATCH'
+                        : (displayResult || result).cash_status === 'WATCH'
                         ? `Treasury Caution: Runway Within ${threshold}-Day Horizon`
                         : 'Critical Liquidity Alert: Action Required'}
                     </h4>
                     <p className="solvency-text">
-                      {result.runway_days === null
-                        ? `Operating cash flows demonstrate net positive growth. Over the ${result.period_days}-day period reviewed, inflows have comfortably funded disbursements with no net operational burn.`
-                        : result.cash_status === 'WATCH'
-                        ? `At the current burn rate of ${money(result.average_daily_burn, result.currency)} per day, treasury reserves will last approximately ${result.runway_days} days. Review outstanding customer invoices or stage a contingency credit facility to avoid liquidity compression.`
-                        : `Daily operational burn of ${money(result.average_daily_burn, result.currency)}/day is projected to deplete cash reserves by ${result.projected_depletion_date || 'the near term'}. Immediate action recommended: factor outstanding receivables, draw an approved credit line, or defer discretionary expenses.`}
+                      {(displayResult || result).runway_days === null
+                        ? `Operating cash flows demonstrate net positive growth. Over the ${(displayResult || result).period_days}-day period reviewed, inflows have comfortably funded disbursements with no net operational burn.`
+                        : (displayResult || result).cash_status === 'WATCH'
+                        ? `At the current burn rate of ${money((displayResult || result).average_daily_burn, (displayResult || result).currency)} per day, treasury reserves will last approximately ${(displayResult || result).runway_days} days. Review outstanding customer invoices or stage a contingency credit facility to avoid liquidity compression.`
+                        : `Daily operational burn of ${money((displayResult || result).average_daily_burn, (displayResult || result).currency)}/day is projected to deplete cash reserves by ${(displayResult || result).projected_depletion_date || 'the near term'}. Immediate action recommended: factor outstanding receivables, draw an approved credit line, or defer discretionary expenses.`}
                     </p>
                   </div>
                 </div>
@@ -2217,41 +2394,80 @@ export default function HomePage() {
                 <div className="metrics" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
                   <Metric
                     label="Gross Period Inflows"
-                    value={money(result.gross_inflows || result.net_period_change, result.currency)}
+                    value={money((displayResult || result).gross_inflows || (displayResult || result).net_period_change, (displayResult || result).currency)}
                     sub="Total customer deposits & credits"
                   />
                   <Metric
                     label="Gross Period Outflows"
-                    value={money(result.gross_outflows || result.average_daily_burn, result.currency)}
+                    value={money((displayResult || result).gross_outflows || (displayResult || result).average_daily_burn, (displayResult || result).currency)}
                     sub="Total debits & operational disbursements"
                   />
                   <Metric
                     label="Net Period Change"
-                    value={money(result.net_period_change, result.currency)}
-                    sub={Number(result.net_period_change) >= 0 ? 'Net cash expansion' : 'Net cash contraction'}
+                    value={money((displayResult || result).net_period_change, (displayResult || result).currency)}
+                    sub={Number((displayResult || result).net_period_change) >= 0 ? 'Net cash expansion' : 'Net cash contraction'}
                   />
                   <Metric
                     label="Average Daily Burn"
-                    value={money(result.average_daily_burn, result.currency)}
-                    sub={result.runway_days === null ? 'Zero net burn rate' : 'Daily outflow velocity'}
+                    value={money((displayResult || result).average_daily_burn, (displayResult || result).currency)}
+                    sub={(displayResult || result).runway_days === null ? 'Zero net burn rate' : 'Daily outflow velocity'}
                   />
                   <Metric
                     label="Period Reviewed"
-                    value={`${result.period_days} Days`}
-                    sub={`${result.start_date || 'Start'} → ${result.end_date || 'End'}`}
+                    value={`${(displayResult || result).period_days} Days`}
+                    sub={`${(displayResult || result).start_date || 'Start'} → ${(displayResult || result).end_date || 'End'}`}
                   />
                   <Metric
                     label="Transactions Ingested"
-                    value={`${result.accepted_count} Rows`}
+                    value={`${(displayResult || result).accepted_count} Rows`}
                     sub="Deduplicated & validated"
                   />
                 </div>
 
-                {result.rejected_rows.length > 0 && (
+                {selectedMonthStats && (
+                  <div style={{ marginTop: 20, padding: '16px 20px', borderRadius: 10, background: '#f8faf9', border: '1px solid #dce5df' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>
+                        📅 Calendar Month Reconciliation: {availableMonths.find((m) => m.key === selectedMonth)?.label || selectedMonth}
+                      </div>
+                      <span className="filter-badge" style={{ background: '#eef2ef', color: '#146b55', fontWeight: 600 }}>
+                        Filtered Timeline
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                      <div style={{ padding: '10px 14px', background: '#ffffff', borderRadius: 8, border: '1px solid #eef2ef' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>Month Inflows</div>
+                        <div className="tabular-num" style={{ fontSize: 16, fontWeight: 700, color: '#16a34a', marginTop: 4 }}>
+                          {money(selectedMonthStats.inflow.toFixed(2), (displayResult || result).currency)}
+                        </div>
+                      </div>
+                      <div style={{ padding: '10px 14px', background: '#ffffff', borderRadius: 8, border: '1px solid #eef2ef' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>Month Outflows</div>
+                        <div className="tabular-num" style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginTop: 4 }}>
+                          {money(selectedMonthStats.outflow.toFixed(2), (displayResult || result).currency)}
+                        </div>
+                      </div>
+                      <div style={{ padding: '10px 14px', background: '#ffffff', borderRadius: 8, border: '1px solid #eef2ef' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>Net Month Delta</div>
+                        <div className="tabular-num" style={{ fontSize: 16, fontWeight: 700, color: selectedMonthStats.net >= 0 ? '#16a34a' : '#dc2626', marginTop: 4 }}>
+                          {money(selectedMonthStats.net.toFixed(2), (displayResult || result).currency)}
+                        </div>
+                      </div>
+                      <div style={{ padding: '10px 14px', background: '#ffffff', borderRadius: 8, border: '1px solid #eef2ef' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 600 }}>Period Balance Shift</div>
+                        <div className="tabular-num" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginTop: 4 }}>
+                          {money(selectedMonthStats.startBal.toFixed(2), (displayResult || result).currency)} → {money(selectedMonthStats.endBal.toFixed(2), (displayResult || result).currency)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(displayResult || result).rejected_rows.length > 0 && (
                   <div className="rejections" style={{ marginTop: 20 }}>
-                    <h3>Excluded Rows ({result.rejected_rows.length})</h3>
+                    <h3>Excluded Rows ({(displayResult || result).rejected_rows.length})</h3>
                     <ul>
-                      {result.rejected_rows.map((row) => (
+                      {(displayResult || result).rejected_rows.map((row) => (
                         <li key={`${row.row_number}-${row.reason_code}`}>
                           Row {row.row_number}: {row.reason_code.replaceAll('_', ' ').toLowerCase()}
                         </li>
