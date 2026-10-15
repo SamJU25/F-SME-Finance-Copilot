@@ -73,3 +73,9 @@ async def reject_action_intent(intent_id: str) -> StagedActionIntent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except IntentStateError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_action_intents() -> None:
+    """Clears all action intents from the staging ledger."""
+    staging_ledger.clear()

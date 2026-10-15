@@ -128,9 +128,6 @@ def extract_amortization_params(text: str, history: Optional[List[Any]] = None) 
     if history:
         params = backfill_missing_params(params, history, extract_amortization_params)
 
-    params["principal"] = params["principal"] or Decimal("50000.00")
-    params["annual_interest_rate_pct"] = params["annual_interest_rate_pct"] or Decimal("8.50")
-    params["term_months"] = params["term_months"] or 24
     return params
 
 
@@ -301,10 +298,6 @@ def extract_factoring_params(text: str, history: Optional[List[Any]] = None) -> 
     if history:
         params = backfill_missing_params(params, history, extract_factoring_params)
 
-    params["invoice_amount"] = params["invoice_amount"] or Decimal("50000.00")
-    params["advance_rate_pct"] = params["advance_rate_pct"] or Decimal("85.00")
-    params["fee_rate_pct"] = params["fee_rate_pct"] or Decimal("3.00")
-    params["collection_days"] = params["collection_days"] or 45
     return params
 
 

@@ -82,8 +82,6 @@ class CreditSubagent:
                         eb = quarterly_net * Decimal("4")
                     if fc is None:
                         fc = Decimal("0.00")
-                    if ds is None:
-                        ds = Decimal("24000.00")
                 except Exception:
                     pass
 
@@ -179,8 +177,6 @@ class CreditSubagent:
                     outflows = Decimal(str(cash_res.get("gross_outflows") or "0"))
                     quarterly_net = max(Decimal("0.00"), inflows - outflows)
                     noi = quarterly_net * Decimal("4")
-                    if ads is None:
-                        ads = Decimal("20000.00")
                 except Exception:
                     pass
 
@@ -216,25 +212,35 @@ class CreditSubagent:
         # 4. Commercial Loan Amortization
         if sub_intent in ("AMORTIZATION", "LOAN_AMORTIZATION"):
             p_dict = extract_amortization_params(request.message, history=request.history)
-            res = tool_calculate_loan_amortization(
-                principal=p_dict["principal"],
-                annual_interest_rate_pct=p_dict["annual_interest_rate_pct"],
-                term_months=p_dict["term_months"],
-                periods_elapsed=p_dict.get("periods_elapsed", 0),
-            )
-            total_paid = res.get("total_amount_paid") or res.get("total_payments") or "0.00"
-            base_reply = (
-                f"### Commercial Loan Amortization Schedule\n\n"
-                f"- **Loan Principal**: ${float(res['principal']):,.2f}\n"
-                f"- **Annual Interest Rate**: {res['annual_interest_rate_pct']}%\n"
-                f"- **Loan Term**: {res['term_months']} months ({int(res['term_months']) // 12} years)\n"
-                f"- **Fixed Monthly Payment**: ${float(res['monthly_payment']):,.2f}/mo\n"
-                f"- **Total Interest Cost**: ${float(res['total_interest']):,.2f}\n"
-                f"- **Total Loan Obligation**: ${float(total_paid):,.2f}\n\n"
-                "To stage this financing proposal in the consortium queue, request action staging."
-            )
+            if p_dict.get("principal") and p_dict.get("annual_interest_rate_pct") and p_dict.get("term_months"):
+                res = tool_calculate_loan_amortization(
+                    principal=p_dict["principal"],
+                    annual_interest_rate_pct=p_dict["annual_interest_rate_pct"],
+                    term_months=p_dict["term_months"],
+                    periods_elapsed=p_dict.get("periods_elapsed", 0),
+                )
+                total_paid = res.get("total_amount_paid") or res.get("total_payments") or "0.00"
+                base_reply = (
+                    f"### Commercial Loan Amortization Schedule\n\n"
+                    f"- **Loan Principal**: ${float(res['principal']):,.2f}\n"
+                    f"- **Annual Interest Rate**: {res['annual_interest_rate_pct']}%\n"
+                    f"- **Loan Term**: {res['term_months']} months ({int(res['term_months']) // 12} years)\n"
+                    f"- **Fixed Monthly Payment**: ${float(res['monthly_payment']):,.2f}/mo\n"
+                    f"- **Total Interest Cost**: ${float(res['total_interest']):,.2f}\n"
+                    f"- **Total Loan Obligation**: ${float(total_paid):,.2f}\n\n"
+                    "To prepare this financing proposal for review, request action staging."
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="underwriting"),
+                    intent_detected="CREDIT_UNDERWRITING",
+                    requires_biometric_hitl=False,
+                )
             return CopilotResponse(
-                reply=enrich_fn(base_reply, prompt_type="underwriting"),
+                reply=(
+                    "To calculate your commercial loan amortization schedule, please specify the loan principal amount, "
+                    "annual interest rate, and term in months.\n\n"
+                    "Example format: 'Calculate monthly payment for a $50,000 commercial loan at 8% interest over 24 months'."
+                ),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -242,31 +248,41 @@ class CreditSubagent:
         # 5. Invoice Factoring Net Proceeds & True APR
         if sub_intent == "FACTORING":
             p_dict = extract_factoring_params(request.message, history=request.history)
-            res = tool_calculate_factoring_proceeds(
-                invoice_amount=p_dict["invoice_amount"],
-                advance_rate_pct=p_dict["advance_rate_pct"],
-                fee_rate_pct=p_dict["fee_rate_pct"],
-                collection_days=p_dict["collection_days"],
-            )
-            pred_warning = (
-                "\n\n> [!WARNING]\n> **Predatory Rate Alert**: True annualized APR exceeds 36.00% benchmark. "
-                "Evaluate alternative credit lines or commercial factoring before proceeding."
-                if res["is_predatory"]
-                else "\n\n✅ Annualized APR complies with institutional non-predatory lending standards (<= 36.00%)."
-            )
-            base_reply = (
-                f"### Invoice Factoring Net Proceeds & True APR Analysis\n\n"
-                f"- **Invoice Face Value**: ${float(res['invoice_face_value']):,.2f}\n"
-                f"- **Advance Rate**: {res['advance_rate_percent']}% (${float(res['advance_amount']):,.2f})\n"
-                f"- **Factoring Discount Fee**: ${float(res['factoring_fee_amount']):,.2f}\n"
-                f"- **Net Immediate Cash Proceeds**: ${float(res['net_proceeds']):,.2f}\n"
-                f"- **Collection Horizon**: {res['collection_days']} days\n"
-                f"- **True Annualized APR**: {res['true_apr_percent']}%"
-                f"{pred_warning}\n\n"
-                "To pledge this invoice into the consortium staging queue, request action staging for invoice factoring."
-            )
+            if p_dict.get("invoice_amount") and p_dict.get("advance_rate_pct"):
+                res = tool_calculate_factoring_proceeds(
+                    invoice_amount=p_dict["invoice_amount"],
+                    advance_rate_pct=p_dict["advance_rate_pct"],
+                    fee_rate_pct=p_dict.get("fee_rate_pct") or Decimal("3.00"),
+                    collection_days=p_dict.get("collection_days") or 45,
+                )
+                pred_warning = (
+                    "\n\n> [!WARNING]\n> **Predatory Rate Alert**: True annualized APR exceeds 36.00% benchmark. "
+                    "Evaluate alternative credit lines or commercial factoring before proceeding."
+                    if res["is_predatory"]
+                    else "\n\n✅ Annualized APR complies with institutional non-predatory lending standards (<= 36.00%)."
+                )
+                base_reply = (
+                    f"### Invoice Factoring Net Proceeds & True APR Analysis\n\n"
+                    f"- **Invoice Face Value**: ${float(res['invoice_face_value']):,.2f}\n"
+                    f"- **Advance Rate**: {res['advance_rate_percent']}% (${float(res['advance_amount']):,.2f})\n"
+                    f"- **Factoring Discount Fee**: ${float(res['factoring_fee_amount']):,.2f}\n"
+                    f"- **Net Immediate Cash Proceeds**: ${float(res['net_proceeds']):,.2f}\n"
+                    f"- **Collection Horizon**: {res['collection_days']} days\n"
+                    f"- **True Annualized APR**: {res['true_apr_percent']}%"
+                    f"{pred_warning}\n\n"
+                    "To prepare this invoice factoring proposal for review, request action staging."
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="underwriting"),
+                    intent_detected="CREDIT_UNDERWRITING",
+                    requires_biometric_hitl=False,
+                )
             return CopilotResponse(
-                reply=enrich_fn(base_reply, prompt_type="underwriting"),
+                reply=(
+                    "To calculate invoice factoring net proceeds and true APR, please specify your invoice face value "
+                    "and advance rate.\n\n"
+                    "Example format: 'Factor a $50,000 invoice with 85% advance, 3% discount fee, and 45 days collection'."
+                ),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -315,10 +331,8 @@ class CreditSubagent:
         if not effective_csv:
             return CopilotResponse(
                 reply=(
-                    "To evaluate pre-qualified credit lines or working capital loans, please upload your "
-                    "transactional bank statement CSV.\n\n"
-                    "Our underwriting engine uses Daily Average Balance (DAB), inflow consistency, and NSF records "
-                    "under WeBank inclusive finance criteria to match facilities without audited balance sheets."
+                    "To evaluate credit lines or working capital loans, please upload your "
+                    "transactional bank statement CSV."
                 ),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,

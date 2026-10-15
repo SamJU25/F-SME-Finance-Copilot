@@ -40,9 +40,72 @@ function formatSessionTime(isoString?: string): string {
   }
 }
 
+function deriveSessionTitle(firstPrompt?: string, fileName?: string): string {
+  if (fileName) {
+    const cleanName = fileName
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (cleanName) {
+      return cleanName
+        .split(' ')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+        .slice(0, 32);
+    }
+  }
+
+  if (!firstPrompt || !firstPrompt.trim()) {
+    return 'New Conversation';
+  }
+
+  const lower = firstPrompt.toLowerCase();
+
+  if (lower.includes('runway') || lower.includes('burn')) return 'Runway & Daily Burn';
+  if (lower.includes('deficit') || lower.includes('shortfall') || lower.includes('overdraft')) return 'Deficit Risk Forecast';
+  if (lower.includes('amortization') || lower.includes('monthly payment')) return 'Loan Amortization';
+  if (lower.includes('factor') || lower.includes('advance rate')) return 'Invoice Factoring';
+  if (lower.includes('loan') || lower.includes('credit') || lower.includes('borrow')) return 'Credit Facility Matching';
+  if (lower.includes('break-even') || lower.includes('breakeven')) return 'Break-Even Analysis';
+  if (lower.includes('dscr') || lower.includes('debt service')) return 'DSCR Debt Analysis';
+  if (lower.includes('fccr') || lower.includes('fixed charge')) return 'FCCR Covenant Audit';
+  if (lower.includes('ccc') || lower.includes('working capital') || lower.includes('dso') || lower.includes('dpo')) return 'Working Capital & CCC';
+  if (lower.includes('concentration') || lower.includes('hhi')) return 'Revenue Concentration';
+  if (lower.includes('churn') || lower.includes('attrition')) return 'Customer Attrition Stress';
+  if (lower.includes('hash') || lower.includes('blockchain')) return 'Invoice Verification';
+  if (lower.includes('balance')) return 'Cash Balance Inquiry';
+
+  const cleaned = firstPrompt
+    .replace(/^(?:can you|could you|please|what is|what are|how do i|how much|tell me about|check|analyze|evaluate)\s+/i, '')
+    .replace(/[?!.]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const source = cleaned || firstPrompt.trim();
+  const words = source.split(' ');
+  const selectedWords: string[] = [];
+  let currentLen = 0;
+  for (const word of words) {
+    if (currentLen + word.length > 28 && selectedWords.length >= 2) break;
+    selectedWords.push(word.charAt(0).toUpperCase() + word.slice(1));
+    currentLen += word.length + 1;
+    if (selectedWords.length >= 5) break;
+  }
+
+  return selectedWords.join(' ') || 'Financial Diagnostic';
+}
+
 const DEFAULT_WELCOME_MESSAGE: { role: 'agent'; text: string } = {
   role: 'agent',
   text: 'How can I help with your business finances today?',
+};
+
+const CASH_STATUS_LABELS: Record<string, string> = {
+  WATCH: 'Adequate Runway',
+  LOW_RUNWAY: 'Low Runway Alert',
+  NO_BURN: 'Cash Flow Positive',
+  CASH_NONPOSITIVE: 'Critical Deficit',
 };
 
 const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defaultUrl?: string; description: string }> = {
@@ -196,25 +259,21 @@ const STARTER_PROMPTS = [
   {
     icon: '📊',
     title: 'Analyze Runway & Daily Burn',
-    desc: 'Calculate exact survival days and daily cash outflow velocity',
     prompt: 'What is my current runway and daily burn rate?',
   },
   {
     icon: '⚠️',
     title: 'Detect Cash Deficit Risks',
-    desc: 'Early-warning forecast for upcoming cash crunches and overdrafts',
     prompt: 'Check for upcoming cash shortfalls and deficit risks over the next 60 days.',
   },
   {
     icon: '💼',
     title: 'Match Pre-Qualified Credit Facilities',
-    desc: 'Review non-predatory credit lines with true APR disclosures',
     prompt: 'What pre-qualified loan or credit line options can my business qualify for?',
   },
   {
     icon: '🔄',
     title: 'Audit Working Capital & CCC',
-    desc: 'Assess Cash Conversion Cycle, receivable delays, and payables buffer',
     prompt: 'Audit our Cash Conversion Cycle (CCC) and working capital efficiency.',
   },
 ];
@@ -228,8 +287,7 @@ interface StagedIntentItem {
   status: 'STAGED_PENDING_HITL' | 'EXECUTED' | 'REJECTED';
   staged_at: string;
   facility_name: string;
-  apr_percent: string;
-  compliance_check: string;
+  apr_percent?: string;
 }
 
 export default function HomePage() {
@@ -288,17 +346,17 @@ export default function HomePage() {
         if (res.ok) {
           const remoteIntents = await res.json();
           if (Array.isArray(remoteIntents)) {
-            const mapped: StagedIntentItem[] = remoteIntents.map((r: { id: string; tenant_id: string; action_type: string; amount_cents: number; target_identifier: string; status: string; staged_at?: string; apr_percent?: string }) => ({
+            const pendingOnly = remoteIntents.filter((r: { status: string }) => r.status === 'STAGED_PENDING_HITL');
+            const mapped: StagedIntentItem[] = pendingOnly.map((r: { id: string; tenant_id: string; action_type: string; amount_cents: number; target_identifier: string; status: string; staged_at?: string; apr_percent?: string }) => ({
               id: r.id,
               tenant_id: r.tenant_id,
               action_type: r.action_type,
               amount_cents: r.amount_cents,
               target_identifier: r.target_identifier,
               status: r.status as 'STAGED_PENDING_HITL' | 'EXECUTED' | 'REJECTED',
-              staged_at: r.staged_at ? new Date(r.staged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+              staged_at: r.staged_at ? new Date(r.staged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending',
               facility_name: r.action_type === 'FACTOR_INVOICE' ? 'Invoice Factoring' : r.action_type === 'DRAW_CREDIT_LINE' ? 'Credit Line Draw' : r.action_type,
-              apr_percent: r.apr_percent ? `${r.apr_percent}% True APR` : 'Verified Rate',
-              compliance_check: 'Verified Non-Predatory',
+              apr_percent: r.apr_percent ? `${r.apr_percent}% True APR` : undefined,
             }));
             setStagedIntents(mapped);
           }
@@ -325,9 +383,7 @@ export default function HomePage() {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([]);
 
   const conversationMessages = messages.filter(
-    (m) =>
-      m.text !== DEFAULT_WELCOME_MESSAGE.text &&
-      !m.text.includes('Autonomous SME Finance Copilot')
+    (m) => m.text !== DEFAULT_WELCOME_MESSAGE.text
   );
   const hasUserMessages = conversationMessages.some((m) => m.role === 'user');
 
@@ -358,7 +414,24 @@ export default function HomePage() {
         try {
           const parsed = JSON.parse(rawSessions);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            storedSessionsList = parsed;
+            storedSessionsList = parsed.map((item: SessionItem) => {
+              if (item.title && (item.title.startsWith('Session ') || item.title === 'Current Session')) {
+                try {
+                  const msgsStr = localStorage.getItem(`sme_copilot_chat_${item.id}`);
+                  if (msgsStr) {
+                    const parsedMsgs = JSON.parse(msgsStr);
+                    const firstUser = parsedMsgs.find((m: any) => m.role === 'user');
+                    if (firstUser?.text) {
+                      return { ...item, title: deriveSessionTitle(firstUser.text) };
+                    }
+                  }
+                } catch {
+                  // Fallback
+                }
+                return { ...item, title: 'New Conversation' };
+              }
+              return item;
+            });
           }
         } catch {
           // JSON parse fallback
@@ -376,7 +449,7 @@ export default function HomePage() {
       if (!existing) {
         const initialItem: SessionItem = {
           id: storedSession,
-          title: 'Session 1',
+          title: 'New Conversation',
           updatedAt: new Date().toISOString(),
           messageCount: 0,
         };
@@ -448,17 +521,13 @@ export default function HomePage() {
       const firstUserMsg = messages.find((m) => m.role === 'user');
       setSessions((prev) => {
         const idx = prev.findIndex((s) => s.id === sessionId);
-        let updatedTitle = `Session ${prev.length || 1}`;
-        if (firstUserMsg && firstUserMsg.text) {
-          const cleanPrompt = firstUserMsg.text.replace(/\s+/g, ' ').trim();
-          updatedTitle = cleanPrompt.length > 24 ? `${cleanPrompt.slice(0, 24)}…` : cleanPrompt;
-        }
+        const updatedTitle = deriveSessionTitle(firstUserMsg?.text, file?.name);
 
         let nextSessions: SessionItem[];
         if (idx >= 0) {
           const current = prev[idx];
-          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session';
-          const newTitle = isGeneric && firstUserMsg ? updatedTitle : current.title;
+          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session' || current.title === 'New Conversation';
+          const newTitle = isGeneric && (firstUserMsg || file) ? updatedTitle : current.title;
           const updatedItem: SessionItem = {
             ...current,
             title: newTitle,
@@ -620,21 +689,6 @@ export default function HomePage() {
     await executeAnalysis(file, threshold);
   }
 
-  async function handleLoadSample() {
-    try {
-      const res = await fetch('/synthetic-statement.csv');
-      if (!res.ok) throw new Error('Could not fetch sample CSV file.');
-      const text = await res.text();
-      const sampleFile = new File([text], 'synthetic-statement.csv', { type: 'text/csv' });
-      setFile(sampleFile);
-      setCsvText(text);
-      setThreshold('30');
-      await executeAnalysis(sampleFile, '30');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Failed to load sample statement.');
-    }
-  }
-
   async function sendChatMessage(promptText?: string) {
     const textToSend = promptText || chatInput;
     if (!textToSend.trim()) return;
@@ -705,13 +759,18 @@ export default function HomePage() {
     const newMsgs: Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }> = [];
     const newSessionItem: SessionItem = {
       id: newSessionId,
-      title: `Session ${sessions.length + 1}`,
+      title: 'New Conversation',
       updatedAt: new Date().toISOString(),
       messageCount: 0,
     };
 
     setSessionId(newSessionId);
     setMessages(newMsgs);
+    setChatInput('');
+    setCsvText(null);
+    setFile(null);
+    setResult(null);
+    setError(null);
     setSessions((prev) => {
       const updated = [newSessionItem, ...prev];
       try {
@@ -733,6 +792,7 @@ export default function HomePage() {
     }
     if (!targetId || targetId === sessionId) return;
 
+    setChatInput('');
     const sessionChatKey = `sme_copilot_chat_${targetId}`;
     let loaded = false;
     try {
@@ -748,18 +808,41 @@ export default function HomePage() {
       // LocalStorage parse fallback
     }
 
+    try {
+      const savedCsv = localStorage.getItem(`sme_copilot_csv_${targetId}`);
+      if (savedCsv) {
+        setCsvText(savedCsv);
+      }
+    } catch {
+      // LocalStorage fallback
+    }
+
     if (!loaded) {
       try {
         const res = await fetch(`${API_URL}/api/v1/agent/session/${targetId}`);
         if (res.ok) {
           const data = await res.json();
-          if (data?.history && Array.isArray(data.history) && data.history.length > 0) {
-            const mapped = data.history.map((h: { role: 'user' | 'agent'; text: string }) => ({
+          const msgsList = data?.messages || data?.history;
+          if (Array.isArray(msgsList) && msgsList.length > 0) {
+            const mapped = msgsList.map((h: { role: 'user' | 'agent'; text: string }) => ({
               role: h.role,
               text: h.text,
             }));
             setMessages(mapped);
             loaded = true;
+            try {
+              localStorage.setItem(sessionChatKey, JSON.stringify(mapped));
+            } catch {
+              // LocalStorage fallback
+            }
+          }
+          if (data?.csv_content) {
+            setCsvText(data.csv_content);
+            try {
+              localStorage.setItem(`sme_copilot_csv_${targetId}`, data.csv_content);
+            } catch {
+              // LocalStorage fallback
+            }
           }
         }
       } catch {
@@ -789,6 +872,7 @@ export default function HomePage() {
     const remaining = sessions.filter((s) => s.id !== idToDelete);
     try {
       localStorage.removeItem(`sme_copilot_chat_${idToDelete}`);
+      localStorage.removeItem(`sme_copilot_csv_${idToDelete}`);
       localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(remaining));
     } catch {
       // LocalStorage fallback
@@ -805,7 +889,7 @@ export default function HomePage() {
 
   const activeSessionItem = sessions.find((s) => s.id === sessionId) || {
     id: sessionId,
-    title: 'Session 1',
+    title: 'New Conversation',
     messageCount: messages.length,
     updatedAt: new Date().toISOString(),
   };
@@ -947,7 +1031,7 @@ export default function HomePage() {
         </div>
 
         {/* Staged Action Proposals */}
-        {stagedIntents.length > 0 && (
+        {result && stagedIntents.length > 0 && (
           <div className="staged-queue-panel" style={{ marginBottom: 24 }}>
             <div className="staged-queue-head">
               <h3 className="staged-queue-title">Action Proposals</h3>
@@ -958,9 +1042,9 @@ export default function HomePage() {
                 <thead>
                   <tr>
                     <th>Proposal</th>
-                    <th>Identifier</th>
+                    <th>Target Identifier</th>
                     <th>Amount</th>
-                    <th>Terms</th>
+                    <th>Timestamp</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Action</th>
                   </tr>
@@ -973,11 +1057,10 @@ export default function HomePage() {
                       <tr key={item.id}>
                         <td>
                           <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{item.facility_name}</div>
-                          <div className="staged-meta-sub">{item.action_type}</div>
+                          <div className="staged-meta-sub">{item.apr_percent ? `${item.action_type} · ${item.apr_percent}` : item.action_type}</div>
                         </td>
                         <td>
                           <div className="staged-intent-id">{item.target_identifier}</div>
-                          <div className="staged-meta-sub">{item.staged_at}</div>
                         </td>
                         <td>
                           <div className="staged-amount">
@@ -985,8 +1068,7 @@ export default function HomePage() {
                           </div>
                         </td>
                         <td>
-                          <div className="staged-terms">{item.apr_percent}</div>
-                          <div className="staged-compliance-tag">{item.compliance_check}</div>
+                          <div className="staged-meta-sub">{item.staged_at}</div>
                         </td>
                         <td>
                           <span className={`staged-badge ${isExecuted ? 'executed' : isRejected ? 'pending' : 'pending'}`}>
@@ -1069,6 +1151,25 @@ export default function HomePage() {
                       reader.onload = (e) => setCsvText(e.target?.result as string);
                       reader.readAsText(picked);
                       executeAnalysis(picked, threshold);
+                      const fileTitle = deriveSessionTitle(undefined, picked.name);
+                      setSessions((prev) => {
+                        const idx = prev.findIndex((s) => s.id === sessionId);
+                        if (idx >= 0) {
+                          const current = prev[idx];
+                          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session' || current.title === 'New Conversation';
+                          if (isGeneric) {
+                            const next = [...prev];
+                            next[idx] = { ...current, title: fileTitle, updatedAt: new Date().toISOString() };
+                            try {
+                              localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(next));
+                            } catch {
+                              // LocalStorage fallback
+                            }
+                            return next;
+                          }
+                        }
+                        return prev;
+                      });
                     } else {
                       setCsvText(null);
                     }
@@ -1083,18 +1184,6 @@ export default function HomePage() {
                 Format: <code>{CSV_HEADER}</code>
               </div>
 
-              <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="pill-btn"
-                  onClick={handleLoadSample}
-                  disabled={loading}
-                  title="Load and analyze bundled demo statement"
-                >
-                  ⚡ Load demo statement
-                </button>
-              </div>
-
               <button className="submit" type="submit" disabled={loading || !file} style={{ marginTop: 16 }}>
                 {loading ? 'Analyzing statement…' : 'Analyze cash activity'}
               </button>
@@ -1107,7 +1196,14 @@ export default function HomePage() {
             <div className="result-head">
               <h2 id="result-title">Cash Summary</h2>
               {result && (
-                <span className={`status ${result.cash_status}`}>{result.cash_status.replaceAll('_', ' ')}</span>
+                <span
+                  className={`status ${result.cash_status}`}
+                  role="status"
+                  aria-label={`Liquidity status: ${CASH_STATUS_LABELS[result.cash_status] || result.cash_status}`}
+                >
+                  <span className="status-dot" aria-hidden="true" />
+                  {CASH_STATUS_LABELS[result.cash_status] || result.cash_status.replaceAll('_', ' ')}
+                </span>
               )}
             </div>
 
@@ -1132,7 +1228,7 @@ export default function HomePage() {
               <div className="empty-results-box">
                 <div className="empty-results-icon">📊</div>
                 <h3>No Statement Analyzed</h3>
-                <p>Upload a CSV file or click &ldquo;Load demo statement&rdquo; to view cash runway, burn rate, and liquidity status.</p>
+                <p>Upload a CSV file to view cash runway, burn rate, and liquidity status.</p>
               </div>
             )}
           </section>
@@ -1346,7 +1442,6 @@ export default function HomePage() {
                       <span className="starter-prompt-icon" aria-hidden="true">{item.icon}</span>
                       <div className="starter-prompt-content">
                         <span className="starter-prompt-title">{item.title}</span>
-                        <span className="starter-prompt-desc">{item.desc}</span>
                       </div>
                     </button>
                   ))}
@@ -1394,7 +1489,7 @@ export default function HomePage() {
                     )}
 
                     {/* Structured Metrics Card */}
-                    {m.data?.metrics && (
+                    {m.data?.metrics && (m.data.metrics.current_balance || m.data.metrics.average_daily_burn || m.data.metrics.runway_days !== undefined || m.data.metrics.daily_average_balance || m.data.metrics.risk_tier) && (
                       <div className="chat-card">
                         <strong>Calculated Cash Metrics</strong>
                         {m.data.metrics.current_balance && <div>Balance: ${m.data.metrics.current_balance}</div>}

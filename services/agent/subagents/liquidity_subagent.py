@@ -210,10 +210,8 @@ class LiquiditySubagent:
         if not effective_csv:
             return CopilotResponse(
                 reply=(
-                    "To diagnose your cash runway, burn rate, and liquidity reserves, please upload "
-                    "your transactional bank statement CSV via the dropzone.\n\n"
-                    "Our deterministic engine calculates Daily Average Balance (DAB), daily burn velocity, "
-                    "and runway days to pinpoint deficit vulnerabilities."
+                    "To diagnose your cash runway, burn rate, and liquidity reserves, "
+                    "please provide your transactional bank statement CSV."
                 ),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,

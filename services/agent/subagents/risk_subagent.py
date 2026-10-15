@@ -71,12 +71,10 @@ class RiskManagerSubagent:
                     inflows = Decimal(str(cash_res.get("gross_inflows") or "0"))
                     fc = outflows * Decimal("4")
                     rev = inflows * Decimal("4")
-                    if cm_ratio is None:
-                        cm_ratio = Decimal("0.35")
                 except Exception:
                     pass
 
-            if fc is not None:
+            if fc is not None and (cm_ratio is not None or (rev is not None and vc is not None)):
                 res = tool_calculate_break_even(
                     fixed_costs=fc,
                     cm_ratio=cm_ratio,
@@ -150,14 +148,11 @@ class RiskManagerSubagent:
 
         # 3. Client Revenue Concentration & Herfindahl-Hirschman Index (HHI)
         if sub_intent == "CONCENTRATION":
-            metrics = None
             if not effective_csv:
                 return CopilotResponse(
                     reply=(
                         "To audit your client revenue concentration and Herfindahl-Hirschman Index (HHI), "
-                        "please provide your transactional bank statement CSV.\n\n"
-                        "Our deterministic underwriting engine aggregates inflows across counterparty descriptions "
-                        "to quantify client dependency risk and revenue volatility."
+                        "please provide your transactional bank statement CSV."
                     ),
                     intent_detected="CASH_DIAGNOSTIC",
                     requires_biometric_hitl=False,
@@ -260,10 +255,8 @@ class RiskManagerSubagent:
         if not effective_csv:
             return CopilotResponse(
                 reply=(
-                    "To run a predictive cash crunch and deficit early warning analysis, please upload your "
-                    "transactional bank statement CSV.\n\n"
-                    "Our predictive forecasting models detect recurring expense spikes (payroll, rent, supplier cycles) "
-                    "to project insolvency dates across customized 30/60/90 day horizons."
+                    "To run a predictive cash crunch and deficit early warning analysis, "
+                    "please provide your transactional bank statement CSV."
                 ),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,

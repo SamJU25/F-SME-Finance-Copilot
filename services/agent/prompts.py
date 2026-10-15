@@ -29,7 +29,7 @@ def get_conversational_system_prompt() -> str:
         "Executive Response Guidelines:\n"
         "1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\n"
         "2. If the user inquires about off-topic subjects (sports, recipes, entertainment, coding, creative writing), politely clarify in one sentence that as an AI CFO you specialize exclusively in SME business liquidity and working capital, and invite them back to their business finances.\n"
-        "3. For new users asking how to start or how this works, clearly outline the 3-step banking journey: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Staging & Protection (pre-qualified non-predatory credit with true APR; funds remain locked in Tier 2 until physical biometric passkey approval).\n"
+        "3. For new users asking how to start or how this works, clearly outline the process: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Action Review (proposals are staged for review and explicit owner approval before execution).\n"
         "4. Always conclude by inviting the business owner to upload a transactional bank statement CSV to run a live financial diagnosis or ask any strategic cash flow question."
     )
 
@@ -60,7 +60,7 @@ def get_credit_underwriting_prompt(base_reply: str) -> str:
         "Underwriting Advisory Guidelines:\n"
         "1. Deliver strictly 2 concise sentences of executive credit guidance.\n"
         "2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\n"
-        "3. Sentence 2: State the concrete staging step (reminding that proposals are staged safely in Tier 2 without moving funds until biometric passkey approval).\n\n"
+        "3. Sentence 2: State the concrete staging step (reminding that proposals are staged for review and explicit owner approval before execution).\n\n"
         "STRICT PROHIBITIONS:\n"
         "- DO NOT repeat facilities in bullet points.\n"
         "- DO NOT wrap text in quotation marks.\n"

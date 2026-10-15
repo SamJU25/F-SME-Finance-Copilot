@@ -1151,12 +1151,6 @@
     "ast_hash": "15a553922ffa0c744fb5f87c5fce6b4f",
     "semantic_hash": ""
   },
-  "frontend/src/mocks/financial_data.json": {
-    "mtime": 1791935001.6677995,
-    "seen": 1791935083.4368927,
-    "ast_hash": "edbd672201dbc888c275ec2ca91cb791",
-    "semantic_hash": ""
-  },
   "frontend/src/types/api.ts": {
     "mtime": 1792064104.9234643,
     "seen": 1792064245.2457435,
@@ -1248,9 +1242,9 @@
     "semantic_hash": ""
   },
   "app/layout.tsx": {
-    "mtime": 1791972824.590033,
-    "seen": 1791973324.0255902,
-    "ast_hash": "1b2f6744b642a1ec2b1c7ed0a571b695",
+    "mtime": 1792091277.8129268,
+    "seen": 1792091320.3021085,
+    "ast_hash": "435c8978d5b1a2d8b6510934621fa538",
     "semantic_hash": ""
   },
   "app/page.tsx": {
@@ -1260,15 +1254,15 @@
     "semantic_hash": ""
   },
   "frontend/src/app/layout.tsx": {
-    "mtime": 1791972695.7678027,
-    "seen": 1791973324.025593,
-    "ast_hash": "36295da6bab73177b5ee658de673bc6f",
+    "mtime": 1792091282.2585168,
+    "seen": 1792091320.3022316,
+    "ast_hash": "bd783b2ce63e325a830a668360e51d9c",
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792089093.393408,
-    "seen": 1792089111.6630063,
-    "ast_hash": "19c07e89c8dcc81391ed40bd07a38558",
+    "mtime": 1792093254.5816026,
+    "seen": 1792093284.6211967,
+    "ast_hash": "077cf28564410ecb744cbe091ec95579",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1332,9 +1326,9 @@
     "semantic_hash": ""
   },
   "api/routes/actions.py": {
-    "mtime": 1791980001.6484504,
-    "seen": 1791980089.5544536,
-    "ast_hash": "d69457219c832eea9bad860ea367c62d",
+    "mtime": 1792090359.6757195,
+    "seen": 1792090611.270288,
+    "ast_hash": "0cec5c92c2677d534f15c1dc9ad23add",
     "semantic_hash": ""
   },
   "api/routes/underwrite.py": {
@@ -1368,9 +1362,9 @@
     "semantic_hash": ""
   },
   "services/security/staging_ledger.py": {
-    "mtime": 1791980352.4556327,
-    "seen": 1791980414.904705,
-    "ast_hash": "28391e130cbbab28f75061be05dafdce",
+    "mtime": 1792089487.8792613,
+    "seen": 1792089860.2388012,
+    "ast_hash": "54a0f97980a1d34147632b8b11a73937",
     "semantic_hash": ""
   },
   "tests/integration/test_backbone_apis.py": {
@@ -1458,9 +1452,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792083253.7856662,
-    "seen": 1792083488.4001231,
-    "ast_hash": "cb9e84709aaaed48c26c77fe7c93d648",
+    "mtime": 1792092540.4501655,
+    "seen": 1792092712.0500524,
+    "ast_hash": "90fc4aa87b64fd19dff2a7fdc56f796d",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1506,9 +1500,9 @@
     "semantic_hash": ""
   },
   "services/agent/prompts.py": {
-    "mtime": 1792068325.044024,
-    "seen": 1792068828.1076632,
-    "ast_hash": "e82a22c9f8d7ec9ca2c2d7ffcab85da0",
+    "mtime": 1792092556.1833913,
+    "seen": 1792092712.0497277,
+    "ast_hash": "3aba78231a6ba43fd908f5d27876e0f7",
     "semantic_hash": ""
   },
   "services/agent/dynamic_router.py": {
@@ -1524,9 +1518,9 @@
     "semantic_hash": ""
   },
   "services/agent/param_extractor.py": {
-    "mtime": 1792078847.2287157,
-    "seen": 1792079129.042244,
-    "ast_hash": "1101ee37bacd68ee60aebff3d55c1654",
+    "mtime": 1792091725.5042784,
+    "seen": 1792091949.0563872,
+    "ast_hash": "04fbc7f8fba1a1ac9d84a15fd85aa971",
     "semantic_hash": ""
   },
   "services/calculations/concentration_risk.py": {
@@ -1566,21 +1560,21 @@
     "semantic_hash": ""
   },
   "services/agent/subagents/credit_subagent.py": {
-    "mtime": 1792078907.026458,
-    "seen": 1792079129.0426376,
-    "ast_hash": "3f97785642bff1d5321d4812aa19ca08",
+    "mtime": 1792092584.3761296,
+    "seen": 1792092712.050047,
+    "ast_hash": "e3ad60d9aa58e7f6f035b2acd753a9a2",
     "semantic_hash": ""
   },
   "services/agent/subagents/liquidity_subagent.py": {
-    "mtime": 1792078931.4420216,
-    "seen": 1792079129.0426393,
-    "ast_hash": "dec5d3d448214f1613cf38470bc8ccb8",
+    "mtime": 1792092595.2128599,
+    "seen": 1792092712.0500493,
+    "ast_hash": "bf52e69ba81a949364e55b5df98b7071",
     "semantic_hash": ""
   },
   "services/agent/subagents/risk_subagent.py": {
-    "mtime": 1792078981.8858588,
-    "seen": 1792079129.042641,
-    "ast_hash": "14c2a51c0cd60b40370657c4cfa3f66e",
+    "mtime": 1792092629.6088593,
+    "seen": 1792092712.0500507,
+    "ast_hash": "e01fe0d6c13a78ec486720f7bafe7236",
     "semantic_hash": ""
   },
   "services/agent/session_store.py": {

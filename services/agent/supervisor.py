@@ -326,7 +326,7 @@ def run_copilot_supervisor(
         return _finalize(CopilotResponse(
             reply=(
                 "Security Alert: Adversarial prompt injection pattern detected. "
-                "System execution remains strictly constrained by the Three-Tier Security Gate. "
+                "System execution remains strictly constrained by security policies. "
                 "No unauthorized state changes or covenant modifications are permitted."
             ),
             intent_detected="SECURITY_DEFENSE_TRIGGERED",
@@ -379,8 +379,7 @@ def run_copilot_supervisor(
         reply = (
             f"Staged {action_type} proposal for {amount_display} (Target: {target}). "
             f"Intent ID is {staged['intent_id']}. "
-            "Under the Three-Tier Security Gate, no funds can move automatically. "
-            "Physical biometric passkey verification (WebAuthn FIDO2) is required to execute."
+            "Biometric passkey verification or user confirmation is required to execute."
         )
 
         return _finalize(CopilotResponse(
@@ -452,12 +451,8 @@ def run_copilot_supervisor(
 
             return _finalize(CopilotResponse(
                 reply=(
-                    "To evaluate digital credit underwriting and match pre-qualified financing options, "
-                    "please provide your transactional bank statement CSV.\n\n"
-                    "Getting Started:\n"
-                    "- Upload your 90-day bank statement CSV using the Upload Statement button.\n"
-                    "- Our deterministic underwriting engine calculates your Daily Average Balance (DAB), revenue stability, and NSF metrics.\n"
-                    "- You will receive matched credit facilities with true APR disclosures."
+                    "To evaluate credit underwriting and match financing options, "
+                    "please provide your transactional bank statement CSV."
                 ),
                 intent_detected=intent,
             ))
@@ -519,7 +514,7 @@ def run_copilot_supervisor(
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
                     "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
-                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV using the dedicated uploader on the left (or select 'Load Sample') so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
+                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
                 )
                 local_reply = generate_local_reply(
                     prompt=request.message,
@@ -538,7 +533,7 @@ def run_copilot_supervisor(
                 sys_directive = (
                     f"{COPILOT_PERSONA_BASE}\n\n"
                     "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
-                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV using the dedicated uploader on the left (or select 'Load Sample') so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
+                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
                 )
                 ai_reply = query_external_llm(
                     prompt=request.message,
@@ -556,11 +551,7 @@ def run_copilot_supervisor(
             return _finalize(CopilotResponse(
                 reply=(
                     "To diagnose your cash runway, burn rate, and overdraft risks, "
-                    "please provide your transactional bank statement CSV.\n\n"
-                    "Getting Started:\n"
-                    "- Upload your 90-day bank statement CSV using the Upload Statement button.\n"
-                    "- Our deterministic calculation engine will compute net burn, runway, and cash deficit points.\n"
-                    "- You can ask custom horizon queries such as 'What is my runway in 45 days?'"
+                    "please provide your transactional bank statement CSV."
                 ),
                 intent_detected=intent,
             ))
@@ -673,11 +664,14 @@ def run_copilot_supervisor(
             reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         elif sub_intent == "ADVICE":
             if cash_result.get("has_projected_deficit"):
+                shortfall_val = cash_result.get("projected_shortfall_amount")
+                bridge_val = cash_result.get("recommended_bridge_amount") or shortfall_val
+                bridge_text = f"${float(bridge_val):,.2f}" if bridge_val else "liquidity support"
                 headline = (
                     f"Financial Health Assessment: Your cash status is {cash_result['cash_status']} with {runway_desc} of runway. "
                     f"A cash shortfall of ${cash_result.get('projected_shortfall_amount', '0.00')} is projected on {cash_result.get('projected_deficit_date', 'upcoming dates')} "
                     f"due to {cash_result.get('primary_deficit_trigger', 'recurring commitments')}. "
-                    f"Recommended action: Stage a working capital bridge facility of ${cash_result.get('recommended_bridge_amount', '25,000.00')} to protect operating continuity."
+                    f"Recommended action: Stage a working capital bridge facility of {bridge_text} to protect operating continuity."
                 )
             elif cash_result.get("cash_status") == "WATCH":
                 headline = (
@@ -782,17 +776,12 @@ def run_copilot_supervisor(
 
     if effective_csv:
         general_reply = (
-            "Statement loaded. You can ask follow-up questions such as 'how many days left?', "
-            "'what is my daily burn?', 'what loan options can I qualify for?', or request to stage a line of credit."
+            "Statement loaded. You can ask about cash runway, daily burn rate, projected deficits, or credit qualification."
         )
     else:
         general_reply = (
-            "I am the Autonomous SME Finance Copilot. I help SME founders analyze cash runway, "
-            "evaluate WeBank transactional credit eligibility, and stage financing proposals safely.\n\n"
-            "3 Quick Steps to Get Started:\n"
-            "1. Upload your 90-day bank statement CSV or click a demo sample.\n"
-            "2. Ask any question: 'What is my runway?', 'Do I have overdraft risk?', or 'What loans qualify?'.\n"
-            "3. Stage financing proposals securely under Tier 2, requiring Tier 3 biometric confirmation to execute."
+            "I am the Autonomous SME Finance Copilot. "
+            "Upload your bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity."
         )
     return _finalize(CopilotResponse(
         reply=general_reply,
