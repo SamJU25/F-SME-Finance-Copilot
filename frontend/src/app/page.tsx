@@ -1342,7 +1342,7 @@ export default function HomePage() {
 
                     {sessions.length > 2 && (
                       <div className="session-search-box">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }} aria-hidden="true">
+                        <svg className="session-search-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <circle cx="11" cy="11" r="8"></circle>
                           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
@@ -1352,7 +1352,6 @@ export default function HomePage() {
                           placeholder="Search sessions…"
                           value={sessionSearch}
                           onChange={(e) => setSessionSearch(e.target.value)}
-                          autoFocus
                         />
                         {sessionSearch && (
                           <button
