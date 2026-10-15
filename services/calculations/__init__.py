@@ -28,6 +28,7 @@ from services.calculations.working_capital import (
 from services.calculations.concentration_risk import (
     calculate_client_concentration,
     calculate_revenue_attrition_impact,
+    calculate_client_churn_impact,
 )
 
 __all__ = [
@@ -52,4 +53,5 @@ __all__ = [
     "calculate_operating_cash_flow_ratio",
     "calculate_client_concentration",
     "calculate_revenue_attrition_impact",
+    "calculate_client_churn_impact",
 ]

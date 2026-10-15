@@ -89,6 +89,13 @@ class FastEmbedSemanticRouter:
         "DEFENSIVE_INTERVAL": "Calculate defensive interval ratio, DIR days, quick assets covering daily operational expenses.",
         "OPTIONS": "Pre-qualified financing options, what loans can we qualify for, borrowing eligibility, matched credit facilities, credit line limits.",
         "WORKING_CAPITAL": "Working capital risk, cash conversion cycle, customer DSO payment terms, supplier DPO payment terms, trade terms, receivables terms.",
+        "FCCR": "Calculate fixed charge coverage ratio, FCCR, EBITDA and lease charges coverage.",
+        "DEBT_CAPACITY": "Calculate maximum prudent debt capacity, maximum borrowing capacity based on cash flow and DAB, safe leverage limit.",
+        "WCR": "Calculate working capital requirement, WCR, operating working capital needed, receivables and inventory minus payables.",
+        "OCF_RATIO": "Calculate operating cash flow ratio, operating cash flow to current liabilities, short-term debt coverage.",
+        "BREAK_EVEN_UNITS": "Calculate break-even units, break-even sales volume, how many units must we sell to break even.",
+        "ATTRITION": "Calculate customer churn impact, lost client impact on burn rate and cash runway, revenue attrition.",
+        "INVOICE_HASH": "Verify invoice hash, check invoice double financing, check blockchain invoice integrity, consortium registry check.",
         "GENERAL": "General overview of financial health, cash diagnostics summary, and business accounting status.",
     }
 

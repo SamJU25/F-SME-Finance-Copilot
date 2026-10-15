@@ -287,3 +287,273 @@ def extract_defensive_interval_params(text: str) -> Dict[str, Any]:
         "quick_assets": qa,
         "daily_operating_expenses": burn,
     }
+
+
+def extract_fccr_params(text: str) -> Dict[str, Any]:
+    """Extracts EBITDA, fixed charges, and total debt service from text."""
+    ebitda: Optional[Decimal] = None
+    fc: Optional[Decimal] = None
+    ds: Optional[Decimal] = None
+
+    eb_m = re.search(r"(?:ebitda|operating\s+cash\s+flow)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if eb_m:
+        ebitda = parse_numeric_token(eb_m.group(1))
+
+    fc_m = re.search(r"(?:fixed\s+charges?|leases?|lease\s+payments?|rent)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if fc_m:
+        fc = parse_numeric_token(fc_m.group(1))
+
+    ds_m = re.search(r"(?:debt\s+service|loan\s+payments?|interest\s+and\s+principal)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if ds_m:
+        ds = parse_numeric_token(ds_m.group(1))
+
+    if ebitda is None or fc is None or ds is None:
+        nums = [parse_numeric_token(n) for n in re.findall(r"\b\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text)]
+        valid_nums = [n for n in nums if n is not None and n >= Decimal("1000")]
+        if len(valid_nums) >= 3:
+            if ebitda is None:
+                ebitda = valid_nums[0]
+            if fc is None:
+                fc = valid_nums[1]
+            if ds is None:
+                ds = valid_nums[2]
+
+    return {
+        "ebitda": ebitda,
+        "fixed_charges": fc,
+        "total_debt_service": ds,
+    }
+
+
+def extract_debt_capacity_params(text: str) -> Dict[str, Any]:
+    """Extracts DAB, NOI, target DSCR, interest rate, and term for prudent debt capacity."""
+    dab: Optional[Decimal] = None
+    noi: Optional[Decimal] = None
+    dscr: Decimal = Decimal("1.25")
+    rate: Decimal = Decimal("8.50")
+    term: int = 24
+
+    dab_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:in\s+)?\b(?:dab|daily\s+average\s+balance|average\s+balance)\b", text, re.IGNORECASE)
+    if not dab_m:
+        dab_m = re.search(r"\b(?:dab|daily\s+average\s+balance|average\s+balance)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if dab_m:
+        dab = parse_numeric_token(dab_m.group(1))
+
+    noi_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:in\s+)?\b(?:noi|net\s+operating\s+income|operating\s+income)\b", text, re.IGNORECASE)
+    if not noi_m:
+        noi_m = re.search(r"\b(?:noi|net\s+operating\s+income|operating\s+income)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if noi_m:
+        noi = parse_numeric_token(noi_m.group(1))
+
+    dscr_m = re.search(r"(\d+(?:\.\d+)?)\s*(?:x\s+)?\b(?:dscr|coverage)\b", text, re.IGNORECASE)
+    if not dscr_m:
+        dscr_m = re.search(r"\b(?:dscr|coverage)\b\D*?(\d+(?:\.\d+)?)", text, re.IGNORECASE)
+    if dscr_m:
+        try:
+            dscr = Decimal(dscr_m.group(1))
+        except Exception:
+            pass
+
+    rate_m = re.search(r"(\d+(?:\.\d+)?)\s*%", text)
+    if rate_m:
+        try:
+            rate = Decimal(rate_m.group(1))
+        except Exception:
+            pass
+
+    term_m = re.search(r"(\d+)\s*(?:month|months|mo)\b", text, re.IGNORECASE)
+    if term_m:
+        term = int(term_m.group(1))
+
+    if noi is None and dab is None:
+        nums = [parse_numeric_token(n) for n in re.findall(r"\b\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text)]
+        valid_nums = [n for n in nums if n is not None and n >= Decimal("1000")]
+        if valid_nums:
+            noi = valid_nums[0]
+
+    return {
+        "daily_average_balance": dab,
+        "net_operating_income": noi,
+        "max_dscr": dscr,
+        "annual_interest_rate_pct": rate,
+        "loan_term_months": term,
+    }
+
+
+def extract_wcr_params(text: str) -> Dict[str, Any]:
+    """Extracts accounts receivable, inventory, and accounts payable for WCR."""
+    ar: Optional[Decimal] = None
+    inv: Optional[Decimal] = None
+    ap: Optional[Decimal] = None
+
+    ar_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:in\s+)?\b(?:receivables?|accounts?\s+receivable)\b", text, re.IGNORECASE)
+    if not ar_m:
+        ar_m = re.search(r"\b(?:receivables?|\bar\b|accounts?\s+receivable)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if ar_m:
+        ar = parse_numeric_token(ar_m.group(1))
+
+    inv_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:in\s+)?\b(?:inventory|stocks?)\b", text, re.IGNORECASE)
+    if not inv_m:
+        inv_m = re.search(r"\b(?:inventory|stocks?)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if inv_m:
+        inv = parse_numeric_token(inv_m.group(1))
+
+    ap_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:in\s+)?\b(?:payables?|accounts?\s+payable)\b", text, re.IGNORECASE)
+    if not ap_m:
+        ap_m = re.search(r"\b(?:payables?|\bap\b|accounts?\s+payable)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if ap_m:
+        ap = parse_numeric_token(ap_m.group(1))
+
+    if ar is None or inv is None or ap is None:
+        nums = [parse_numeric_token(n) for n in re.findall(r"\b\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text)]
+        valid_nums = [n for n in nums if n is not None and n >= Decimal("100")]
+        if len(valid_nums) >= 3:
+            if ar is None:
+                ar = valid_nums[0]
+            if inv is None:
+                inv = valid_nums[1]
+            if ap is None:
+                ap = valid_nums[2]
+
+    return {
+        "accounts_receivable": ar,
+        "inventory": inv,
+        "accounts_payable": ap,
+    }
+
+
+def extract_ocf_ratio_params(text: str) -> Dict[str, Any]:
+    """Extracts operating cash flow and current liabilities."""
+    ocf: Optional[Decimal] = None
+    cl: Optional[Decimal] = None
+
+    ocf_m = re.search(r"(?:operating\s+cash\s+flow|ocf|cash\s+flow)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if ocf_m:
+        ocf = parse_numeric_token(ocf_m.group(1))
+
+    cl_m = re.search(r"(?:current\s+liabilities|short\s*[- ]*term\s+debt|liabilities)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if cl_m:
+        cl = parse_numeric_token(cl_m.group(1))
+
+    if ocf is None or cl is None:
+        nums = [parse_numeric_token(n) for n in re.findall(r"\b\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text)]
+        valid_nums = [n for n in nums if n is not None and n >= Decimal("1000")]
+        if len(valid_nums) >= 2:
+            if ocf is None:
+                ocf = valid_nums[0]
+            if cl is None:
+                cl = valid_nums[1]
+
+    return {
+        "operating_cash_flow": ocf,
+        "current_liabilities": cl,
+    }
+
+
+def extract_break_even_units_params(text: str) -> Dict[str, Any]:
+    """Extracts fixed costs, unit selling price, and unit variable cost."""
+    fc: Optional[Decimal] = None
+    price: Optional[Decimal] = None
+    vc: Optional[Decimal] = None
+
+    fc_m = re.search(r"(?:fixed\s+costs?|overhead)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if fc_m:
+        fc = parse_numeric_token(fc_m.group(1))
+
+    p_m = re.search(r"(?:price|selling\s+price|unit\s+price)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if p_m:
+        price = parse_numeric_token(p_m.group(1))
+
+    vc_m = re.search(r"(?:variable\s+costs?|unit\s+variable\s+cost|cost\s+per\s+unit)\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if vc_m:
+        vc = parse_numeric_token(vc_m.group(1))
+
+    if fc is None or price is None or vc is None:
+        nums = [parse_numeric_token(n) for n in re.findall(r"\b\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text)]
+        valid_nums = [n for n in nums if n is not None and n > Decimal("0.00")]
+        if len(valid_nums) >= 3:
+            if fc is None:
+                fc = valid_nums[0]
+            if price is None:
+                price = valid_nums[1]
+            if vc is None:
+                vc = valid_nums[2]
+
+    return {
+        "fixed_costs": fc,
+        "unit_selling_price": price,
+        "unit_variable_cost": vc,
+    }
+
+
+def extract_attrition_params(text: str) -> Dict[str, Any]:
+    """Extracts current annual revenue, annual burn, and lost client annual revenue."""
+    rev: Optional[Decimal] = None
+    burn: Optional[Decimal] = None
+    lost: Optional[Decimal] = None
+
+    lost_m = re.search(r"\b(?:client|customer|account|paying|pays|who\s+pays)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if lost_m:
+        lost = parse_numeric_token(lost_m.group(1))
+
+    rev_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:annual\s+)?\b(?:revenue|sales|inflows)\b", text, re.IGNORECASE)
+    if not rev_m:
+        rev_m = re.search(r"\b(?:annual\s+revenue|revenue|sales|inflows)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if rev_m:
+        rev = parse_numeric_token(rev_m.group(1))
+
+    burn_m = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\s*(?:annual\s+)?\b(?:burn|burn\s+rate|expenses?|costs?|overhead|outflows)\b", text, re.IGNORECASE)
+    if not burn_m:
+        burn_m = re.search(r"\b(?:annual\s+burn|burn\s+rate|burn|annual\s+expenses?|expenses?|operating\s+costs?|overhead|outflows)\b\D*?\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text, re.IGNORECASE)
+    if burn_m:
+        burn = parse_numeric_token(burn_m.group(1))
+
+    if rev is None or burn is None or lost is None:
+        nums = [parse_numeric_token(n) for n in re.findall(r"\b\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)\b", text)]
+        valid_nums = [n for n in nums if n is not None and n >= Decimal("1000")]
+        if len(valid_nums) >= 3:
+            if lost is None:
+                lost = valid_nums[0]
+            if rev is None:
+                rev = valid_nums[1]
+            if burn is None:
+                burn = valid_nums[2]
+
+    return {
+        "current_annual_revenue": rev,
+        "current_annual_burn": burn,
+        "lost_client_annual_revenue": lost,
+    }
+
+
+def extract_invoice_hash_params(text: str) -> Dict[str, Any]:
+    """Extracts tax ID, buyer ID, invoice number, and amount cents for invoice verification."""
+    tax_id: str = "12-3456789"
+    buyer_id: str = "BUYER-CORP"
+    invoice_num: str = "INV-001"
+    amount_cents: int = 500000
+
+    tax_m = re.search(r"(?:tax\s*(?:id|number)?|ein)\s*[:= ]*\s*([A-Za-z0-9\-]+)", text, re.IGNORECASE)
+    if tax_m:
+        tax_id = tax_m.group(1)
+
+    buyer_m = re.search(r"(?:buyer\s*(?:id|name)?|client)\s*[:= ]*\s*([A-Za-z0-9\-]+)", text, re.IGNORECASE)
+    if buyer_m:
+        buyer_id = buyer_m.group(1)
+
+    inv_m = re.search(r"(?:invoice\s*(?:num|number|id|#)?)\s*[:= ]*\s*([A-Za-z0-9\-]+)", text, re.IGNORECASE)
+    if inv_m:
+        invoice_num = inv_m.group(1)
+
+    amt_m = re.search(r"\$([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|\d+[km]?)", text)
+    if amt_m:
+        val = parse_numeric_token(amt_m.group(1))
+        if val:
+            amount_cents = int(val * 100)
+
+    return {
+        "tax_id": tax_id,
+        "buyer_id": buyer_id,
+        "invoice_num": invoice_num,
+        "amount_cents": amount_cents,
+    }

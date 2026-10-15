@@ -36,12 +36,19 @@ from services.calculations.concentration_risk import (
     calculate_revenue_attrition_impact,
 )
 from services.agent.tools import (
-    tool_calculate_dscr,
-    tool_calculate_loan_amortization,
     tool_calculate_break_even,
-    tool_calculate_factoring_proceeds,
+    tool_calculate_break_even_units,
     tool_calculate_client_concentration,
     tool_calculate_defensive_interval,
+    tool_calculate_dscr,
+    tool_calculate_factoring_proceeds,
+    tool_calculate_fccr,
+    tool_calculate_loan_amortization,
+    tool_calculate_operating_cash_flow_ratio,
+    tool_calculate_prudent_debt_capacity,
+    tool_calculate_revenue_attrition_impact,
+    tool_calculate_wcr,
+    tool_verify_invoice_hash,
 )
 
 
@@ -301,3 +308,53 @@ def test_agent_tool_wrappers():
     dir_res = tool_calculate_defensive_interval("90000", "1000")
     assert dir_res["defensive_interval_days"] == "90.00"
     assert dir_res["liquidity_tier"] == "PRIME"
+
+
+def test_expanded_agent_tool_wrappers():
+    """Verify all 7 additional financial tools accept string inputs and return typed dicts."""
+    # 1. FCCR
+    fccr_res = tool_calculate_fccr("200000", "40000", "60000")
+    assert fccr_res["fccr"] == "2.40"
+    assert fccr_res["underwriting_tier"] == "APPROVED"
+
+    # 2. Prudent Debt Capacity
+    debt_cap_res = tool_calculate_prudent_debt_capacity(
+        net_operating_income="120000",
+        target_dscr="1.25",
+        annual_interest_rate_pct="8.5",
+        term_years=2,
+    )
+    assert float(debt_cap_res["maximum_prudent_debt_capacity"]) > 0
+    assert debt_cap_res["target_dscr"] == "1.25"
+
+    # 3. WCR
+    wcr_res = tool_calculate_wcr("50000", "30000", "20000")
+    assert wcr_res["working_capital_requirement"] == "60000.00"
+    assert wcr_res["liquidity_posture"] == "BALANCED"
+
+    # 4. Operating Cash Flow Ratio
+    ocf_res = tool_calculate_operating_cash_flow_ratio("90000", "60000")
+    assert ocf_res["operating_cash_flow_ratio"] == "1.50"
+    assert ocf_res["solvency_tier"] == "STRONG"
+
+    # 5. Break-Even Units
+    be_units_res = tool_calculate_break_even_units("40000", "100", "60")
+    assert be_units_res["break_even_units_required"] == 1000
+    assert be_units_res["unit_contribution_margin"] == "40.00"
+
+    # 6. Revenue Attrition Impact
+    attr_res = tool_calculate_revenue_attrition_impact("300000", "250000", "80000")
+    assert attr_res["lost_revenue_share_percent"] == "26.67"
+    assert attr_res["severity"] == "CRITICAL"
+
+    # 7. Invoice Hash Verification
+    inv_res = tool_verify_invoice_hash(
+        tax_id="12-3456789",
+        buyer_id="BUYER-CORP",
+        invoice_num="INV-999",
+        amount_cents=500000,
+    )
+    assert inv_res["invoice_hash"].startswith("0x")
+    assert inv_res["consortium_status"] == "UNREGISTERED"
+    assert inv_res["is_double_financing_risk"] is False
+

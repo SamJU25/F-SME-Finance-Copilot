@@ -616,6 +616,106 @@ def test_agent_chat_defensive_interval_ratio():
     assert data["metrics"] is not None
 
 
+def test_agent_chat_fccr():
+    """Verify Fixed Charge Coverage Ratio calculation and underwriting approval tier."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "Calculate FCCR for EBITDA $200,000, fixed charges $40,000, and debt service $60,000"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Fixed Charge Coverage Ratio (FCCR)" in data["reply"]
+    assert "2.40x" in data["reply"]
+    assert "APPROVED" in data["reply"]
+
+
+def test_agent_chat_prudent_debt_capacity():
+    """Verify maximum prudent debt capacity calculation with target DSCR covenant."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "What is our maximum prudent borrowing capacity with $120,000 NOI at 1.25x DSCR?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Prudent Debt Capacity & Borrowing Limit" in data["reply"]
+    assert "Maximum Prudent Debt Capacity" in data["reply"]
+    assert "$120,000.00" in data["reply"]
+
+
+def test_agent_chat_working_capital_requirement():
+    """Verify Working Capital Requirement (WCR) calculation and liquidity posture."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "What is our working capital requirement if receivables are $50,000, inventory $30,000, and payables $20,000?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Working Capital Requirement (WCR) Audit" in data["reply"]
+    assert "$60,000.00" in data["reply"]
+    assert "BALANCED" in data["reply"]
+
+
+def test_agent_chat_operating_cash_flow_ratio():
+    """Verify Operating Cash Flow (OCF) ratio assessment and solvency classification."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "Calculate our operating cash flow ratio for OCF $90,000 and current liabilities $60,000"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Operating Cash Flow (OCF) Ratio Assessment" in data["reply"]
+    assert "1.50x" in data["reply"]
+    assert "STRONG" in data["reply"]
+
+
+def test_agent_chat_break_even_units():
+    """Verify unit-level break-even volume calculation with contribution margin."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "How many units must we sell to break even if fixed costs are $40,000, price $100, and variable cost $60?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Break-Even Unit Volume Analysis" in data["reply"]
+    assert "1,000 units" in data["reply"]
+    assert "$40.00/unit" in data["reply"]
+
+
+def test_agent_chat_customer_attrition_impact():
+    """Verify customer churn revenue attrition stress testing on annual cash burn."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "What is the cash flow impact if we lose our largest client who pays $80,000 out of $300,000 revenue with $250,000 annual expenses?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Client Revenue Attrition & Cash Flow Stress Test" in data["reply"]
+    assert "26.67%" in data["reply"]
+    assert "CRITICAL" in data["reply"]
+
+
+def test_agent_chat_invoice_hash_verification():
+    """Verify consortium blockchain SHA-256 invoice hashing and unencumbered asset status."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "Verify invoice hash for tax ID 12-3456789, buyer BUYER-CORP, invoice INV-001 for $5,000"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Consortium Blockchain Invoice Hash Verification" in data["reply"]
+    assert "0x" in data["reply"]
+    assert "UNREGISTERED" in data["reply"]
+    assert "VALIDATED" in data["reply"]
+
+
+
 
 
 

@@ -125,3 +125,65 @@ def calculate_revenue_attrition_impact(
     runway_loss_days = max(Decimal("0"), original_runway - new_runway)
 
     return annualized_drag, new_daily_burn, runway_loss_days
+
+
+def calculate_client_churn_impact(
+    current_annual_revenue: Decimal,
+    current_annual_burn: Decimal,
+    lost_client_annual_revenue: Decimal,
+) -> Dict[str, Any]:
+    """Assess cash flow and burn expansion impact if a major customer churns.
+
+    Formulas:
+      lost_revenue_share_pct = (lost_client_revenue / current_revenue) * 100
+      remaining_revenue = max(0, current_revenue - lost_client_revenue)
+      projected_annual_deficit = max(0, current_annual_burn - remaining_revenue)
+      burn_expansion_rate = (lost_client_revenue / current_annual_burn) * 100
+    """
+    if current_annual_revenue <= Decimal("0.00"):
+        raise ValueError("current_annual_revenue must be positive.")
+    if lost_client_annual_revenue < Decimal("0.00"):
+        raise ValueError("lost_client_annual_revenue cannot be negative.")
+
+    lost_share = (lost_client_annual_revenue / current_annual_revenue * Decimal("100")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    rem_rev = max(Decimal("0.00"), current_annual_revenue - lost_client_annual_revenue)
+
+    projected_annual_burn = max(Decimal("0.00"), current_annual_burn - rem_rev).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+    if current_annual_burn > Decimal("0.00"):
+        burn_expansion = (lost_client_annual_revenue / current_annual_burn * Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    else:
+        burn_expansion = Decimal("0.00")
+
+    if projected_annual_burn > Decimal("0.00") or lost_share >= Decimal("25.00"):
+        severity = "CRITICAL"
+        recommendation = (
+            f"Loss of client creates an immediate annual operating deficit of ${projected_annual_burn:,.2f} "
+            f"({lost_share}% revenue loss). Secure bridge working capital or cut overhead immediately."
+        )
+    elif lost_share >= Decimal("15.00"):
+        severity = "ELEVATED"
+        recommendation = (
+            f"Loss represents {lost_share}% of annual revenue. Operating cash flow tightens; "
+            f"diversify pipeline to replace customer volume."
+        )
+    else:
+        severity = "MODERATE"
+        recommendation = (
+            f"Loss represents {lost_share}% of annual revenue. Operating margin absorbs the variance, "
+            f"maintain active pipeline."
+        )
+
+    return {
+        "lost_revenue_share_percent": lost_share,
+        "projected_annual_burn": projected_annual_burn,
+        "burn_expansion_rate_percent": burn_expansion,
+        "severity": severity,
+        "recommendation": recommendation,
+    }

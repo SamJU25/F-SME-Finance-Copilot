@@ -24,6 +24,7 @@ from services.calculations.debt_service import (
 from services.calculations.unit_economics import (
     calculate_contribution_margin as calc_cm,
     calculate_break_even as calc_break_even,
+    calculate_break_even_units as calc_be_units,
     calculate_margin_of_safety as calc_mos,
     calculate_operating_margins as calc_op_margins,
 )
@@ -37,6 +38,11 @@ from services.calculations.working_capital import (
 from services.calculations.concentration_risk import (
     calculate_client_concentration as calc_concentration,
     calculate_revenue_attrition_impact as calc_attrition,
+    calculate_client_churn_impact as calc_client_churn,
+)
+from services.blockchain.invoice_hasher import (
+    calculate_canonical_invoice_hash,
+    invoice_registry,
 )
 from services.ingestion.csv_parser import parse_bank_csv
 from services.matcher.liquidity_matcher import (
@@ -377,4 +383,171 @@ def tool_calculate_defensive_interval(
         "defensive_interval_days": str(dir_days),
         "liquidity_tier": tier,
         "rationale": rationale,
+    }
+
+
+def tool_calculate_fccr(
+    ebitda: Any,
+    fixed_charges: Any,
+    total_debt_service: Any,
+) -> Dict[str, Any]:
+    """Calculate Fixed Charge Coverage Ratio (FCCR) and credit tier."""
+    eb = _to_decimal(ebitda)
+    fc = _to_decimal(fixed_charges)
+    ds = _to_decimal(total_debt_service)
+    fccr, tier, rationale = calc_fccr(eb, fc, ds)
+    return {
+        "ebitda": _format_money(eb),
+        "fixed_charges": _format_money(fc),
+        "total_debt_service": _format_money(ds),
+        "fccr": str(fccr),
+        "underwriting_tier": tier,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_prudent_debt_capacity(
+    net_operating_income: Any,
+    target_dscr: Any = "1.25",
+    annual_interest_rate_pct: Any = "8.5",
+    term_years: int = 2,
+    existing_annual_debt_service: Any = "0.00",
+    ebitda: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate maximum prudent borrowing limit without violating DSCR and leverage covenants."""
+    noi = _to_decimal(net_operating_income)
+    dscr_val = _to_decimal(target_dscr)
+    raw_rate = _to_decimal(annual_interest_rate_pct)
+    rate = raw_rate / Decimal("100") if raw_rate > Decimal("1.00") else raw_rate
+    service = _to_decimal(existing_annual_debt_service)
+    eb = _to_decimal(ebitda) if ebitda is not None else None
+
+    cap = calc_debt_capacity(
+        net_operating_income=noi,
+        target_dscr=dscr_val,
+        existing_annual_debt_service=service,
+        annual_interest_rate=rate,
+        term_years=term_years,
+        ebitda=eb,
+    )
+    return {
+        "net_operating_income": _format_money(noi),
+        "target_dscr": str(dscr_val),
+        "annual_interest_rate_pct": _format_money(rate * Decimal("100")),
+        "term_years": term_years,
+        "existing_annual_debt_service": _format_money(service),
+        "ebitda": _format_money(eb) if eb is not None else None,
+        "maximum_prudent_debt_capacity": _format_money(cap),
+        "advisory_summary": f"Maximum prudent borrowing capacity capped at ${_format_money(cap)} to preserve a {dscr_val}x DSCR covenant.",
+    }
+
+
+def tool_calculate_wcr(
+    accounts_receivable: Any,
+    inventory: Any,
+    accounts_payable: Any,
+    annual_revenue: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate Working Capital Requirement (WCR = AR + Inventory - AP)."""
+    ar = _to_decimal(accounts_receivable)
+    inv = _to_decimal(inventory)
+    ap = _to_decimal(accounts_payable)
+    rev = _to_decimal(annual_revenue) if annual_revenue is not None else None
+    wcr, days, status = calc_wcr(ar, inv, ap, annual_revenue=rev)
+    rationale = f"Net working capital requirement is ${_format_money(wcr)} ({status})."
+    return {
+        "accounts_receivable": _format_money(ar),
+        "inventory": _format_money(inv),
+        "accounts_payable": _format_money(ap),
+        "working_capital_requirement": _format_money(wcr),
+        "wcr_days_of_revenue": str(days) if days is not None else None,
+        "liquidity_posture": status,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_operating_cash_flow_ratio(
+    operating_cash_flow: Any,
+    current_liabilities: Any,
+) -> Dict[str, Any]:
+    """Calculate Operating Cash Flow Ratio (OCF / Current Liabilities)."""
+    ocf = _to_decimal(operating_cash_flow)
+    cl = _to_decimal(current_liabilities)
+    ratio, tier, rationale = calc_ocf_ratio(ocf, cl)
+    return {
+        "operating_cash_flow": _format_money(ocf),
+        "current_liabilities": _format_money(cl),
+        "operating_cash_flow_ratio": str(ratio),
+        "solvency_tier": tier,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_break_even_units(
+    fixed_costs: Any,
+    unit_selling_price: Any,
+    unit_variable_cost: Any,
+) -> Dict[str, Any]:
+    """Calculate Break-Even Volume in physical units and unit contribution margin."""
+    fc = _to_decimal(fixed_costs)
+    p = _to_decimal(unit_selling_price)
+    vc = _to_decimal(unit_variable_cost)
+    be_units = calc_be_units(fc, p, vc)
+    unit_cm = p - vc
+    assessment = f"Must sell {int(be_units):,} units at ${_format_money(p)} to fully cover ${_format_money(fc)} fixed overhead."
+    return {
+        "fixed_costs": _format_money(fc),
+        "unit_selling_price": _format_money(p),
+        "unit_variable_cost": _format_money(vc),
+        "unit_contribution_margin": _format_money(unit_cm),
+        "break_even_units_required": int(be_units),
+        "assessment": assessment,
+    }
+
+
+def tool_calculate_revenue_attrition_impact(
+    current_annual_revenue: Any,
+    current_annual_burn: Any,
+    lost_client_annual_revenue: Any,
+) -> Dict[str, Any]:
+    """Assess cash flow and burn expansion impact if a major customer churns."""
+    rev = _to_decimal(current_annual_revenue)
+    burn = _to_decimal(current_annual_burn)
+    lost = _to_decimal(lost_client_annual_revenue)
+    res = calc_client_churn(rev, burn, lost)
+    return {
+        "current_annual_revenue": _format_money(rev),
+        "current_annual_burn": _format_money(burn),
+        "lost_client_annual_revenue": _format_money(lost),
+        "lost_revenue_share_percent": str(res["lost_revenue_share_percent"]),
+        "projected_annual_burn": str(res["projected_annual_burn"]),
+        "burn_expansion_rate_percent": str(res["burn_expansion_rate_percent"]),
+        "severity": res["severity"],
+        "recommendation": res["recommendation"],
+    }
+
+
+def tool_verify_invoice_hash(
+    tax_id: str,
+    buyer_id: str,
+    invoice_num: str,
+    amount_cents: int,
+) -> Dict[str, Any]:
+    """Compute canonical SHA-256 invoice hash and check double-financing on consortium registry."""
+    inv_hash = calculate_canonical_invoice_hash(
+        tax_id=tax_id,
+        buyer_id=buyer_id,
+        invoice_num=invoice_num,
+        amount_cents=amount_cents,
+    )
+    status = invoice_registry.get_invoice_status(inv_hash)
+    return {
+        "tax_id": tax_id.strip().upper(),
+        "buyer_id": buyer_id.strip().upper(),
+        "invoice_num": invoice_num.strip().upper(),
+        "amount_cents": amount_cents,
+        "amount_dollars": _format_money(Decimal(amount_cents) / Decimal("100")),
+        "invoice_hash": inv_hash,
+        "consortium_status": status.value,
+        "is_double_financing_risk": status.value != "UNREGISTERED",
     }
