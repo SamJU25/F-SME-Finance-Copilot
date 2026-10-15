@@ -217,6 +217,67 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
   }
 }
 
+.starter-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 4px 0 8px;
+}
+
+.starter-prompt-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.starter-prompt-card:hover {
+  border-color: var(--green);
+  background: #f7faf8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.starter-prompt-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f1f4f1;
+}
+
+.starter-prompt-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.starter-prompt-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.starter-prompt-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .chat-pills {
   display: flex;
   flex-wrap: wrap;

@@ -79,6 +79,33 @@ function money(value: string, currency: string): string {
   }
 }
 
+const STARTER_PROMPTS = [
+  {
+    icon: '📊',
+    title: 'Analyze Runway & Daily Burn',
+    desc: 'Calculate exact survival days and daily cash outflow velocity',
+    prompt: 'What is my current runway and daily burn rate?',
+  },
+  {
+    icon: '⚠️',
+    title: 'Detect Cash Deficit Risks',
+    desc: 'Early-warning forecast for upcoming cash crunches and overdrafts',
+    prompt: 'Check for upcoming cash shortfalls and deficit risks over the next 60 days.',
+  },
+  {
+    icon: '💼',
+    title: 'Match Pre-Qualified Credit Facilities',
+    desc: 'Review non-predatory credit lines with true APR disclosures',
+    prompt: 'What pre-qualified loan or credit line options can my business qualify for?',
+  },
+  {
+    icon: '🔄',
+    title: 'Audit Working Capital & CCC',
+    desc: 'Assess Cash Conversion Cycle, receivable delays, and payables buffer',
+    prompt: 'Audit our Cash Conversion Cycle (CCC) and working capital efficiency.',
+  },
+];
+
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
@@ -95,7 +122,7 @@ export default function HomePage() {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([
     {
       role: 'agent',
-      text: 'Hello, I am your Autonomous SME Finance Copilot. Upload your bank statement or click a quick prompt below to diagnose your runway, evaluate financing facilities, or stage credit applications.',
+      text: 'Hello, I am your Autonomous SME Finance Copilot. You can pick an inquiry below, ask any financial question, or upload your transactional bank statement on the left to run live diagnostics.',
     },
   ]);
 
@@ -613,6 +640,29 @@ export default function HomePage() {
                 )}
               </div>
             ))}
+            {/* Starter Prompt Cards (Only visible before user asks a question) */}
+            {!messages.some((m) => m.role === 'user') && (
+              <div className="starter-prompts">
+                <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 2 }}>
+                  Suggested Financial Inquiries
+                </span>
+                {STARTER_PROMPTS.map((item, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    className="starter-prompt-card"
+                    onClick={() => sendChatMessage(item.prompt)}
+                  >
+                    <span className="starter-prompt-icon" aria-hidden="true">{item.icon}</span>
+                    <div className="starter-prompt-content">
+                      <span className="starter-prompt-title">{item.title}</span>
+                      <span className="starter-prompt-desc">{item.desc}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {chatLoading && (
               <div className="chat-msg agent">
                 <div className="chat-bubble" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
@@ -625,34 +675,6 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Quick Action Suggestion Pills */}
-          <div style={{ padding: '8px 16px', background: '#fafbf9', borderTop: '1px solid var(--line)' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4, fontWeight: 600 }}>Quick Prompts:</span>
-            <div className="chat-pills">
-              <button
-                className="pill-btn"
-                type="button"
-                onClick={() => sendChatMessage('What is my current runway and daily burn rate?')}
-              >
-                📊 Check Runway
-              </button>
-              <button
-                className="pill-btn"
-                type="button"
-                onClick={() => sendChatMessage('What loan or credit line options can my business qualify for?')}
-              >
-                💼 Match Credit Facilities
-              </button>
-              <button
-                className="pill-btn"
-                type="button"
-                onClick={() => sendChatMessage('Please stage an application to draw line of $25,000 for working capital')}
-              >
-                ⚡ Stage $25k Loan
-              </button>
-            </div>
           </div>
 
           <form
