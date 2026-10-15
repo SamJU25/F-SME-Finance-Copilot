@@ -1458,9 +1458,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792058349.461003,
-    "seen": 1792058404.169295,
-    "ast_hash": "36672445189670b76d47c70bea29a58e",
+    "mtime": 1792059251.4800198,
+    "seen": 1792059439.9840899,
+    "ast_hash": "301fde44dd9f3defe9812381f8bb2ecc",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1470,15 +1470,15 @@
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
-    "mtime": 1792057984.5785906,
-    "seen": 1792058063.274948,
-    "ast_hash": "b126137b6fb1f600a71015e2b7d09928",
+    "mtime": 1792059376.1706338,
+    "seen": 1792059439.9861846,
+    "ast_hash": "75b6e462536650ad98c3cbdd2467ef71",
     "semantic_hash": ""
   },
   "services/agent/llm_bridge.py": {
-    "mtime": 1792057631.167377,
-    "seen": 1792058063.2722352,
-    "ast_hash": "921f5643b5ff4fc67883f2fc2ed2dc1d",
+    "mtime": 1792059307.3166592,
+    "seen": 1792059439.9838552,
+    "ast_hash": "0599d6eb470c03254da25318c4751a5e",
     "semantic_hash": ""
   },
   "services/calculations/predictive_cash.py": {
@@ -1497,6 +1497,18 @@
     "mtime": 1792057848.79605,
     "seen": 1792058063.272362,
     "ast_hash": "82bcac9524fd83217d7ac8a246ec6aaa",
+    "semantic_hash": ""
+  },
+  "scripts/download_llama.py": {
+    "mtime": 1792058901.545901,
+    "seen": 1792059439.9836152,
+    "ast_hash": "905f468141ffa90c945d8bf5e44fe294",
+    "semantic_hash": ""
+  },
+  "services/agent/local_slm.py": {
+    "mtime": 1792059008.6205685,
+    "seen": 1792059439.9838576,
+    "ast_hash": "b9699ee7b4593a9bd2ac3e3f699067c7",
     "semantic_hash": ""
   }
 }

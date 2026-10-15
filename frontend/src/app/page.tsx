@@ -17,8 +17,8 @@ const CSV_HEADER = 'transaction_id,posted_on,amount,currency,description,closing
 const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defaultUrl?: string; description: string }> = {
   offline: {
     name: 'Offline Local Engine (Zero Keys)',
-    defaultModel: 'deterministic-v1',
-    description: '100% private and offline. Pure Python Decimal calculation with zero external API calls.',
+    defaultModel: 'llama-3.2-1b-instruct-onnx',
+    description: '100% private and on-device. Meta Llama-3.2-1B ONNX local generation with zero external API calls.',
   },
   gemini: {
     name: 'Google Gemini',
@@ -102,11 +102,11 @@ export default function HomePage() {
   // Multi-Provider AI Settings State
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
     provider: 'offline',
-    model_name: 'deterministic-v1',
+    model_name: 'llama-3.2-1b-instruct-onnx',
   });
   const [draftConfig, setDraftConfig] = useState<LLMConfig>({
     provider: 'offline',
-    model_name: 'deterministic-v1',
+    model_name: 'llama-3.2-1b-instruct-onnx',
   });
   const [showSettings, setShowSettings] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -133,8 +133,11 @@ export default function HomePage() {
 
   async function fetchModels(cfg: LLMConfig) {
     if (cfg.provider === 'offline') {
-      setAvailableModels([{ id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' }]);
-      setModelsMessage(null);
+      setAvailableModels([
+        { id: 'llama-3.2-1b-instruct-onnx', name: 'Meta Llama-3.2-1B-Instruct (On-Device ONNX)' },
+        { id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' },
+      ]);
+      setModelsMessage('✅ On-device SLM active: Meta Llama-3.2-1B-Instruct (Zero external keys).');
       return;
     }
 
@@ -689,13 +692,20 @@ export default function HomePage() {
                     const nextCfg: LLMConfig = {
                       ...draftConfig,
                       provider: p,
-                      model_name: p === 'offline' ? 'deterministic-v1' : '',
+                      model_name: p === 'offline' ? 'llama-3.2-1b-instruct-onnx' : '',
                       base_url: info.defaultUrl || '',
                     };
                     setDraftConfig(nextCfg);
                     setTestResult(null);
                     setCustomModelMode(false);
-                    setAvailableModels(p === 'offline' ? [{ id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' }] : []);
+                    setAvailableModels(
+                      p === 'offline'
+                        ? [
+                            { id: 'llama-3.2-1b-instruct-onnx', name: 'Meta Llama-3.2-1B-Instruct (On-Device ONNX)' },
+                            { id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' },
+                          ]
+                        : []
+                    );
                     if (p === 'offline' || nextCfg.api_key) {
                       fetchModels(nextCfg);
                     } else {
@@ -748,7 +758,6 @@ export default function HomePage() {
                 </div>
               )}
 
-              {draftConfig.provider !== 'offline' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <label className="field-label" style={{ margin: 0 }} htmlFor="model-select">Target Model</label>
@@ -844,7 +853,6 @@ export default function HomePage() {
                     </div>
                   )}
                 </div>
-              )}
 
               {testResult && (
                 <div className={`test-status ${testResult.success ? 'success' : 'error'}`} role="status">

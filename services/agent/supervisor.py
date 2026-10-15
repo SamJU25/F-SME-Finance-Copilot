@@ -402,6 +402,30 @@ def run_copilot_supervisor(
 
 
     # 4. General Financial Dialogue
+    is_local = (
+        effective_config
+        and (effective_config.provider or "").lower() == "offline"
+        and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
+    )
+    if is_local:
+        sys_directive = (
+            "You are the Autonomous SME Finance Copilot, an AI assistant for business owners. "
+            "Respond conversationally, warmly, and concisely in 2 sentences. "
+            "Mention that you can analyze cash runway, check financing options, or forecast cash shortfalls."
+        )
+        local_reply = generate_local_reply(
+            prompt=request.message,
+            system_instruction=sys_directive,
+            history=request.history,
+            max_new_tokens=70,
+        )
+        if local_reply:
+            return CopilotResponse(
+                reply=local_reply,
+                intent_detected="GENERAL_ASSISTANCE",
+                requires_biometric_hitl=False,
+            )
+
     if request.csv_content:
         general_reply = (
             "Statement loaded. You can ask follow-up questions such as 'how many days left?', "
