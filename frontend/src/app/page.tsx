@@ -1369,14 +1369,16 @@ export default function HomePage() {
                     </span>
                   )}
                 </div>
-                {result?.end_date && (
+                {result?.start_date && result?.end_date ? (
+                  <p className="result-as-of">
+                    Statement period: <time dateTime={result.start_date}>{result.start_date}</time> to{' '}
+                    <time dateTime={result.end_date}>{result.end_date}</time>
+                  </p>
+                ) : result?.end_date ? (
                   <p className="result-as-of">
                     As of statement close: <time dateTime={result.end_date}>{result.end_date}</time>
-                    {result.start_date && (
-                      <span className="result-span"> · {result.start_date} to {result.end_date}</span>
-                    )}
                   </p>
-                )}
+                ) : null}
               </div>
               {result && (
                 <span

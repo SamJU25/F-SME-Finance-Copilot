@@ -2948,7 +2948,7 @@
       "file_type": "code",
       "norm_label": "metric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L2056"
+      "source_location": "L2058"
     },
     {
       "id": "frontend_src_app_page_money",
@@ -33832,7 +33832,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1405",
+      "source_location": "L1407",
       "weight": 1.0
     },
     {
@@ -33844,7 +33844,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1407",
+      "source_location": "L1409",
       "weight": 1.0
     },
     {
@@ -33856,7 +33856,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1607",
+      "source_location": "L1609",
       "weight": 1.0
     },
     {
@@ -33868,7 +33868,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1688",
+      "source_location": "L1690",
       "weight": 1.0
     },
     {
@@ -63600,7 +63600,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L2056",
+      "source_location": "L2058",
       "weight": 1.0
     },
     {
@@ -76579,5 +76579,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a5732ac8e28ed27fd3bed4c75338d984813f6d5e"
+  "built_at_commit": "cbb1dc8a272c5c9f5d9a49785d31b7166c075736"
 }
