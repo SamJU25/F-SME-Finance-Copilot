@@ -147,17 +147,20 @@ function buildCashTrajectorySeries(
 
   if (curBal > 0 && burn > 0) {
     const lastDate = new Date(lastDateStr);
-    const maxDays = Math.min(90, res.runway_days ? res.runway_days + 15 : 90);
+    const maxDays = Math.max(thresholdDays, Math.min(120, res.runway_days ? res.runway_days + 15 : 90));
     const lastPoint = points[points.length - 1];
     if (lastPoint) {
       lastPoint.projection = lastPoint.balance;
     }
 
     const intervals = [7, 14, 21, 30, 45, 60, 90].filter((d) => d <= maxDays);
+    if (thresholdDays > 0 && !intervals.includes(thresholdDays) && thresholdDays <= maxDays) {
+      intervals.push(thresholdDays);
+    }
     if (res.runway_days && !intervals.includes(res.runway_days)) {
       intervals.push(res.runway_days);
-      intervals.sort((a, b) => a - b);
     }
+    intervals.sort((a, b) => a - b);
 
     for (const d of intervals) {
       const projDate = new Date(lastDate.getTime() + d * 86400000);
@@ -170,6 +173,20 @@ function buildCashTrajectorySeries(
         isProjection: true,
       });
     }
+  } else if (curBal > 0 && burn === 0 && thresholdDays > 0) {
+    const lastDate = new Date(lastDateStr);
+    const lastPoint = points[points.length - 1];
+    if (lastPoint) {
+      lastPoint.projection = lastPoint.balance;
+    }
+    const projDate = new Date(lastDate.getTime() + thresholdDays * 86400000);
+    const iso = projDate.toISOString().slice(0, 10);
+    points.push({
+      date: iso,
+      displayDate: `${iso.slice(5)} (+${thresholdDays}d)`,
+      projection: curBal,
+      isProjection: true,
+    });
   }
 
   return points;
@@ -590,6 +607,10 @@ export default function HomePage() {
     return monthPoints.length > 0 ? monthPoints : trajectoryData;
   }, [trajectoryData, selectedMonth, availableMonths]);
 
+  const alertHorizonPoint = useMemo(() => {
+    return displayedChartData.find((p) => p.isProjection && p.displayDate.includes(`+${threshold}d`));
+  }, [displayedChartData, threshold]);
+
   const selectedMonthStats = useMemo(() => {
     if (selectedMonth === 'all') return null;
     const monthPts = trajectoryData.filter((p) => p.date.startsWith(selectedMonth) && !p.isProjection);
@@ -980,10 +1001,12 @@ export default function HomePage() {
     setTestResult(null);
   }
 
-  async function executeAnalysis(targetFile: File | File[], thresholdValue?: string) {
+  async function executeAnalysis(targetFile: File | File[], thresholdValue?: string, preserveResult = false) {
     setLoading(true);
     setError(null);
-    setResult(null);
+    if (!preserveResult) {
+      setResult(null);
+    }
     const effectiveDays = thresholdValue && Number(thresholdValue) >= 1
       ? thresholdValue
       : (threshold && Number(threshold) >= 1 ? threshold : '30');
@@ -1019,6 +1042,18 @@ export default function HomePage() {
       setError(cause instanceof Error ? cause.message : 'A network error interrupted the request. Try again.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleUpdateThreshold(newDays: string) {
+    const num = parseInt(newDays, 10);
+    if (isNaN(num) || num < 1) return;
+    const safeDays = String(num);
+    setThreshold(safeDays);
+    setAccountAnalysisCache({});
+    const target = filesList.length > 0 ? filesList : (file || (csvText ? new File([csvText], 'statement.csv', { type: 'text/csv' }) : null));
+    if (target) {
+      await executeAnalysis(target, safeDays, true);
     }
   }
 
@@ -1635,9 +1670,9 @@ export default function HomePage() {
                             className={`threshold-pill ${isSelected ? 'active' : ''}`}
                             onClick={() => {
                               setThreshold(preset.days);
-                              if (file || csvText) {
-                                const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
-                                executeAnalysis(target, preset.days);
+                              const currentFilesTarget = filesList.length > 1 ? filesList : (filesList[0] || file || (csvText ? new File([csvText], 'statement.csv', { type: 'text/csv' }) : null));
+                              if (currentFilesTarget) {
+                                executeAnalysis(currentFilesTarget, preset.days);
                               }
                             }}
                           >
@@ -1664,19 +1699,22 @@ export default function HomePage() {
                         onChange={(event) => setThreshold(event.target.value)}
                         onBlur={() => {
                           const num = Number(threshold);
-                          if (!threshold || isNaN(num) || num < 1) {
-                            setThreshold('30');
-                          } else if (file || csvText) {
-                            const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
-                            executeAnalysis(target, threshold);
+                          const safe = !threshold || isNaN(num) || num < 1 ? '30' : threshold;
+                          setThreshold(safe);
+                          const currentFilesTarget = filesList.length > 1 ? filesList : (filesList[0] || file || (csvText ? new File([csvText], 'statement.csv', { type: 'text/csv' }) : null));
+                          if (currentFilesTarget) {
+                            executeAnalysis(currentFilesTarget, safe);
                           }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (file || csvText) {
-                              const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
-                              executeAnalysis(target, threshold);
+                            const num = Number(threshold);
+                            const safe = !threshold || isNaN(num) || num < 1 ? '30' : threshold;
+                            setThreshold(safe);
+                            const currentFilesTarget = filesList.length > 1 ? filesList : (filesList[0] || file || (csvText ? new File([csvText], 'statement.csv', { type: 'text/csv' }) : null));
+                            if (currentFilesTarget) {
+                              executeAnalysis(currentFilesTarget, safe);
                             }
                           }
                         }}
@@ -1876,18 +1914,37 @@ export default function HomePage() {
                           key={preset.days}
                           type="button"
                           className={`threshold-quick-pill ${isSelected ? 'active' : ''}`}
-                          onClick={() => {
-                            setThreshold(preset.days);
-                            if (filesList.length > 0 || file || csvText) {
-                              const target = filesList.length > 0 ? filesList : (file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' }));
-                              executeAnalysis(target, preset.days);
-                            }
-                          }}
+                          onClick={() => handleUpdateThreshold(preset.days)}
                         >
                           {preset.label}
                         </button>
                       );
                     })}
+                  </div>
+                  <div className="threshold-quick-custom" title="Custom warning horizon in days">
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      className="threshold-quick-input"
+                      value={threshold}
+                      onChange={(e) => setThreshold(e.target.value)}
+                      onBlur={() => {
+                        const num = Number(threshold);
+                        if (!threshold || isNaN(num) || num < 1) {
+                          handleUpdateThreshold('30');
+                        } else {
+                          handleUpdateThreshold(threshold);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
+                      aria-label="Custom warning horizon days"
+                    />
+                    <span className="threshold-quick-unit">d</span>
                   </div>
                 </div>
 
@@ -1902,15 +1959,17 @@ export default function HomePage() {
                   style={{ display: 'none' }}
                   onChange={handleFileInputChange}
                 />
-                <button
-                  type="button"
-                  className="context-action-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Add another statement to consolidate treasury"
-                >
-                  <span style={{ fontWeight: 700, color: 'var(--green)' }}>+</span>
-                  <span>Add Statement</span>
-                </button>
+                {filesList.length <= 1 && (
+                  <button
+                    type="button"
+                    className="context-action-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Add another statement to consolidate treasury"
+                  >
+                    <span style={{ fontWeight: 700, color: 'var(--green)' }}>+</span>
+                    <span>Add Statement</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="context-action-btn danger"
@@ -1976,7 +2035,7 @@ export default function HomePage() {
                     fontWeight: 600,
                   }}
                 >
-                  + Add Another
+                  + Add Statement
                 </button>
               </div>
             )}
@@ -2128,10 +2187,10 @@ export default function HomePage() {
                 </div>
                 <div className="verdict-card-sub">
                   {(displayResult || result).runway_days === null
-                    ? 'Net cash-positive · Inflows exceed burn'
+                    ? `Net cash-positive · Exceeds ${threshold}d warning horizon`
                     : (displayResult || result).projected_depletion_date
-                    ? `Projected zero-cash: ${(displayResult || result).projected_depletion_date}`
-                    : `Cash depletes within ${(displayResult || result).runway_days} days`}
+                    ? `Projected zero-cash: ${(displayResult || result).projected_depletion_date} (${threshold}d horizon)`
+                    : `Cash depletes within ${(displayResult || result).runway_days}d against ${threshold}d horizon`}
                 </div>
               </div>
 
@@ -2267,6 +2326,21 @@ export default function HomePage() {
                         />
                         <Tooltip content={<CustomChartTooltip currency={(displayResult || result).currency} />} />
                         <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
+                        {alertHorizonPoint && (
+                          <ReferenceLine
+                            x={alertHorizonPoint.displayDate}
+                            stroke="#d97706"
+                            strokeDasharray="4 4"
+                            strokeWidth={1.5}
+                            label={{
+                              value: `${threshold}d Alert Horizon`,
+                              position: 'insideTopRight',
+                              fill: '#d97706',
+                              fontSize: 10.5,
+                              fontWeight: 600,
+                            }}
+                          />
+                        )}
                         <Area
                           type="monotone"
                           dataKey="balance"
