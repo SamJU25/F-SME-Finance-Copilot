@@ -40,52 +40,33 @@ def inspect_for_prompt_injection(text: str) -> bool:
     return bool(INJECTION_PATTERN.search(text))
 
 
+from services.agent.semantic_router import semantic_classify
+
+
 def detect_intent(message: str, request: AgentChatRequest) -> str:
-    """Classifies user chat message into structured financial intent categories."""
+    """Classifies user chat message into structured financial intent categories using in-process Vector Routing."""
     if inspect_for_prompt_injection(message):
         return "SECURITY_DEFENSE_TRIGGERED"
 
     msg_lower = message.lower().strip()
 
-    # 1. Action Staging (Tier 2 intent creation)
-    action_keywords = [
-        "apply for", "stage", "draw line", "draw credit", "draw money",
-        "commit transfer", "pledge invoice", "take the loan", "sign contract",
-        "execute draw", "draw funds"
-    ]
-    if request.staged_action_type or any(k in msg_lower for k in action_keywords):
+    # 1. Explicit request parameters take highest priority
+    if request.staged_action_type:
         return "ACTION_STAGING"
-
-    # 2. Credit Underwriting & Loan Options
-    underwrite_keywords = [
-        "loan", "financing", "credit", "underwrite", "lender", "factor rate",
-        "apr", "facility", "borrow", "can i get a loan", "qualify", "need money",
-        "need funding", "need cash", "working capital loan", "borrowing limit"
-    ]
-    if any(k in msg_lower for k in underwrite_keywords):
-        return "CREDIT_UNDERWRITING"
-
-    # 3. Cash Flow Diagnostics & Runway Questions
-    cash_keywords = [
-        "runway", "burn", "balance", "cash flow", "cash position", "deficit",
-        "survive", "overdraft", "forecast", "shortfall", "working capital",
-        "cash conversion", "ccc", "dso", "dpo",
-        # Natural language follow-up phrases
-        "how many days", "days left", "how long", "time left", "when will i run out",
-        "when do i run out", "run out", "how much money", "how much cash",
-        "money left", "cash left", "how much do i have", "spending", "expenses",
-        "outflow", "inflow", "healthy", "am i safe", "what should i do",
-        "what can i spend", "afford", "daily burn"
-    ]
     if (
         request.target_horizon_days is not None
         or request.dso_days is not None
         or request.dpo_days is not None
-        or any(k in msg_lower for k in cash_keywords)
     ):
         return "CASH_DIAGNOSTIC"
 
-    # 4. Contextual Follow-up from History or Loaded Statement
+    # 2. In-Process Semantic Vector Router (FastEmbed bge-small ONNX)
+    # Computes semantic cosine similarity against intent centroids without keyword guessing
+    vector_intent, score = semantic_classify(message)
+    if vector_intent != "GENERAL_ASSISTANCE":
+        return vector_intent
+
+    # 3. Contextual Follow-up from History or Loaded Statement
     if request.csv_content and any(k in msg_lower for k in [
         "explain", "what does this mean", "tell me more", "summary", "summarize",
         "details", "status", "overview", "what now", "help me understand"
@@ -225,11 +206,14 @@ def run_copilot_supervisor(
         )
 
         reply = (
-            f"Underwriting evaluation complete. Your business is classified as {dossier['risk_tier']} "
-            f"with a Daily Average Balance (DAB) of ${float(dossier['daily_average_balance']):,.2f} "
-            f"and maximum qualified limit of ${float(dossier['max_qualified_limit']):,.2f}. "
-            f"{opt_summary} "
-            "To apply, request staging for the chosen facility."
+            "### 💼 WeBank Digital Underwriting Evaluation\n\n"
+            f"Underwriting evaluation complete. Your business is classified as **{dossier['risk_tier']}** "
+            f"with a Daily Average Balance (DAB) of **${float(dossier['daily_average_balance']):,.2f}** "
+            f"and maximum qualified limit of **${float(dossier['max_qualified_limit']):,.2f}**.\n\n"
+            "**Pre-Qualified Financing Matches:**\n"
+            f"• {opt_summary}\n\n"
+            "**Governance & Staging:**\n"
+            "To draw on this facility, ask to stage the proposal. Physical biometric passkey verification is required before execution."
         )
 
         return CopilotResponse(
@@ -369,7 +353,25 @@ def run_copilot_supervisor(
         else:
             headline = f"Diagnostic complete for {cash_result['currency']}. Current balance stands at ${float(cash_result['current_balance']):,.2f} with an average daily burn of ${float(cash_result['average_daily_burn']):,.2f}/day. Estimated historical runway is {runway_desc}. Status: {cash_result['cash_status']} (Threshold: {cash_result['alert_threshold_days']} days)."
 
-        reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
+        # Structured Executive Summary
+        sections = [
+            "### 📊 Cash Runway & Liquidity Diagnostic\n",
+            headline,
+            "\n**Key Financial Indicators:**\n"
+            f"• Current Balance: **${float(cash_result['current_balance']):,.2f} {cash_result['currency']}**\n"
+            f"• Daily Net Burn: **${float(cash_result['average_daily_burn']):,.2f}/day**\n"
+            f"• Estimated Runway: **{runway_desc}** (Alert Threshold: {cash_result['alert_threshold_days']} days)\n"
+            f"• Cash Status: **{cash_result['cash_status']}**"
+        ]
+
+        if pred_snippet:
+            sections.append(f"\n**Deficit Early-Warning:**{pred_snippet}")
+        if target_snippet:
+            sections.append(f"\n**Target Horizon Projection:**{target_snippet}")
+        if wc_snippet:
+            sections.append(f"\n**Working Capital Analysis:**{wc_snippet}")
+
+        reply = "\n".join(sections)
 
         return CopilotResponse(
             reply=_enrich_reply(reply),
@@ -382,11 +384,13 @@ def run_copilot_supervisor(
     # 4. General Financial Dialogue
     if request.csv_content:
         general_reply = (
+            "### 💬 SME Finance Copilot Ready\n\n"
             "Statement loaded. You can ask follow-up questions such as 'how many days left?', "
             "'what is my daily burn?', 'what loan options can I qualify for?', or request to stage a line of credit."
         )
     else:
         general_reply = (
+            "### 💬 SME Finance Copilot\n\n"
             "I am the Autonomous SME Finance Copilot. I can diagnose your historical cash runway, "
             "evaluate WeBank transactional underwriting dossiers, match non-predatory credit facilities "
             "with true APR disclosures, and safely stage financing proposals behind a Three-Tier biometric security gate."
