@@ -77,3 +77,15 @@ def test_cash_analysis_gross_inflows_and_outflows_decomposition():
     assert result.gross_outflows == Decimal("3500.00")
     assert result.net_period_change == Decimal("4500.00")
 
+
+def test_cash_analysis_dynamic_modes_live_vs_historical():
+    rows = [row(2, 1, "-10.00", "100.00"), row(3, 10, "5.00", "95.00")]
+    live_result = calculate_cash_analysis(rows, [], 10, as_of_date=date(2026, 10, 20))
+    assert live_result.statement_age_days == 10
+    assert live_result.analysis_mode == "LIVE_OPERATING"
+
+    audit_result = calculate_cash_analysis(rows, [], 10, as_of_date=date(2026, 12, 1))
+    assert audit_result.statement_age_days == 52
+    assert audit_result.analysis_mode == "HISTORICAL_AUDIT"
+
+

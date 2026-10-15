@@ -14,7 +14,7 @@ CSV = (
 def test_analyze_api_returns_decimal_strings_and_row_provenance():
     response = client.post(
         "/api/v1/analyze",
-        data={"alert_threshold_days": "10"},
+        data={"alert_threshold_days": "10", "as_of_date": "2026-10-02"},
         files={"file": ("synthetic.csv", CSV.encode(), "text/csv")},
     )
 
@@ -38,6 +38,8 @@ def test_analyze_api_returns_decimal_strings_and_row_provenance():
         "working_capital_rationale": None,
         "start_date": "2026-10-01",
         "end_date": "2026-10-02",
+        "statement_age_days": 0,
+        "analysis_mode": "LIVE_OPERATING",
     }
 
 
@@ -97,4 +99,17 @@ def test_analyze_api_defaults_threshold_to_30_when_omitted():
     )
     assert response.status_code == 200
     assert response.json()["alert_threshold_days"] == 30
+
+
+def test_analyze_api_adapts_to_historical_audit_mode_for_outdated_statement():
+    response = client.post(
+        "/api/v1/analyze",
+        data={"alert_threshold_days": "10", "as_of_date": "2027-01-01"},
+        files={"file": ("synthetic.csv", CSV.encode(), "text/csv")},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["statement_age_days"] == 91
+    assert body["analysis_mode"] == "HISTORICAL_AUDIT"
+
 

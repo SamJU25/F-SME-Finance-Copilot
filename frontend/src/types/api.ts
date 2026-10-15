@@ -24,6 +24,8 @@ export interface CashAnalysisResponse {
   working_capital_rationale?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  statement_age_days?: number | null;
+  analysis_mode?: 'LIVE_OPERATING' | 'HISTORICAL_AUDIT';
 }
 
 // Three-Tier Security Gate & Staged Action Intents

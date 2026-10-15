@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 from typing import Sequence
 
@@ -25,12 +26,15 @@ class CashAnalysisResult:
     gross_outflows: Decimal = Decimal("0.00")
     start_date: str | None = None
     end_date: str | None = None
+    statement_age_days: int = 0
+    analysis_mode: str = "LIVE_OPERATING"  # "LIVE_OPERATING" | "HISTORICAL_AUDIT"
 
 
 def calculate_cash_analysis(
     rows: Sequence[DemoTransaction],
     rejected_rows: Sequence[RejectedRow],
     alert_threshold_days: int,
+    as_of_date: date | None = None,
 ) -> CashAnalysisResult:
     """Calculate a historical-average burn/runway indicator; this is not a forecast."""
     if not rows:
@@ -42,6 +46,10 @@ def calculate_cash_analysis(
     first_date = min(row.posted_on for row in ordered)
     last_date = max(row.posted_on for row in ordered)
     period_days = max(1, (last_date - first_date).days + 1)
+    current_date = as_of_date or date.today()
+    raw_age_days = (current_date - last_date).days
+    statement_age_days = max(0, raw_age_days)
+    analysis_mode = "LIVE_OPERATING" if raw_age_days <= 35 else "HISTORICAL_AUDIT"
     current_balance = ordered[-1].closing_balance
     net_period_change = sum((row.amount for row in ordered), Decimal("0"))
     gross_inflows = sum((r.amount for r in ordered if r.amount > 0), Decimal("0.00")).quantize(
@@ -84,4 +92,6 @@ def calculate_cash_analysis(
         gross_outflows=gross_outflows,
         start_date=first_date.isoformat(),
         end_date=last_date.isoformat(),
+        statement_age_days=statement_age_days,
+        analysis_mode=analysis_mode,
     )

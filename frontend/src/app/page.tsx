@@ -1346,7 +1346,25 @@ export default function HomePage() {
           <section className="panel" aria-labelledby="result-title">
             <div className="result-head">
               <div>
-                <h2 id="result-title">Cash Summary</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <h2 id="result-title">Cash Summary</h2>
+                  {result?.analysis_mode && (
+                    <span
+                      className={`mode-badge ${result.analysis_mode === 'HISTORICAL_AUDIT' ? 'audit' : 'live'}`}
+                      role="status"
+                      title={
+                        result.analysis_mode === 'HISTORICAL_AUDIT'
+                          ? `Statement closed ${result.statement_age_days} days ago. Metrics and projections evaluate historical liquidity from that closing baseline.`
+                          : `Statement is current (closed ${result.statement_age_days ?? 0} days ago).`
+                      }
+                    >
+                      <span className="mode-dot" aria-hidden="true" />
+                      {result.analysis_mode === 'HISTORICAL_AUDIT'
+                        ? `Historical Audit · Closed ${result.statement_age_days}d ago`
+                        : 'Live Operating'}
+                    </span>
+                  )}
+                </div>
                 {result?.end_date && (
                   <p className="result-as-of">
                     As of statement close: <time dateTime={result.end_date}>{result.end_date}</time>
@@ -1370,11 +1388,23 @@ export default function HomePage() {
 
             {result ? (
               <div className="result" aria-live="polite">
+                {result.analysis_mode === 'HISTORICAL_AUDIT' && (
+                  <div className="audit-mode-banner" role="note">
+                    <span className="audit-icon" aria-hidden="true">🏛️</span>
+                    <div>
+                      <strong>Historical Diagnostic Mode:</strong> This statement closed{' '}
+                      <span className="tabular-num">{result.statement_age_days}</span> days ago ({result.end_date}). Metrics evaluate performance over the reviewed window. Runway and deficit projections benchmark liquidity from that closing baseline.
+                    </div>
+                  </div>
+                )}
                 <div className="metrics">
                   <Metric label="Current balance" value={money(result.current_balance, result.currency)} />
                   <Metric label="Historical net change" value={money(result.net_period_change, result.currency)} />
                   <Metric label="Average daily burn" value={money(result.average_daily_burn, result.currency)} />
-                  <Metric label="Estimated runway" value={result.runway_days === null ? 'No burn' : `${result.runway_days} days`} />
+                  <Metric
+                    label={result.analysis_mode === 'HISTORICAL_AUDIT' ? 'Historical runway from close' : 'Estimated runway'}
+                    value={result.runway_days === null ? 'No burn' : `${result.runway_days} days`}
+                  />
                   <Metric label="Period reviewed" value={`${result.period_days} days`} />
                   <Metric label="Rows accepted" value={`${result.accepted_count}`} />
                 </div>

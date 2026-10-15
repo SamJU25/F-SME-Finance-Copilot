@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 
@@ -43,6 +44,8 @@ class CashAnalysisResponse(BaseModel):
     working_capital_rationale: str | None = None
     start_date: str | None = None
     end_date: str | None = None
+    statement_age_days: int = 0
+    analysis_mode: Literal["LIVE_OPERATING", "HISTORICAL_AUDIT"] = "LIVE_OPERATING"
 
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
@@ -52,6 +55,7 @@ async def analyze_csv(
     dso_days: int | None = Form(None, ge=0),
     dpo_days: int | None = Form(None, ge=0),
     dio_days: int | None = Form(0, ge=0),
+    as_of_date: date | None = Form(None),
 ) -> CashAnalysisResponse | JSONResponse:
     if MAX_UPLOAD_BYTES <= 0:
         raise RuntimeError("MAX_ANALYSIS_UPLOAD_BYTES must be a positive integer")
@@ -66,7 +70,12 @@ async def analyze_csv(
     except CSVIngestionError as exc:
         return JSONResponse(status_code=422, content={"error": {"code": exc.code, "message": str(exc)}})
 
-    result = calculate_cash_analysis(ingestion.accepted_rows, ingestion.rejected_rows, alert_threshold_days)
+    result = calculate_cash_analysis(
+        ingestion.accepted_rows,
+        ingestion.rejected_rows,
+        alert_threshold_days,
+        as_of_date=as_of_date,
+    )
 
     ccc_days, wc_status, wc_rationale = None, None, None
     if dso_days is not None and dpo_days is not None:
@@ -94,6 +103,8 @@ async def analyze_csv(
         working_capital_rationale=wc_rationale,
         start_date=result.start_date,
         end_date=result.end_date,
+        statement_age_days=result.statement_age_days,
+        analysis_mode=result.analysis_mode,  # type: ignore[arg-type]
     )
 
 
