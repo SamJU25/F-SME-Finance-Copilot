@@ -1375,7 +1375,7 @@ export default function HomePage() {
               )}
 
               <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-                Universal Ingestion: Commercial Banks (Chase, BofA, Citi, Wells Fargo), Processors (Stripe, Square, Shopify), Accounting (QuickBooks, Xero), or founder CSVs. Multi-account treasury consolidation supported.
+                Universal Ingestion: Compatible with CSV exports from any financial institution, bank, payment gateway, or accounting system worldwide. Automatically resolves column layouts, date formats, currencies, and multi-account portfolios.
               </div>
 
               <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
