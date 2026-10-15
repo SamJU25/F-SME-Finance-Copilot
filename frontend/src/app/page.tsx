@@ -1434,16 +1434,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="chat-status-bar" role="status">
-            <div className="chat-status-left">
-              <span className="chat-status-pulse" aria-hidden="true" />
-              <span>AUTONOMOUS AGENT ACTIVE · HITL GATED</span>
-            </div>
-            <div className="chat-status-right">
-              <span>Session {sessionId.slice(0, 8)} · Pure Decimal Core</span>
-            </div>
-          </div>
-
           <div className="chat-body">
             {messages.map((m, idx) => (
               <Fragment key={idx}>

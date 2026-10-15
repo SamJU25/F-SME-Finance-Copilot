@@ -636,37 +636,6 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
   color: var(--ink);
 }
 
-/* Institutional Agent Gating Status Bar in Sidecar */
-.chat-status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 16px;
-  background: #f4f7f5;
-  border-bottom: 1px solid var(--line);
-  font-size: 11px;
-  font-family: var(--mono);
-}
-.chat-status-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #1a634e;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.chat-status-pulse {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--green);
-  box-shadow: 0 0 0 2px rgba(20, 107, 85, 0.2);
-}
-.chat-status-right {
-  color: var(--muted);
-  font-size: 10.5px;
-}
-
 /* Session Limit Breakline */
 .session-breakline {
   display: flex;
