@@ -11,10 +11,18 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Optional
+from decimal import Decimal
+from typing import Any, Dict, Optional
 
 from services.agent.llm_bridge import query_external_llm
 from services.agent.local_slm import LocalSLMEngine, generate_local_reply
+from services.agent.param_extractor import (
+    extract_amortization_params,
+    extract_break_even_params,
+    extract_defensive_interval_params,
+    extract_dscr_params,
+    extract_factoring_params,
+)
 from services.agent.prompts import (
     COPILOT_PERSONA_BASE,
     get_cash_diagnostic_prompt,
@@ -32,6 +40,12 @@ from services.agent.schema import (
 )
 from services.agent.tools import (
     tool_analyze_cash_flow,
+    tool_calculate_break_even,
+    tool_calculate_client_concentration,
+    tool_calculate_defensive_interval,
+    tool_calculate_dscr,
+    tool_calculate_factoring_proceeds,
+    tool_calculate_loan_amortization,
     tool_stage_financial_action,
     tool_underwrite_credit,
 )
@@ -106,6 +120,309 @@ def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMC
         has_csv=has_statement,
         config=config,
     )
+
+
+def _handle_quantitative_calculation(
+    sub_intent: str,
+    request: AgentChatRequest,
+    effective_csv: Optional[str],
+    effective_config: Optional[LLMConfig],
+    enrich_fn: Any,
+) -> Optional[CopilotResponse]:
+    """Dispatches quantitative financial calculations to deterministic Decimal tools."""
+    if sub_intent not in (
+        "AMORTIZATION",
+        "DSCR",
+        "BREAK_EVEN",
+        "FACTORING",
+        "CONCENTRATION",
+        "DEFENSIVE_INTERVAL",
+    ):
+        return None
+
+    # 1. Commercial Loan Amortization Schedule
+    if sub_intent == "AMORTIZATION":
+        p_dict = extract_amortization_params(request.message)
+        res = tool_calculate_loan_amortization(
+            principal=p_dict["principal"],
+            annual_interest_rate_pct=p_dict["annual_interest_rate_pct"],
+            term_months=p_dict["term_months"],
+            periods_elapsed=p_dict["periods_elapsed"],
+        )
+        elapsed_snippet = (
+            f" ({res['periods_elapsed']} months elapsed, remaining balance: ${float(res['remaining_balance']):,.2f})"
+            if res["periods_elapsed"] > 0
+            else ""
+        )
+        base_reply = (
+            f"### Commercial Loan Amortization Schedule\n\n"
+            f"- **Facility Principal**: ${float(res['principal']):,.2f}\n"
+            f"- **Annual Interest Rate**: {res['annual_interest_rate_pct']}% APR\n"
+            f"- **Loan Term**: {res['term_months']} months{elapsed_snippet}\n"
+            f"- **Monthly Payment**: ${float(res['monthly_payment']):,.2f}/month\n"
+            f"- **Total Interest Charges**: ${float(res['total_interest']):,.2f}\n"
+            f"- **Total Repayment Amount**: ${float(res['total_amount_paid']):,.2f}\n\n"
+            "To apply for this facility, request staging for a pre-qualified commercial loan proposal."
+        )
+        return CopilotResponse(
+            reply=enrich_fn(base_reply, prompt_type="underwriting"),
+            intent_detected="CREDIT_UNDERWRITING",
+            requires_biometric_hitl=False,
+        )
+
+    # 2. Debt Service Coverage Ratio (DSCR)
+    if sub_intent == "DSCR":
+        p_dict = extract_dscr_params(request.message)
+        noi = p_dict["net_operating_income"]
+        service = p_dict["total_debt_service"]
+
+        # If not provided in message text, attempt to derive from loaded statement
+        if (noi is None or service is None) and effective_csv:
+            try:
+                cash_res = tool_analyze_cash_flow(effective_csv)
+                rec_debt = Decimal(str(cash_res.get("detected_recurring_debt") or 0))
+                if rec_debt > Decimal("0.00") and service is None:
+                    service = rec_debt * Decimal("12")  # Annualized debt service
+                if noi is None and cash_res.get("gross_inflows"):
+                    inflows = Decimal(str(cash_res["gross_inflows"]))
+                    outflows = Decimal(str(cash_res.get("gross_outflows") or "0.00"))
+                    operating_expenses = max(Decimal("0.00"), outflows - (rec_debt * Decimal("3")))
+                    noi = max(Decimal("0.00"), inflows - operating_expenses)
+            except Exception:
+                pass
+
+        if noi is not None and service is not None:
+            res = tool_calculate_dscr(net_operating_income=noi, total_debt_service=service)
+            base_reply = (
+                f"### Debt Service Coverage Ratio (DSCR) Assessment\n\n"
+                f"- **Net Operating Income (NOI)**: ${float(res['net_operating_income']):,.2f}\n"
+                f"- **Total Annual Debt Service**: ${float(res['total_debt_service']):,.2f}\n"
+                f"- **Debt Service Coverage Ratio (DSCR)**: {res['dscr']}x\n"
+                f"- **Underwriting Status**: `{res['underwriting_status']}`\n"
+                f"- **Credit Assessment**: {res['rationale']}"
+            )
+            return CopilotResponse(
+                reply=enrich_fn(base_reply, prompt_type="underwriting"),
+                intent_detected="CREDIT_UNDERWRITING",
+                requires_biometric_hitl=False,
+            )
+
+        base_reply = (
+            "To calculate your Debt Service Coverage Ratio (DSCR), please specify your annual Net Operating Income (NOI) "
+            "and annual debt service.\n\n"
+            "Example format: 'Calculate DSCR for NOI $120,000 and annual debt payments of $80,000'.\n\n"
+            "Banking Benchmark Grid:\n"
+            "- PRIME: DSCR >= 1.40x\n"
+            "- HEALTHY: DSCR 1.25x - 1.39x\n"
+            "- WATCH: DSCR 1.00x - 1.24x\n"
+            "- DISTRESSED: DSCR < 1.00x"
+        )
+        return CopilotResponse(
+            reply=base_reply,
+            intent_detected="CREDIT_UNDERWRITING",
+            requires_biometric_hitl=False,
+        )
+
+    # 3. Break-Even & Margin of Safety
+    if sub_intent == "BREAK_EVEN":
+        p_dict = extract_break_even_params(request.message)
+        fc = p_dict["fixed_costs"]
+        cm_ratio = p_dict["cm_ratio"]
+        rev = p_dict["revenue"]
+        vc = p_dict["variable_costs"]
+
+        # If fixed costs not provided, check if CSV has detected recurring overhead
+        if fc is None and effective_csv:
+            try:
+                cash_res = tool_analyze_cash_flow(effective_csv)
+                rent = Decimal(str(cash_res.get("detected_recurring_rent") or 0))
+                debt = Decimal(str(cash_res.get("detected_recurring_debt") or 0))
+                recurring = (rent + debt) * Decimal("3")
+                if recurring > Decimal("0.00"):
+                    fc = recurring
+            except Exception:
+                pass
+
+        if fc is not None and (cm_ratio is not None or (rev is not None and vc is not None)):
+            res = tool_calculate_break_even(
+                fixed_costs=fc,
+                cm_ratio=cm_ratio,
+                revenue=rev,
+                variable_costs=vc,
+            )
+            cm_pct = f"{float(res['contribution_margin_ratio']) * 100:.1f}%" if res.get("contribution_margin_ratio") else "N/A"
+            mos_snippet = ""
+            if res.get("margin_of_safety_dollars") and res.get("margin_of_safety_percent"):
+                mos_snippet = (
+                    f"\n- **Margin of Safety**: ${float(res['margin_of_safety_dollars']):,.2f} "
+                    f"({res['margin_of_safety_percent']}%, {res.get('resilience_tier', 'MODERATE')} buffer)"
+                )
+            base_reply = (
+                f"### Break-Even & Margin of Safety Analysis\n\n"
+                f"- **Fixed Operating Overhead**: ${float(res['fixed_costs']):,.2f}\n"
+                f"- **Contribution Margin Ratio**: {cm_pct}\n"
+                f"- **Break-Even Revenue Requirement**: ${float(res['break_even_revenue']):,.2f}"
+                f"{mos_snippet}\n\n"
+                "Revenue above this threshold directly generates net operating profit."
+            )
+            return CopilotResponse(
+                reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        base_reply = (
+            "To calculate your Break-Even Revenue, please provide your fixed operating costs and contribution margin ratio.\n\n"
+            "Example format: 'What is our break-even if fixed costs are $25,000 and margin is 40%?'\n"
+            "Or: 'Calculate break-even for fixed costs $30,000 with revenue $100,000 and variable costs $60,000'."
+        )
+        return CopilotResponse(
+            reply=base_reply,
+            intent_detected="CASH_DIAGNOSTIC",
+            requires_biometric_hitl=False,
+        )
+
+    # 4. Invoice Factoring Net Proceeds & True APR
+    if sub_intent == "FACTORING":
+        p_dict = extract_factoring_params(request.message)
+        res = tool_calculate_factoring_proceeds(
+            invoice_amount=p_dict["invoice_amount"],
+            advance_rate_pct=p_dict["advance_rate_pct"],
+            fee_rate_pct=p_dict["fee_rate_pct"],
+            collection_days=p_dict["collection_days"],
+        )
+        pred_warning = (
+            "\n\n> [!WARNING]\n> **Predatory Rate Alert**: True annualized APR exceeds 36.00% benchmark. "
+            "Evaluate alternative credit lines or commercial factoring before proceeding."
+            if res["is_predatory"]
+            else "\n\n✅ Annualized APR complies with institutional non-predatory lending standards (<= 36.00%)."
+        )
+        base_reply = (
+            f"### Invoice Factoring Net Proceeds & True APR Analysis\n\n"
+            f"- **Invoice Face Value**: ${float(res['invoice_face_value']):,.2f}\n"
+            f"- **Advance Rate**: {res['advance_rate_percent']}% (${float(res['advance_amount']):,.2f})\n"
+            f"- **Factoring Discount Fee**: ${float(res['factoring_fee_amount']):,.2f}\n"
+            f"- **Net Immediate Cash Proceeds**: ${float(res['net_proceeds']):,.2f}\n"
+            f"- **Collection Horizon**: {res['collection_days']} days\n"
+            f"- **True Annualized APR**: {res['true_apr_percent']}%"
+            f"{pred_warning}\n\n"
+            "To pledge this invoice into the consortium staging queue, request action staging for invoice factoring."
+        )
+        return CopilotResponse(
+            reply=enrich_fn(base_reply, prompt_type="underwriting"),
+            intent_detected="CREDIT_UNDERWRITING",
+            requires_biometric_hitl=False,
+        )
+
+    # 5. Client Revenue Concentration & Herfindahl-Hirschman Index (HHI)
+    if sub_intent == "CONCENTRATION":
+        metrics = None
+        if not effective_csv:
+            return CopilotResponse(
+                reply=(
+                    "To audit your client revenue concentration and Herfindahl-Hirschman Index (HHI), "
+                    "please provide your transactional bank statement CSV.\n\n"
+                    "Our deterministic underwriting engine aggregates inflows across counterparty descriptions "
+                    "to quantify client dependency risk and revenue volatility."
+                ),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        try:
+            res = tool_calculate_client_concentration(csv_content=effective_csv)
+            cash_result = tool_analyze_cash_flow(effective_csv)
+            metrics = AgentMetricsSummary(
+                current_balance=cash_result["current_balance"],
+                net_period_change=cash_result["net_period_change"],
+                gross_inflows=cash_result.get("gross_inflows"),
+                gross_outflows=cash_result.get("gross_outflows"),
+                average_daily_burn=cash_result["average_daily_burn"],
+                runway_days=cash_result["runway_days"],
+                cash_status=cash_result["cash_status"],
+            )
+        except Exception as exc:
+            return CopilotResponse(
+                reply=f"Client concentration analysis failed: {str(exc)}",
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        base_reply = (
+            f"### Client Revenue Concentration & Dependency Risk\n\n"
+            f"- **Total Revenue Evaluated**: ${float(res['total_inflows_evaluated']):,.2f} across {res['client_count']} distinct client counterparties\n"
+            f"- **Top 1 Client Share**: {res['top_1_client_percent']}%\n"
+            f"- **Top 3 Clients Combined Share**: {res['top_3_clients_percent']}%\n"
+            f"- **Herfindahl-Hirschman Index (HHI)**: {res['hhi_index']} ({res['concentration_tier']} concentration)\n"
+            f"- **Underwriting Assessment**: {res['assessment']}"
+        )
+        return CopilotResponse(
+            reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+            intent_detected="CASH_DIAGNOSTIC",
+            metrics=metrics,
+            requires_biometric_hitl=False,
+        )
+
+    # 6. Defensive Interval Ratio (DIR)
+    if sub_intent == "DEFENSIVE_INTERVAL":
+        qa: Optional[Decimal] = None
+        burn: Optional[Decimal] = None
+        metrics = None
+
+        if effective_csv:
+            try:
+                cash_res = tool_analyze_cash_flow(effective_csv)
+                bal = Decimal(str(cash_res["current_balance"]))
+                daily_burn = Decimal(str(cash_res["average_daily_burn"]))
+                if bal > Decimal("0.00") and daily_burn > Decimal("0.00"):
+                    qa = bal
+                    burn = daily_burn
+                metrics = AgentMetricsSummary(
+                    current_balance=cash_res["current_balance"],
+                    net_period_change=cash_res["net_period_change"],
+                    gross_inflows=cash_res.get("gross_inflows"),
+                    gross_outflows=cash_res.get("gross_outflows"),
+                    average_daily_burn=cash_res["average_daily_burn"],
+                    runway_days=cash_res["runway_days"],
+                    cash_status=cash_res["cash_status"],
+                )
+            except Exception:
+                pass
+
+        if qa is None or burn is None:
+            p_dict = extract_defensive_interval_params(request.message)
+            qa = p_dict["quick_assets"]
+            burn = p_dict["daily_operating_expenses"]
+
+        if qa is not None and burn is not None:
+            res = tool_calculate_defensive_interval(quick_assets=qa, daily_operating_expenses=burn)
+            base_reply = (
+                f"### Defensive Interval Ratio (DIR) Liquidity Audit\n\n"
+                f"- **Liquid Quick Assets**: ${float(res['quick_assets']):,.2f}\n"
+                f"- **Average Daily Operational Burn**: ${float(res['daily_operating_expenses']):,.2f}/day\n"
+                f"- **Defensive Interval Ratio (DIR)**: {res['defensive_interval_days']} days\n"
+                f"- **Liquidity Classification**: `{res['liquidity_tier']}`\n"
+                f"- **Assessment**: {res['rationale']}"
+            )
+            return CopilotResponse(
+                reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                intent_detected="CASH_DIAGNOSTIC",
+                metrics=metrics,
+                requires_biometric_hitl=False,
+            )
+
+        return CopilotResponse(
+            reply=(
+                "To calculate your Defensive Interval Ratio (DIR), please upload your bank statement CSV "
+                "or specify your liquid quick assets and average daily operating expenses.\n\n"
+                "Example format: 'What is our DIR if quick assets are $150,000 and daily burn is $2,500?'\n\n"
+                "DIR Measures: Number of days the business can operate using liquid cash without new revenues."
+            ),
+            intent_detected="CASH_DIAGNOSTIC",
+            requires_biometric_hitl=False,
+        )
+
+    return None
 
 
 def run_copilot_supervisor(
@@ -269,6 +586,18 @@ def run_copilot_supervisor(
             ),
             requires_biometric_hitl=True,
         )
+
+    # 1b. Deterministic Quantitative Financial Calculations
+    sub_intent = classify_sub_intent_dynamic(request.message)
+    quant_resp = _handle_quantitative_calculation(
+        sub_intent=sub_intent,
+        request=request,
+        effective_csv=effective_csv,
+        effective_config=effective_config,
+        enrich_fn=_enrich_reply,
+    )
+    if quant_resp is not None:
+        return quant_resp
 
     # 2. Credit Underwriting Flow
     if intent == "CREDIT_UNDERWRITING":

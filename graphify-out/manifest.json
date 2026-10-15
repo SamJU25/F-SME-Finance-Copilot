@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "services/calculations/__init__.py": {
-    "mtime": 1792048662.852201,
-    "seen": 1792049031.803451,
-    "ast_hash": "ea9c0cf3951b4f7bc0d6fc2a95406e2b",
+    "mtime": 1792074258.4368172,
+    "seen": 1792075021.7833283,
+    "ast_hash": "67f3c9968184dcd1c35422652a22155a",
     "semantic_hash": ""
   },
   "services/calculations/runway.py": {
@@ -1458,21 +1458,21 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792073117.8010855,
-    "seen": 1792073315.3404894,
-    "ast_hash": "f35010badd371ce9c7851a003c4a2b9c",
+    "mtime": 1792074822.3722124,
+    "seen": 1792075021.7831132,
+    "ast_hash": "207221452e541b06e206319d48cb4c57",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
-    "mtime": 1792048746.6427186,
-    "seen": 1792049031.8032084,
-    "ast_hash": "3e0bb930cbd2624b809f6a6fb11221ee",
+    "mtime": 1792074355.0502937,
+    "seen": 1792075021.7831151,
+    "ast_hash": "098565632a9e4f1b1c8a92cfaa597f4b",
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
-    "mtime": 1792063772.278068,
-    "seen": 1792063877.9132073,
-    "ast_hash": "f5021b00d0d6f17813bafd298ef9826c",
+    "mtime": 1792074994.620038,
+    "seen": 1792075021.7848294,
+    "ast_hash": "4a716ad1226e8fe1f7399f64c4974e35",
     "semantic_hash": ""
   },
   "services/agent/llm_bridge.py": {
@@ -1512,15 +1512,51 @@
     "semantic_hash": ""
   },
   "services/agent/dynamic_router.py": {
-    "mtime": 1792073282.5672674,
-    "seen": 1792073315.340078,
-    "ast_hash": "d0c5349047dbc6626f9b02d2b61e2163",
+    "mtime": 1792074927.3238223,
+    "seen": 1792075021.78267,
+    "ast_hash": "3642414f6d46ac57758a4b0a8697fb2c",
     "semantic_hash": ""
   },
   "tests/unit/test_prompts.py": {
     "mtime": 1792073251.8519943,
     "seen": 1792073315.3436549,
     "ast_hash": "f5a72694e4a8ed4ed31fbc9291cfa6aa",
+    "semantic_hash": ""
+  },
+  "services/agent/param_extractor.py": {
+    "mtime": 1792074692.5746434,
+    "seen": 1792075021.782901,
+    "ast_hash": "4daf80ac20279de65ba11c0d771231f6",
+    "semantic_hash": ""
+  },
+  "services/calculations/concentration_risk.py": {
+    "mtime": 1792074246.738355,
+    "seen": 1792075021.783436,
+    "ast_hash": "dd3c0b08d20ea93b648bd53f9ce2b4cf",
+    "semantic_hash": ""
+  },
+  "services/calculations/debt_service.py": {
+    "mtime": 1792074194.6984842,
+    "seen": 1792075021.7834384,
+    "ast_hash": "bd8fc9d8460c9c9b1d9b5ba705a2348f",
+    "semantic_hash": ""
+  },
+  "services/calculations/unit_economics.py": {
+    "mtime": 1792074209.7021053,
+    "seen": 1792075021.783653,
+    "ast_hash": "b75c1543a1d2c90133d4016f3a69bbea",
+    "semantic_hash": ""
+  },
+  "services/calculations/working_capital.py": {
+    "mtime": 1792074227.7806206,
+    "seen": 1792075021.7836552,
+    "ast_hash": "d1c32faf3d9b06c9cbd39dbdb510f472",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_financial_metrics.py": {
+    "mtime": 1792074391.0877554,
+    "seen": 1792075021.7856605,
+    "ast_hash": "c612229fe0f3563d4bc73cccb8156707",
     "semantic_hash": ""
   }
 }

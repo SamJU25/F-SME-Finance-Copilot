@@ -46,12 +46,14 @@ class FastEmbedSemanticRouter:
         "CASH_DIAGNOSTIC": (
             "Inquiries evaluating business cash flow, cash runway duration in days, how many days left, "
             "days of cash remaining, daily net burn rate, bank account balance, projected cash deficits, "
-            "operating in the red, insolvency risk, bouncing payroll, running out of money, bleeding cash, "
-            "and liquidity health from bank statements."
+            "working capital risk, cash conversion cycle, customer DSO payment terms, supplier DPO terms, "
+            "operating in the red, customer concentration risk, break-even sales, insolvency risk, "
+            "bouncing payroll, running out of money, bleeding cash, and liquidity health from bank statements."
         ),
         "CREDIT_UNDERWRITING": (
             "Inquiries regarding borrowing business money, credit line qualification, merchant invoice factoring, "
-            "commercial loan options, lending capacity, debt facilities, options, and truth-in-lending APR interest rates."
+            "commercial loan options, pre-qualified financing options, loan eligibility, borrowing capacity, "
+            "debt facilities, options, and truth-in-lending APR interest rates."
         ),
         "ACTION_STAGING": (
             "Requests to stage, commit, authorize, draw down funds from an approved credit facility, "
@@ -74,11 +76,19 @@ class FastEmbedSemanticRouter:
     }
 
     SUB_INTENT_PROTOTYPES = {
-        "DEFICIT": "Projected cash shortfall, running out of money, bouncing payroll, overdraft date, insolvency warning.",
+        "DEFICIT": "Projected cash shortfall, upcoming cash deficit, running out of money, bouncing payroll, overdraft date, overdraft risk, insolvency warning.",
         "RUNWAY": "Cash runway duration in days, how many days left to survive, time until cash runs out.",
         "BURN": "Average daily cash burn, spending velocity, daily outflows, operational expense drain rate.",
         "BALANCE": "Current available bank cash balance, closing balance, available funds in bank account.",
         "ADVICE": "Strategic CFO recommendations, advice on improving cash flow, how to extend runway.",
+        "CONCENTRATION": "Client revenue concentration, top customer share, HHI index, customer dependency risk.",
+        "BREAK_EVEN": "Calculate break-even sales, break-even revenue, contribution margin, fixed costs, margin of safety.",
+        "AMORTIZATION": "Calculate monthly loan payment, loan amortization schedule, calculate loan installment and interest charges.",
+        "DSCR": "Calculate debt service coverage ratio, calculate DSCR, net operating income to debt service.",
+        "FACTORING": "Calculate invoice factoring advance, calculate factoring discount fee, net invoice proceeds, factor rate APR.",
+        "DEFENSIVE_INTERVAL": "Calculate defensive interval ratio, DIR days, quick assets covering daily operational expenses.",
+        "OPTIONS": "Pre-qualified financing options, what loans can we qualify for, borrowing eligibility, matched credit facilities, credit line limits.",
+        "WORKING_CAPITAL": "Working capital risk, cash conversion cycle, customer DSO payment terms, supplier DPO payment terms, trade terms, receivables terms.",
         "GENERAL": "General overview of financial health, cash diagnostics summary, and business accounting status.",
     }
 
@@ -176,7 +186,7 @@ class FastEmbedSemanticRouter:
         best_intent = ranked[0][0]
 
         # Contextual adjustment: when no CSV is loaded and scores are tied, route to onboarding guidance
-        if not has_csv and best_intent == "CASH_DIAGNOSTIC" and (cash_score - greet_score) < 0.05:
+        if not has_csv and best_intent in ("CASH_DIAGNOSTIC", "CREDIT_UNDERWRITING") and (financial_score - greet_score) < 0.03:
             best_intent = "GENERAL_ASSISTANCE"
 
         if has_csv and best_intent == "GENERAL_ASSISTANCE" and greet_score < 0.58:

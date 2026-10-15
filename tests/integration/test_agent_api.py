@@ -511,6 +511,111 @@ def test_agent_offline_llama_connection_and_discovery():
     assert "deterministic-v1" not in model_ids
 
 
+def test_agent_chat_loan_amortization_calculation():
+    """Verify chat agent calculates commercial loan amortization schedule with deterministic precision."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "Calculate monthly payment for a $50,000 commercial loan at 8% interest over 24 months"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Commercial Loan Amortization Schedule" in data["reply"]
+    assert "$2,261.36" in data["reply"]
+    assert "$4,272.64" in data["reply"]
+    assert "$54,272.64" in data["reply"]
+
+
+def test_agent_chat_dscr_calculation():
+    """Verify chat agent calculates Debt Service Coverage Ratio (DSCR) and assigns risk tier."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "Calculate DSCR for NOI $120,000 and annual debt service $80,000"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Debt Service Coverage Ratio (DSCR) Assessment" in data["reply"]
+    assert "1.50x" in data["reply"]
+    assert "PRIME" in data["reply"]
+
+
+def test_agent_chat_break_even_calculation():
+    """Verify chat agent computes break-even sales revenue threshold."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "What is our break-even revenue if fixed costs are $25,000 and margin ratio is 40%?"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Break-Even & Margin of Safety Analysis" in data["reply"]
+    assert "$62,500.00" in data["reply"]
+    assert "40.0%" in data["reply"]
+
+
+def test_agent_chat_factoring_proceeds_and_predatory_warning():
+    """Verify factoring proceeds calculation and predatory APR (>36%) flagging."""
+    # Institutional compliant factoring (28.63% APR)
+    res_compliant = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "What are factoring proceeds for a $50,000 invoice at 85% advance and 3% fee for 45 days?"},
+    )
+    assert res_compliant.status_code == 200
+    data_c = res_compliant.json()
+    assert data_c["intent_detected"] == "CREDIT_UNDERWRITING"
+    assert "Invoice Factoring Net Proceeds & True APR Analysis" in data_c["reply"]
+    assert "$42,500.00" in data_c["reply"]
+    assert "28.63%" in data_c["reply"]
+    assert "institutional non-predatory lending standards" in data_c["reply"]
+
+    # Predatory factoring (76.04% APR)
+    res_pred = client.post(
+        "/api/v1/agent/chat",
+        json={"message": "What are factoring proceeds for a $50,000 invoice at 80% advance and 5% fee for 30 days?"},
+    )
+    assert res_pred.status_code == 200
+    data_p = res_pred.json()
+    assert "76.04%" in data_p["reply"]
+    assert "Predatory Rate Alert" in data_p["reply"]
+
+
+def test_agent_chat_client_concentration_with_csv():
+    """Verify customer revenue concentration audit across statement CSV counterparties."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "What is our client revenue concentration?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Client Revenue Concentration & Dependency Risk" in data["reply"]
+    assert "Top 1 Client Share" in data["reply"]
+    assert "Herfindahl-Hirschman Index (HHI)" in data["reply"]
+    assert data["metrics"] is not None
+
+
+def test_agent_chat_defensive_interval_ratio():
+    """Verify Defensive Interval Ratio (DIR) computation from loaded bank statement."""
+    response = client.post(
+        "/api/v1/agent/chat",
+        json={
+            "message": "What is our defensive interval ratio?",
+            "csv_content": SYNTHETIC_BANK_CSV,
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["intent_detected"] == "CASH_DIAGNOSTIC"
+    assert "Defensive Interval Ratio (DIR) Liquidity Audit" in data["reply"]
+    assert "75.00 days" in data["reply"]
+    assert "MODERATE" in data["reply"]
+    assert data["metrics"] is not None
+
+
 
 
 
