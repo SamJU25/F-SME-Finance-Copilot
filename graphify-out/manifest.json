@@ -1182,9 +1182,9 @@
     "semantic_hash": ""
   },
   "services/ingestion/csv_parser.py": {
-    "mtime": 1792100073.943135,
-    "seen": 1792100361.2550004,
-    "ast_hash": "c67ff9760e7340e6e3b24cf912866741",
+    "mtime": 1792101099.3060324,
+    "seen": 1792101138.339937,
+    "ast_hash": "e2712f9222e87f5df51a50751348ad99",
     "semantic_hash": ""
   },
   "services/security/__init__.py": {
@@ -1236,9 +1236,9 @@
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
-    "mtime": 1792100169.4825213,
-    "seen": 1792100361.2512527,
-    "ast_hash": "bcfbc9b83aed7fb50b53f3ef4d7d6578",
+    "mtime": 1792100855.57592,
+    "seen": 1792101138.3361468,
+    "ast_hash": "43d8c1c941f7adc0f4e8f6b7a7f7e2b6",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792100290.8993573,
-    "seen": 1792100361.2517896,
-    "ast_hash": "0178574685b3acdab1d8c98900af2ca5",
+    "mtime": 1792100877.0272129,
+    "seen": 1792101138.3366807,
+    "ast_hash": "7236d4bf335faa6b9e569c7a712bdcc2",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "tests/unit/test_ingestion_demo.py": {
-    "mtime": 1792100134.5217469,
-    "seen": 1792100361.2569532,
-    "ast_hash": "b3a7c4d35baaca94e5c8677bac2e8db7",
+    "mtime": 1792100905.1864367,
+    "seen": 1792101138.3420439,
+    "ast_hash": "49abee0be335f944d53c50e7ab35c27e",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -1593,6 +1593,24 @@
     "mtime": 1792094602.9703667,
     "seen": 1792094797.1382344,
     "ast_hash": "9efc665c5aa942aa9da390b4ebe50e9c",
+    "semantic_hash": ""
+  },
+  "services/ingestion/dynamic_profiler.py": {
+    "mtime": 1792101067.3428721,
+    "seen": 1792101138.3399389,
+    "ast_hash": "2b416bfe049a2419ab79963f24246c46",
+    "semantic_hash": ""
+  },
+  "services/ingestion/financial_parsers.py": {
+    "mtime": 1792101021.4391415,
+    "seen": 1792101138.3399405,
+    "ast_hash": "cee8fb65cb3794fd9ba09b0d5a9277c4",
+    "semantic_hash": ""
+  },
+  "services/ingestion/llm_schema_resolver.py": {
+    "mtime": 1792100688.2623472,
+    "seen": 1792101138.3399422,
+    "ast_hash": "a072828b157ef78a254f44c381f18a84",
     "semantic_hash": ""
   }
 }

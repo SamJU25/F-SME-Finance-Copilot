@@ -677,7 +677,11 @@ export default function HomePage() {
         data.append('file', targetFile);
       }
       data.append('alert_threshold_days', effectiveDays);
-      const response = await fetch(`${API_URL}/api/v1/analyze`, { method: 'POST', body: data });
+      const headers: Record<string, string> = {};
+      if (llmConfig) {
+        headers['X-LLM-Config'] = JSON.stringify(llmConfig);
+      }
+      const response = await fetch(`${API_URL}/api/v1/analyze`, { method: 'POST', body: data, headers });
       const body = await response.json();
       if (!response.ok) {
         let msg = 'The file could not be analyzed. Check the CSV and try again.';

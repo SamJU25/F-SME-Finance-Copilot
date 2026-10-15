@@ -13,6 +13,17 @@ from typing import Any, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from services.agent.schema import LLMConfig
+from services.ingestion.dynamic_profiler import ProfiledSchema, profile_table_content
+from services.ingestion.financial_parsers import (
+    _CURRENCY_SYMBOL_MAP,
+    _detect_delimiter,
+    _normalize_col_name,
+    _parse_universal_amount,
+    _parse_universal_date,
+)
+from services.ingestion.llm_schema_resolver import resolve_schema_with_llm
+
 EXPECTED_HEADER = [
     "transaction_id",
     "posted_on",
@@ -142,21 +153,6 @@ _CURRENCY_ALIASES = {
     "currency", "curr", "ccy", "currencycode", "isocurrency",
 }
 
-_CURRENCY_SYMBOL_MAP = {
-    "$": "USD",
-    "€": "EUR",
-    "£": "GBP",
-    "¥": "JPY",
-    "₹": "INR",
-    "C$": "CAD",
-    "A$": "AUD",
-    "CHF": "CHF",
-}
-
-
-def _normalize_col_name(name: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", name.lower().strip())
-
 
 def _detect_columns(header: list[str]) -> dict[str, int] | None:
     norm_cols = [_normalize_col_name(c) for c in header]
@@ -193,118 +189,36 @@ def _detect_columns(header: list[str]) -> dict[str, int] | None:
     return mapping
 
 
-def _parse_universal_date(raw_val: str) -> date:
-    val = raw_val.strip()
-    if not val:
-        raise ValueError("EMPTY_DATE")
-
-    # 1. ISO date prefix (handles YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
-    if len(val) >= 10 and val[4] == "-" and val[7] == "-":
-        try:
-            return date.fromisoformat(val[:10])
-        except ValueError:
-            pass
-
-    patterns = (
-        "%Y-%m-%d",
-        "%m/%d/%Y",
-        "%m/%d/%y",
-        "%d/%m/%Y",
-        "%d/%m/%y",
-        "%d.%m.%Y",
-        "%d-%m-%Y",
-        "%m-%d-%Y",
-        "%d-%b-%Y",
-        "%b %d, %Y",
-        "%d %b %Y",
-        "%B %d, %Y",
-        "%Y/%m/%d",
-    )
-    for pat in patterns:
-        try:
-            return datetime.strptime(val, pat).date()
-        except ValueError:
-            continue
-
-    raise ValueError(f"Unrecognized date format: {val}")
 
 
-def _parse_universal_amount(raw_val: str) -> tuple[Decimal, str | None]:
-    val = raw_val.strip()
-    if not val:
-        return Decimal("0.00"), None
 
-    is_negative = False
-    detected_currency: str | None = None
-
-    val_upper = val.upper()
-    if val_upper.endswith(" CR"):
-        val = val[:-3].strip()
-    elif val_upper.endswith(" DR"):
-        is_negative = True
-        val = val[:-3].strip()
-
-    if val.endswith("-"):
-        is_negative = True
-        val = val[:-1].strip()
-
-    if val.startswith("(") and val.endswith(")"):
-        is_negative = True
-        val = val[1:-1].strip()
-
-    for sym, ccy in _CURRENCY_SYMBOL_MAP.items():
-        if sym in val:
-            detected_currency = ccy
-            val = val.replace(sym, "").strip()
-            break
-
-    if val.startswith("-"):
-        is_negative = True
-        val = val[1:].strip()
-    elif val.startswith("+"):
-        val = val[1:].strip()
-
-    for code in ("USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF"):
-        if code in val.upper():
-            detected_currency = code
-            val = re.sub(re.escape(code), "", val, flags=re.IGNORECASE).strip()
-            break
-
-    # European dot-thousands, comma-decimals: e.g. 1.250,50
-    if re.search(r"^\d{1,3}(\.\d{3})+,\d{2}$", val):
-        val = val.replace(".", "").replace(",", ".")
-    else:
-        val = val.replace(",", "")
-
-    val = re.sub(r"[^\d.]", "", val)
-    if not val:
-        return Decimal("0.00"), detected_currency
-
-    amt = Decimal(val)
-    if not amt.is_finite():
-        raise InvalidOperation("Non-finite amount")
-
-    if is_negative:
-        amt = -abs(amt)
-
-    return amt, detected_currency
+def _profiled_to_col_map(profiled: ProfiledSchema) -> dict[str, int]:
+    col_map: dict[str, int] = {"date": profiled.date_col}
+    if profiled.amount_col is not None:
+        col_map["amount"] = profiled.amount_col
+    if profiled.debit_col is not None:
+        col_map["debit"] = profiled.debit_col
+    if profiled.credit_col is not None:
+        col_map["credit"] = profiled.credit_col
+    if profiled.balance_col is not None:
+        col_map["balance"] = profiled.balance_col
+    if profiled.description_col is not None:
+        col_map["description"] = profiled.description_col
+    if profiled.currency_col is not None:
+        col_map["currency"] = profiled.currency_col
+    if profiled.tx_id_col is not None:
+        col_map["tx_id"] = profiled.tx_id_col
+    return col_map
 
 
-def _detect_delimiter(sample: str) -> str:
-    first_line = sample.splitlines()[0] if sample.splitlines() else ""
-    if "\t" in first_line and first_line.count("\t") > first_line.count(","):
-        return "\t"
-    if ";" in first_line and first_line.count(";") > first_line.count(","):
-        return ";"
-    return ","
-
-
-def parse_bank_csv(content: bytes) -> IngestionResult:
+def parse_bank_csv(content: bytes, llm_config: LLMConfig | None = None) -> IngestionResult:
     """Universal bank statement and financial table CSV parser.
     
-    Accepts standard schemas, commercial bank formats (Chase, BofA, Citi, Wells Fargo),
-    payment gateways (Stripe, Square, Shopify, PayPal), accounting platforms (QuickBooks, Xero),
-    and raw founder spreadsheets.
+    Dynamically infers semantic roles via:
+    1. Fast path for standard schema.
+    2. Stage 1: Mathematical Content Profiler (balance invariant proofs B[i+1]-B[i]==A[i+1], data types).
+    3. Stage 2: Dynamic LLM Schema Resolver (for ambiguous or foreign tables).
+    4. Stage 3: Semantic header alias mapping fallback.
     """
     try:
         text = content.decode("utf-8-sig")
@@ -312,36 +226,94 @@ def parse_bank_csv(content: bytes) -> IngestionResult:
         raise CSVIngestionError("INVALID_ENCODING", "Upload must be UTF-8 encoded CSV.") from exc
 
     delimiter = _detect_delimiter(text)
-    reader = csv.reader(io.StringIO(text, newline=""), delimiter=delimiter, strict=True)
+    raw_lines = [line for line in text.splitlines() if line.strip()]
+    if not raw_lines:
+        raise CSVIngestionError("INVALID_HEADER", "CSV header is missing or malformed.")
 
+    reader = csv.reader(io.StringIO(text, newline=""), delimiter=delimiter, strict=True)
     try:
         header = next(reader)
     except (StopIteration, csv.Error) as exc:
         raise CSVIngestionError("INVALID_HEADER", "CSV header is missing or malformed.") from exc
 
-    # Fast path: exact match with standard baseline schema
+    # 1. Fast path: exact match with standard baseline schema
     if header == EXPECTED_HEADER:
         return _parse_standard_csv(reader)
 
-    # Universal path: locate header row within the first 10 rows (accommodating metadata)
-    detected = _detect_columns(header)
+    # 2. Extract sample matrix for content profiling
+    sample_matrix: list[list[str]] = []
+    for line in raw_lines[:25]:
+        try:
+            r = next(csv.reader([line], delimiter=delimiter))
+            sample_matrix.append(r)
+        except Exception:
+            continue
+
+    detected: dict[str, int] | None = None
     header_offset = 1
-    if detected is None:
-        # Search for table header within the first 10 lines
-        lines = text.splitlines()
-        for idx in range(1, min(10, len(lines))):
+    is_headerless = False
+
+    # Stage 1A: Test if the file is completely headerless (row 0 has a valid date)
+    if len(sample_matrix) >= 2:
+        profiled_all = profile_table_content(sample_matrix)
+        if profiled_all and profiled_all.confidence >= 0.85:
             try:
-                candidate = next(csv.reader([lines[idx]], delimiter=delimiter))
-                detected = _detect_columns(candidate)
-                if detected is not None:
-                    header = candidate
-                    header_offset = idx + 1
-                    # Re-initialize reader starting right after the detected header line
-                    remaining_text = "\n".join(lines[header_offset:])
-                    reader = csv.reader(io.StringIO(remaining_text, newline=""), delimiter=delimiter, strict=True)
-                    break
+                _parse_universal_date(sample_matrix[0][profiled_all.date_col])
+                # Row 0 contains a valid date in date_col -> headerless table!
+                detected = _profiled_to_col_map(profiled_all)
+                header_offset = 0
+                is_headerless = True
+                reader = csv.reader(io.StringIO(text, newline=""), delimiter=delimiter, strict=True)
             except Exception:
-                continue
+                pass
+
+    # Stage 1B: Test if row 0 was a header and remaining rows are data
+    if detected is None and len(sample_matrix) >= 3:
+        profiled_data = profile_table_content(sample_matrix[1:])
+        if profiled_data and profiled_data.confidence >= 0.85:
+            detected = _profiled_to_col_map(profiled_data)
+            header_offset = 1
+            remaining_text = "\n".join(raw_lines[header_offset:])
+            reader = csv.reader(io.StringIO(remaining_text, newline=""), delimiter=delimiter, strict=True)
+
+    # Stage 2: Dynamic LLM Schema Resolver (if profiling uncertain)
+    if detected is None and llm_config is not None:
+        llm_profiled = resolve_schema_with_llm(sample_matrix[:5], llm_config)
+        if llm_profiled:
+            detected = _profiled_to_col_map(llm_profiled)
+            header_offset = 1
+            remaining_text = "\n".join(raw_lines[header_offset:])
+            reader = csv.reader(io.StringIO(remaining_text, newline=""), delimiter=delimiter, strict=True)
+
+    # If headers are present, enrich detected mapping with explicit header matches (e.g. tx_id)
+    if detected is not None and not is_headerless and header:
+        header_cols = _detect_columns(header)
+        if header_cols:
+            if "tx_id" in header_cols and "tx_id" not in detected:
+                detected["tx_id"] = header_cols["tx_id"]
+            if "description" in header_cols and "description" not in detected:
+                detected["description"] = header_cols["description"]
+            if "currency" in header_cols and "currency" not in detected:
+                detected["currency"] = header_cols["currency"]
+
+    # Stage 3: Semantic header detection fallback
+    if detected is None:
+        detected = _detect_columns(header)
+        header_offset = 1
+        if detected is None:
+            # Search within first 10 lines for header
+            for idx in range(1, min(10, len(raw_lines))):
+                try:
+                    candidate = next(csv.reader([raw_lines[idx]], delimiter=delimiter))
+                    detected = _detect_columns(candidate)
+                    if detected is not None:
+                        header = candidate
+                        header_offset = idx + 1
+                        remaining_text = "\n".join(raw_lines[header_offset:])
+                        reader = csv.reader(io.StringIO(remaining_text, newline=""), delimiter=delimiter, strict=True)
+                        break
+                except Exception:
+                    continue
 
     if detected is None:
         raise CSVIngestionError("INVALID_HEADER", "CSV header does not match required schema: " + ",".join(EXPECTED_HEADER))
@@ -553,19 +525,22 @@ def _parse_universal_csv(reader: Any, col_map: dict[str, int], start_row: int) -
     return IngestionResult(currency=accepted_rows[0].currency, accepted_rows=accepted_rows, rejected_rows=rejected)
 
 
-def parse_multiple_bank_csv(files: Sequence[tuple[str, bytes]]) -> IngestionResult:
+def parse_multiple_bank_csv(
+    files: Sequence[tuple[str, bytes]],
+    llm_config: LLMConfig | None = None,
+) -> IngestionResult:
     """Parses and consolidates multiple CSV statements across accounts or sequential periods."""
     if not files:
         raise CSVIngestionError("NO_FILES", "No statement files provided.")
     if len(files) == 1:
-        return parse_bank_csv(files[0][1])
+        return parse_bank_csv(files[0][1], llm_config=llm_config)
 
     all_accepted: list[DemoTransaction] = []
     all_rejected: list[RejectedRow] = []
     file_results: list[tuple[str, IngestionResult]] = []
 
     for filename, content in files:
-        result = parse_bank_csv(content)
+        result = parse_bank_csv(content, llm_config=llm_config)
         file_results.append((filename, result))
         all_rejected.extend(result.rejected_rows)
 

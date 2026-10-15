@@ -228,3 +228,108 @@ def test_parse_multiple_bank_csv_rejects_mixed_currencies():
         parse_multiple_bank_csv([("usd.csv", usd_csv), ("eur.csv", eur_csv)])
     assert exc_info.value.code == "MIXED_CURRENCIES"
 
+
+def test_parse_dynamic_german_statement_content_profiling():
+    # Semicolon delimited German bank export with German non-English headers
+    # Mathematical profiler proves Saldo[1] - Saldo[0] == Betrag[1] (2379.50 - 1879.50 == 500.00)
+    german_csv = (
+        "Buchungstag;Verwendungszweck;Betrag;Saldo\n"
+        "2026-10-01;Buerobedarf;-120,50;1879,50\n"
+        "2026-10-02;Zahlung Kunde;500,00;2379,50\n"
+    ).encode()
+
+    result = parse_bank_csv(german_csv)
+
+    assert result.currency == "USD"
+    assert len(result.accepted_rows) == 2
+    assert result.accepted_rows[0].posted_on == date(2026, 10, 1)
+    assert result.accepted_rows[0].amount == Decimal("-120.50")
+    assert result.accepted_rows[0].closing_balance == Decimal("1879.50")
+    assert result.accepted_rows[1].amount == Decimal("500.00")
+    assert result.accepted_rows[1].closing_balance == Decimal("2379.50")
+
+
+def test_parse_dynamic_headerless_csv_content_profiling():
+    # Completely headerless CSV: row 1 is already transaction data
+    headerless_csv = (
+        "2026-10-01,Office Supplies,-45.50,954.50\n"
+        "2026-10-02,Client Retainer,1500.00,2454.50\n"
+        "2026-10-03,Software Tool,-50.00,2404.50\n"
+    ).encode()
+
+    result = parse_bank_csv(headerless_csv)
+
+    assert len(result.accepted_rows) == 3
+    assert result.accepted_rows[0].posted_on == date(2026, 10, 1)
+    assert result.accepted_rows[0].amount == Decimal("-45.50")
+    assert result.accepted_rows[0].closing_balance == Decimal("954.50")
+    assert result.accepted_rows[2].amount == Decimal("-50.00")
+    assert result.accepted_rows[2].closing_balance == Decimal("2404.50")
+
+
+def test_dynamic_profiler_mathematical_balance_invariant():
+    from services.ingestion.dynamic_profiler import profile_table_content
+
+    # Matrix with arbitrary non-standard column names
+    rows = [
+        ["col_alpha", "col_beta", "col_gamma", "col_delta"],
+        ["2026-10-01", "Vendor Payment", "-300.00", "4700.00"],
+        ["2026-10-02", "Client Retainer", "1000.00", "5700.00"],
+        ["2026-10-03", "Software Cloud", "-100.00", "5600.00"],
+    ]
+
+    schema = profile_table_content(rows[1:])
+    assert schema is not None
+    assert schema.date_col == 0
+    assert schema.amount_col == 2
+    assert schema.balance_col == 3
+    assert schema.confidence == 1.0
+    assert schema.detection_method == "mathematical_balance_proof"
+
+
+def test_dynamic_profiler_debit_credit_balance_invariant():
+    from services.ingestion.dynamic_profiler import profile_table_content
+
+    rows = [
+        ["ColA", "ColB", "ColC", "ColD", "ColE"],
+        ["2026-10-01", "Supplier Invoice", "250.00", "", "9750.00"],
+        ["2026-10-02", "Customer Wire", "", "1500.00", "11250.00"],
+    ]
+
+    schema = profile_table_content(rows[1:])
+    assert schema is not None
+    assert schema.date_col == 0
+    assert schema.debit_col == 2
+    assert schema.credit_col == 3
+    assert schema.balance_col == 4
+    assert schema.confidence == 1.0
+    assert schema.detection_method == "mathematical_debit_credit_balance_proof"
+
+
+def test_llm_schema_resolver_structured_mapping(monkeypatch):
+    from services.ingestion.llm_schema_resolver import resolve_schema_with_llm
+    from services.agent.schema import LLMConfig
+
+    # Mock query_external_llm to simulate an intelligent LLM response for ambiguous columns
+    def mock_query(prompt, system_instruction, config):
+        return '{"date_col": 0, "amount_col": 3, "debit_col": null, "credit_col": null, "balance_col": 4, "description_col": 1, "currency_col": null}'
+
+    import services.ingestion.llm_schema_resolver as resolver_module
+    monkeypatch.setattr(resolver_module, "query_external_llm", mock_query)
+
+    dummy_config = LLMConfig(provider="gemini", api_key="test-key", model_name="gemini-2.5-flash")
+    sample_rows = [
+        ["Date", "Notes", "Category", "Net Movement", "Total Balance"],
+        ["2026-10-01", "Client A", "Revenue", "5000.00", "15000.00"],
+    ]
+
+    schema = resolve_schema_with_llm(sample_rows, llm_config=dummy_config)
+    assert schema is not None
+    assert schema.date_col == 0
+    assert schema.amount_col == 3
+    assert schema.balance_col == 4
+    assert schema.description_col == 1
+    assert schema.confidence == 0.95
+    assert schema.detection_method == "llm_semantic_resolution"
+
+

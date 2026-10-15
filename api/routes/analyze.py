@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Optional
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, Header, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
+from services.agent.schema import LLMConfig
 from services.calculations.cash_analysis import calculate_cash_analysis
 from services.calculations.runway import calculate_cash_conversion_cycle
 from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv, parse_multiple_bank_csv
@@ -59,9 +61,18 @@ async def analyze_csv(
     dpo_days: int | None = Form(None, ge=0),
     dio_days: int | None = Form(0, ge=0),
     as_of_date: date | None = Form(None),
+    x_llm_config: Optional[str] = Header(default=None, alias="X-LLM-Config"),
 ) -> CashAnalysisResponse | JSONResponse:
     if MAX_UPLOAD_BYTES <= 0:
         raise RuntimeError("MAX_ANALYSIS_UPLOAD_BYTES must be a positive integer")
+
+    effective_llm_config: LLMConfig | None = None
+    if x_llm_config:
+        try:
+            parsed = json.loads(x_llm_config)
+            effective_llm_config = LLMConfig(**parsed)
+        except Exception:
+            pass
 
     upload_list: list[UploadFile] = []
     if files:
@@ -89,9 +100,9 @@ async def analyze_csv(
 
     try:
         if len(file_contents) == 1:
-            ingestion = parse_bank_csv(file_contents[0][1])
+            ingestion = parse_bank_csv(file_contents[0][1], llm_config=effective_llm_config)
         else:
-            ingestion = parse_multiple_bank_csv(file_contents)
+            ingestion = parse_multiple_bank_csv(file_contents, llm_config=effective_llm_config)
     except CSVIngestionError as exc:
         return JSONResponse(status_code=422, content={"error": {"code": exc.code, "message": str(exc)}})
 
