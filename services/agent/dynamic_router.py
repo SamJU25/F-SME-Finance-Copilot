@@ -62,8 +62,8 @@ class FastEmbedSemanticRouter:
         "GENERAL_ASSISTANCE": (
             "Conversational greetings, introductions, hello, hi, hey, who are you, how can you assist our business, "
             "how do you help my company, what can you do, explaining assistant capabilities, onboarding guides, "
-            "general financial concepts, business definitions, corporate finance terminology, market share formula, "
-            "accounting formulas, metrics explanations, financial education, business definitions, financial literacy questions, "
+            "general financial concepts, business definitions, corporate finance terminology, "
+            "accounting formulas, business formulas, metrics explanations, financial education, financial literacy questions, "
             "what is my financial status, general business financial status overview without statements, "
             "walkthrough, or general system help."
         ),
@@ -98,7 +98,7 @@ class FastEmbedSemanticRouter:
         "BREAK_EVEN_UNITS": "Calculate break-even units, break-even sales volume, how many units must we sell to break even.",
         "ATTRITION": "Calculate customer churn impact, lost client impact on burn rate and cash runway, revenue attrition.",
         "INVOICE_HASH": "Verify invoice hash, check invoice double financing, check blockchain invoice integrity, consortium registry check.",
-        "GENERAL": "General overview of financial health, business concepts, definitions, market share formula, accounting formulas, metrics explanations, and general financial education.",
+        "GENERAL": "General overview of financial health, business concepts, definitions, corporate finance formulas, accounting formulas, metrics explanations, and general financial education.",
     }
 
     DISCLAIMER_PROTOTYPE = (
@@ -144,35 +144,34 @@ class FastEmbedSemanticRouter:
                 return "CASH_DIAGNOSTIC", "GENERAL", False
             return "GENERAL_ASSISTANCE", "GENERAL", False
 
-        # Contextual history follow-up (e.g. "and what about the options?" or "what if interest is 10%?")
-        eval_text = m
-        if history:
+        if not self._ready:
+            return "GENERAL_ASSISTANCE", "GENERAL", False
+
+        # 1. Standalone semantic embedding evaluation
+        q_embed = np.array(list(self._model.embed([m])))[0]
+        q_norm = q_embed / np.linalg.norm(q_embed)
+
+        sub_sims = np.dot(self._sub_norms, q_norm)
+        sorted_sub_idx = np.argsort(sub_sims)[::-1]
+        top_sub_score = float(sub_sims[sorted_sub_idx[0]])
+        second_sub_score = float(sub_sims[sorted_sub_idx[1]])
+        sub_margin = top_sub_score - second_sub_score
+
+        # 2. Contextual fusion: if query has low sub-intent separation (< 0.03) and history exists,
+        # resolve ambiguous conversational follow-ups using semantic antecedent
+        if history and sub_margin < 0.03:
             last_user_msg = ""
-            last_agent_msg = ""
             for item in reversed(history):
                 role = getattr(item, "role", "") if hasattr(item, "role") else (item.get("role", "") if isinstance(item, dict) else "")
                 txt = (getattr(item, "text", "") if hasattr(item, "text") else (item.get("text", "") if isinstance(item, dict) else "")).strip()
                 if role == "user" and not last_user_msg:
                     last_user_msg = txt
-                elif role in ("agent", "assistant") and not last_agent_msg:
-                    last_agent_msg = txt
-                if last_user_msg and last_agent_msg:
                     break
 
-            m_lower = m.lower().strip()
-            is_delta_query = any(m_lower.startswith(prefix) for prefix in ("what if", "how about", "what about", "and if", "change to", "if rate", "if interest", "with rate", "with interest"))
-            if is_delta_query and last_user_msg:
-                eval_text = f"{last_user_msg} {m}"
-            elif len(m.split()) <= 8:
-                context_ref = last_agent_msg or last_user_msg
-                if context_ref:
-                    eval_text = f"{context_ref} {m}"
-
-        if not self._ready:
-            return "GENERAL_ASSISTANCE", "GENERAL", False
-
-        q_embed = np.array(list(self._model.embed([eval_text])))[0]
-        q_norm = q_embed / np.linalg.norm(q_embed)
+            if last_user_msg:
+                fused = f"{last_user_msg} {m}"
+                q_embed = np.array(list(self._model.embed([fused])))[0]
+                q_norm = q_embed / np.linalg.norm(q_embed)
 
         sims = np.dot(self._intent_norms, q_norm)
         scores = {self._intent_keys[i]: float(sims[i]) for i in range(len(self._intent_keys))}
@@ -210,19 +209,27 @@ class FastEmbedSemanticRouter:
         if not has_csv and best_intent in ("CASH_DIAGNOSTIC", "CREDIT_UNDERWRITING") and (financial_score - greet_score) < 0.03:
             best_intent = "GENERAL_ASSISTANCE"
 
-        if has_csv and best_intent == "GENERAL_ASSISTANCE":
-            if greet_score < 0.65 or any(term in m.lower() for term in ("statement", "csv", "transaction", "bank")):
-                best_intent = "CASH_DIAGNOSTIC"
+        # Bayesian likelihood prior: an active statement artifact in session adds likelihood to cash evaluation
+        if has_csv and best_intent == "GENERAL_ASSISTANCE" and (financial_score + 0.08) >= greet_score:
+            best_intent = "CASH_DIAGNOSTIC"
 
-        # Sub-intent classification
+        # Sub-intent classification via vector similarity and statistical confidence margin
         sub_sims = np.dot(self._sub_norms, q_norm)
-        best_sub_idx = int(np.argmax(sub_sims))
-        best_sub = self._sub_keys[best_sub_idx]
+        sorted_sub_indices = np.argsort(sub_sims)[::-1]
+        top_sub_idx = int(sorted_sub_indices[0])
+        top_sub = self._sub_keys[top_sub_idx]
+        top_sub_score = float(sub_sims[top_sub_idx])
+        second_sub_score = float(sub_sims[sorted_sub_indices[1]])
+        sub_margin = top_sub_score - second_sub_score
 
+        # If general assistance dominates, only route to a quantitative tool if there is a distinct, high-confidence match
         if best_intent == "GENERAL_ASSISTANCE":
-            calc_keywords = ("calculate", "compute", "amortiz", "dscr", "fccr", "factor", "break-even", "break even", "wcr", "burn rate", "how many days")
-            if not any(k in m.lower() for k in calc_keywords):
+            if top_sub_score >= 0.74 and sub_margin >= 0.05:
+                best_sub = top_sub
+            else:
                 best_sub = "GENERAL"
+        else:
+            best_sub = top_sub
 
         return best_intent, best_sub, False
 
