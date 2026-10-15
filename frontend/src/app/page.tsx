@@ -15,6 +15,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 const CSV_HEADER = 'transaction_id,posted_on,amount,currency,description,closing_balance';
 const SESSION_MESSAGE_LIMIT = 20;
 
+const RUNWAY_HORIZON_PRESETS = [
+  { days: '30', label: '30d', sub: '1 mo' },
+  { days: '60', label: '60d', sub: '2 mo' },
+  { days: '90', label: '90d', sub: '1 qtr' },
+  { days: '180', label: '180d', sub: '6 mo' },
+];
+
 export interface SessionItem {
   id: string;
   title: string;
@@ -1189,23 +1196,74 @@ export default function HomePage() {
             <h2 id="upload-title">Statement Ingestion</h2>
             <p className="panel-intro">Processed in local memory · Ephemeral session</p>
             <form onSubmit={analyze}>
-              <div style={{ marginBottom: 16 }}>
+              <div className="threshold-group">
                 <label className="field-label" htmlFor="threshold">Alert threshold (runway warning days)</label>
-                <input
-                  id="threshold"
-                  name="alert_threshold_days"
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="30"
-                  value={threshold}
-                  onChange={(event) => setThreshold(event.target.value)}
-                  onBlur={() => {
-                    if (!threshold || Number(threshold) < 1) {
-                      setThreshold('30');
-                    }
-                  }}
-                />
+                <div className="threshold-container">
+                  <div className="threshold-pills" role="radiogroup" aria-label="Runway alert horizon presets">
+                    {RUNWAY_HORIZON_PRESETS.map((preset) => {
+                      const isSelected = threshold === preset.days;
+                      return (
+                        <button
+                          key={preset.days}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          className={`threshold-pill ${isSelected ? 'active' : ''}`}
+                          onClick={() => {
+                            setThreshold(preset.days);
+                            if (file || csvText) {
+                              const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                              executeAnalysis(target, preset.days);
+                            }
+                          }}
+                        >
+                          <span className="threshold-pill-days">{preset.label}</span>
+                          <span className="threshold-pill-sub">({preset.sub})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="threshold-custom-wrap">
+                    <span className="threshold-custom-prefix">Custom:</span>
+                    <input
+                      id="threshold"
+                      name="alert_threshold_days"
+                      type="number"
+                      min="1"
+                      max="365"
+                      step="1"
+                      aria-label="Custom runway alert days"
+                      className="threshold-custom-input"
+                      placeholder="30"
+                      value={threshold}
+                      onChange={(event) => setThreshold(event.target.value)}
+                      onBlur={() => {
+                        const num = Number(threshold);
+                        if (!threshold || isNaN(num) || num < 1) {
+                          setThreshold('30');
+                        } else if (file || csvText) {
+                          const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                          executeAnalysis(target, threshold);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (file || csvText) {
+                            const target = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+                            executeAnalysis(target, threshold);
+                          }
+                        }
+                      }}
+                    />
+                    <span className="threshold-custom-suffix">days</span>
+                  </div>
+                </div>
+                <div className="threshold-helper">
+                  Triggers warning if burn velocity depletes cash balance within{' '}
+                  <strong>{threshold || '30'} days</strong>.
+                </div>
               </div>
 
               {file || csvText ? (
