@@ -352,24 +352,24 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
         return FetchModelsResponse(
             success=True,
             provider="offline",
-            models=fallbacks,
+            models=[ModelItem(id="deterministic-v1", name="Deterministic Financial Engine (Offline)")],
             message="Offline deterministic engine requires no remote models.",
         )
 
-    # If missing required credentials, return fallback suggestions
+    # If missing required credentials, return empty models list (never pretend with hardcoded list)
     if provider in ["gemini", "anthropic", "openai", "deepseek", "groq"] and not req.api_key:
         return FetchModelsResponse(
             success=False,
             provider=provider,
-            models=fallbacks,
-            message=f"API key required to fetch live models for {provider}. Showing standard models.",
+            models=[],
+            message=f"API key required. Enter your API key to discover live models from {provider}.",
         )
 
     if provider == "custom" and not req.base_url:
         return FetchModelsResponse(
             success=False,
             provider=provider,
-            models=fallbacks,
+            models=[],
             message="Base URL required to fetch custom models.",
         )
 
@@ -459,14 +459,14 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
         return FetchModelsResponse(
             success=False,
             provider=provider,
-            models=fallbacks,
-            message=f"Live fetch failed ({str(exc)[:80]}). Showing default model catalog.",
+            models=[],
+            message=f"Live model discovery failed ({str(exc)[:80]}). Verify connection and credentials.",
         )
 
     return FetchModelsResponse(
         success=False,
         provider=provider,
-        models=fallbacks,
-        message=f"Unable to query /models endpoint for {provider}. Showing default catalog.",
+        models=[],
+        message=f"Unable to query /models endpoint for {provider}. Verify connection and credentials.",
     )
 

@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792045810.1542003,
-    "seen": 1792046490.8953958,
-    "ast_hash": "1bc887e94d6ca239d4dd82486f2a5257",
+    "mtime": 1792049055.2983816,
+    "seen": 1792050670.6219764,
+    "ast_hash": "8e4fe404e0ce9a5bc5e986f4653ef572",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792045730.7123976,
-    "seen": 1792045784.6311789,
-    "ast_hash": "1889a2c3a25bab03afa6b6691fa33684",
+    "mtime": 1792050643.123898,
+    "seen": 1792050670.5985587,
+    "ast_hash": "995c904074e81aeb737f14a771fb10cd",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1470,15 +1470,15 @@
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
-    "mtime": 1792048991.9861429,
-    "seen": 1792049031.80492,
-    "ast_hash": "9abcdbb843fcbf65906e1e9326bac585",
+    "mtime": 1792050525.837252,
+    "seen": 1792050670.6017852,
+    "ast_hash": "8b456acd6eef2e50df15072aca83689a",
     "semantic_hash": ""
   },
   "services/agent/llm_bridge.py": {
-    "mtime": 1792044487.0540025,
-    "seen": 1792044610.4622316,
-    "ast_hash": "f51bf9d889dbb356325a7b6ca42553df",
+    "mtime": 1792050510.4621198,
+    "seen": 1792050670.5994341,
+    "ast_hash": "ba174f041f85a5b958af4f00e683e047",
     "semantic_hash": ""
   },
   "services/calculations/predictive_cash.py": {

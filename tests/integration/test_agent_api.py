@@ -253,7 +253,7 @@ def test_agent_fetch_models_offline():
 
 
 def test_agent_fetch_models_missing_key():
-    """Verify missing API key returns fallback models gracefully without server failure."""
+    """Verify missing API key returns empty models list without hardcoded fallback."""
     response = client.post(
         "/api/v1/agent/fetch-models",
         json={"provider": "gemini"},
@@ -261,12 +261,12 @@ def test_agent_fetch_models_missing_key():
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is False
-    assert len(data["models"]) >= 1
+    assert len(data["models"]) == 0
     assert "API key required" in data["message"]
 
 
 def test_agent_fetch_models_custom_missing_base_url():
-    """Verify custom provider without base URL returns fallback gracefully."""
+    """Verify custom provider without base URL returns empty models list."""
     response = client.post(
         "/api/v1/agent/fetch-models",
         json={"provider": "custom"},
@@ -274,6 +274,7 @@ def test_agent_fetch_models_custom_missing_base_url():
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is False
+    assert len(data["models"]) == 0
     assert "Base URL required" in data["message"]
 
 

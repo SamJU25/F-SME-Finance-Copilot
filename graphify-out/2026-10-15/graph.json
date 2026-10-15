@@ -9,7 +9,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 127,
+      "community": 162,
       "community_name": "DemoTransaction",
       "file_type": "code",
       "norm_label": "detectedobligation",
@@ -22,7 +22,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 127,
+      "community": 162,
       "community_name": "DemoTransaction",
       "file_type": "code",
       "norm_label": "predictivedeficitresult",
@@ -35,38 +35,12 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 127,
+      "community": 162,
       "community_name": "DemoTransaction",
       "file_type": "code",
       "norm_label": "demotransaction",
       "source_file": "services/ingestion/csv_parser.py",
       "source_location": "L48"
-    },
-    {
-      "id": "services_security_staging_ledger_executionrequest",
-      "label": "ExecutionRequest",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "executionrequest",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L50"
-    },
-    {
-      "id": "services_security_staging_ledger_intentstateerror",
-      "label": "IntentStateError",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "intentstateerror",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L33"
     },
     {
       "id": "services_agent_schema_agentactionproposal",
@@ -79,7 +53,7 @@
       "file_type": "code",
       "norm_label": "agentactionproposal",
       "source_file": "services/agent/schema.py",
-      "source_location": "L125"
+      "source_location": "L131"
     },
     {
       "id": "services_agent_schema_agentchatrequest",
@@ -105,7 +79,7 @@
       "file_type": "code",
       "norm_label": "agentmatchedoption",
       "source_file": "services/agent/schema.py",
-      "source_location": "L111"
+      "source_location": "L117"
     },
     {
       "id": "services_agent_schema_agentmetricssummary",
@@ -118,7 +92,7 @@
       "file_type": "code",
       "norm_label": "agentmetricssummary",
       "source_file": "services/agent/schema.py",
-      "source_location": "L78"
+      "source_location": "L81"
     },
     {
       "id": "services_agent_schema_copilotresponse",
@@ -131,7 +105,7 @@
       "file_type": "code",
       "norm_label": "copilotresponse",
       "source_file": "services/agent/schema.py",
-      "source_location": "L136"
+      "source_location": "L142"
     },
     {
       "id": "services_agent_schema_fetchmodelsrequest",
@@ -222,7 +196,7 @@
       "file_type": "code",
       "norm_label": "cashanalysisresponse",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L26"
+      "source_location": "L27"
     },
     {
       "id": "api_routes_analyze_rejectedrowresponse",
@@ -235,7 +209,7 @@
       "file_type": "code",
       "norm_label": "rejectedrowresponse",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L20"
+      "source_location": "L21"
     },
     {
       "id": "api_routes_health_healthstatus",
@@ -261,7 +235,7 @@
       "file_type": "code",
       "norm_label": "actionstatus",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L26"
+      "source_location": "L29"
     },
     {
       "id": "frontend_src_types_api_actiontype",
@@ -274,7 +248,7 @@
       "file_type": "code",
       "norm_label": "actiontype",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L25"
+      "source_location": "L28"
     },
     {
       "id": "frontend_src_types_api_agentactionproposal",
@@ -287,7 +261,7 @@
       "file_type": "code",
       "norm_label": "agentactionproposal",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L115"
+      "source_location": "L121"
     },
     {
       "id": "frontend_src_types_api_agentmetricssummary",
@@ -300,7 +274,7 @@
       "file_type": "code",
       "norm_label": "agentmetricssummary",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L84"
+      "source_location": "L87"
     },
     {
       "id": "frontend_src_types_api_cashanalysisresponse",
@@ -339,7 +313,7 @@
       "file_type": "code",
       "norm_label": "copilotresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L124"
+      "source_location": "L130"
     },
     {
       "id": "frontend_src_types_api_executionrequest",
@@ -352,7 +326,7 @@
       "file_type": "code",
       "norm_label": "executionrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L46"
+      "source_location": "L49"
     },
     {
       "id": "frontend_src_types_api_fetchmodelsrequest",
@@ -365,7 +339,7 @@
       "file_type": "code",
       "norm_label": "fetchmodelsrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L170"
+      "source_location": "L176"
     },
     {
       "id": "frontend_src_types_api_fetchmodelsresponse",
@@ -378,7 +352,7 @@
       "file_type": "code",
       "norm_label": "fetchmodelsresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L176"
+      "source_location": "L182"
     },
     {
       "id": "frontend_src_types_api_financingoption",
@@ -391,7 +365,7 @@
       "file_type": "code",
       "norm_label": "financingoption",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L66"
+      "source_location": "L69"
     },
     {
       "id": "frontend_src_types_api_llmconfig",
@@ -404,7 +378,7 @@
       "file_type": "code",
       "norm_label": "llmconfig",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L143"
+      "source_location": "L149"
     },
     {
       "id": "frontend_src_types_api_llmproviderid",
@@ -417,7 +391,7 @@
       "file_type": "code",
       "norm_label": "llmproviderid",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L133"
+      "source_location": "L139"
     },
     {
       "id": "frontend_src_types_api_modelitem",
@@ -430,7 +404,7 @@
       "file_type": "code",
       "norm_label": "modelitem",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L165"
+      "source_location": "L171"
     },
     {
       "id": "frontend_src_types_api_producttype",
@@ -443,7 +417,7 @@
       "file_type": "code",
       "norm_label": "producttype",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L52"
+      "source_location": "L55"
     },
     {
       "id": "frontend_src_types_api_rejectedrow",
@@ -469,7 +443,7 @@
       "file_type": "code",
       "norm_label": "risktier",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L51"
+      "source_location": "L54"
     },
     {
       "id": "frontend_src_types_api_stagedactionintent",
@@ -482,7 +456,7 @@
       "file_type": "code",
       "norm_label": "stagedactionintent",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L28"
+      "source_location": "L31"
     },
     {
       "id": "frontend_src_types_api_stagingrequest",
@@ -495,7 +469,7 @@
       "file_type": "code",
       "norm_label": "stagingrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L39"
+      "source_location": "L42"
     },
     {
       "id": "frontend_src_types_api_testconnectionrequest",
@@ -508,7 +482,7 @@
       "file_type": "code",
       "norm_label": "testconnectionrequest",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L150"
+      "source_location": "L156"
     },
     {
       "id": "frontend_src_types_api_testconnectionresponse",
@@ -521,7 +495,7 @@
       "file_type": "code",
       "norm_label": "testconnectionresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L157"
+      "source_location": "L163"
     },
     {
       "id": "frontend_src_types_api_underwriteapiresponse",
@@ -534,7 +508,7 @@
       "file_type": "code",
       "norm_label": "underwriteapiresponse",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L78"
+      "source_location": "L81"
     },
     {
       "id": "frontend_src_types_api_underwritingdossier",
@@ -547,7 +521,7 @@
       "file_type": "code",
       "norm_label": "underwritingdossier",
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L54"
+      "source_location": "L57"
     },
     {
       "id": "services_blockchain_invoice_hasher_consortiuminvoiceregistry",
@@ -719,19 +693,6 @@
       "source_location": "L31"
     },
     {
-      "id": "services_security_staging_ledger_intentnotfounderror",
-      "label": "IntentNotFoundError",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 224,
-      "community_name": "StagingLedger",
-      "file_type": "code",
-      "norm_label": "intentnotfounderror",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L29"
-    },
-    {
       "id": "services_security_staging_ledger_stagingledger",
       "label": "StagingLedger",
       "_callable": true,
@@ -743,6 +704,19 @@
       "norm_label": "stagingledger",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L59"
+    },
+    {
+      "id": "services_security_three_tier_gate_stagedactionintent",
+      "label": "StagedActionIntent",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 224,
+      "community_name": "StagingLedger",
+      "file_type": "code",
+      "norm_label": "stagedactionintent",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L18"
     },
     {
       "id": "services_ingestion_csv_parser_csvingestionerror",
@@ -810,6 +784,19 @@
       "source_location": "L59"
     },
     {
+      "id": "services_security_three_tier_gate_securitytier",
+      "label": "SecurityTier",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "code",
+      "norm_label": "securitytier",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L12"
+    },
+    {
       "id": "services_security_staging_ledger_actionstatus",
       "label": "ActionStatus",
       "_callable": true,
@@ -836,6 +823,45 @@
       "source_location": "L37"
     },
     {
+      "id": "services_security_staging_ledger_executionrequest",
+      "label": "ExecutionRequest",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "executionrequest",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L50"
+    },
+    {
+      "id": "services_security_staging_ledger_intentnotfounderror",
+      "label": "IntentNotFoundError",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "intentnotfounderror",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L29"
+    },
+    {
+      "id": "services_security_staging_ledger_intentstateerror",
+      "label": "IntentStateError",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "intentstateerror",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L33"
+    },
+    {
       "id": "services_security_staging_ledger_stagingledgererror",
       "label": "StagingLedgerError",
       "_callable": true,
@@ -847,32 +873,6 @@
       "norm_label": "stagingledgererror",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L25"
-    },
-    {
-      "id": "services_security_three_tier_gate_securitytier",
-      "label": "SecurityTier",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "securitytier",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L12"
-    },
-    {
-      "id": "services_security_three_tier_gate_stagedactionintent",
-      "label": "StagedActionIntent",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "stagedactionintent",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L18"
     },
     {
       "id": "services_security_staging_ledger_stagingrequest",
@@ -901,72 +901,12 @@
       "source_location": "L13"
     },
     {
-      "id": "services_calculations_predictive_cash_calculate_predictive_cash",
-      "label": "calculate_predictive_cash()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "calculate_predictive_cash()",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L102"
-    },
-    {
-      "id": "services_calculations_predictive_cash_detect_obligation",
-      "label": "_detect_obligation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "_detect_obligation()",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L61"
-    },
-    {
-      "id": "services_calculations_predictive_cash_detect_recurring_debt",
-      "label": "detect_recurring_debt()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "detect_recurring_debt()",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L96"
-    },
-    {
-      "id": "services_calculations_predictive_cash_detect_recurring_payroll",
-      "label": "detect_recurring_payroll()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "detect_recurring_payroll()",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L84"
-    },
-    {
-      "id": "services_calculations_predictive_cash_detect_recurring_rent",
-      "label": "detect_recurring_rent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "detect_recurring_rent()",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L90"
-    },
-    {
       "id": "tests_unit_test_predictive_cash_make_tx",
       "label": "make_tx()",
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "make_tx()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -978,7 +918,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_capped_at_365_days()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -990,7 +930,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_critical_shortfall()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1002,7 +942,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_dynamic_arbitrary_horizon()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1014,7 +954,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_dynamic_extended_horizon()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1026,7 +966,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_invalid_zero_or_negative_days()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1038,7 +978,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_safe_horizon()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1050,7 +990,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash_warning_horizon()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1062,7 +1002,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_lumpy_expense_overdraft_pinpointing()",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -1074,23 +1014,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_payroll_detection()",
       "source_file": "tests/unit/test_predictive_cash.py",
       "source_location": "L84"
-    },
-    {
-      "id": "tests_unit_test_predictive_cash_test_predictive_rent_and_debt_detection",
-      "label": "test_predictive_rent_and_debt_detection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "test_predictive_rent_and_debt_detection()",
-      "source_file": "tests/unit/test_predictive_cash.py",
-      "source_location": "L174"
     },
     {
       "id": "services_calculations_cash_analysis_calculate_cash_analysis",
@@ -1189,6 +1117,90 @@
       "source_location": "L50"
     },
     {
+      "id": "services_calculations_predictive_cash_calculate_predictive_cash",
+      "label": "calculate_predictive_cash()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "calculate_predictive_cash()",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L102"
+    },
+    {
+      "id": "services_calculations_predictive_cash_detect_obligation",
+      "label": "_detect_obligation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "_detect_obligation()",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L61"
+    },
+    {
+      "id": "services_calculations_predictive_cash_detect_recurring_debt",
+      "label": "detect_recurring_debt()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "detect_recurring_debt()",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L96"
+    },
+    {
+      "id": "services_calculations_predictive_cash_detect_recurring_payroll",
+      "label": "detect_recurring_payroll()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "detect_recurring_payroll()",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L84"
+    },
+    {
+      "id": "services_calculations_predictive_cash_detect_recurring_rent",
+      "label": "detect_recurring_rent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "detect_recurring_rent()",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L90"
+    },
+    {
+      "id": "tests_unit_test_predictive_cash_test_predictive_rent_and_debt_detection",
+      "label": "test_predictive_rent_and_debt_detection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "test_predictive_rent_and_debt_detection()",
+      "source_file": "tests/unit/test_predictive_cash.py",
+      "source_location": "L174"
+    },
+    {
+      "id": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "label": "calculate_cash_conversion_cycle()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "file_type": "code",
+      "norm_label": "calculate_cash_conversion_cycle()",
+      "source_file": "services/calculations/runway.py",
+      "source_location": "L70"
+    },
+    {
       "id": "services_calculations_runway_calculate_dab",
       "label": "calculate_dab()",
       "_callable": true,
@@ -1237,6 +1249,54 @@
       "source_location": "L27"
     },
     {
+      "id": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_balanced",
+      "label": "test_calculate_cash_conversion_cycle_balanced()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "file_type": "code",
+      "norm_label": "test_calculate_cash_conversion_cycle_balanced()",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L87"
+    },
+    {
+      "id": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_cash_generative",
+      "label": "test_calculate_cash_conversion_cycle_cash_generative()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "file_type": "code",
+      "norm_label": "test_calculate_cash_conversion_cycle_cash_generative()",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L94"
+    },
+    {
+      "id": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_validation",
+      "label": "test_calculate_cash_conversion_cycle_validation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "file_type": "code",
+      "norm_label": "test_calculate_cash_conversion_cycle_validation()",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L101"
+    },
+    {
+      "id": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_working_capital_trap",
+      "label": "test_calculate_cash_conversion_cycle_working_capital_trap()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "file_type": "code",
+      "norm_label": "test_calculate_cash_conversion_cycle_working_capital_trap()",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L78"
+    },
+    {
       "id": "tests_unit_test_calculations_test_calculate_dab",
       "label": "test_calculate_dab()",
       "_callable": true,
@@ -1246,7 +1306,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_dab()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L51"
+      "source_location": "L52"
     },
     {
       "id": "tests_unit_test_calculations_test_calculate_dscr_healthy",
@@ -1258,7 +1318,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_dscr_healthy()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L61"
+      "source_location": "L62"
     },
     {
       "id": "tests_unit_test_calculations_test_calculate_dscr_zero_debt",
@@ -1270,7 +1330,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_dscr_zero_debt()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L69"
+      "source_location": "L70"
     },
     {
       "id": "tests_unit_test_calculations_test_calculate_net_burn",
@@ -1282,7 +1342,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_net_burn()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L16"
+      "source_location": "L17"
     },
     {
       "id": "tests_unit_test_calculations_test_calculate_runway_days_cash_flow_positive",
@@ -1294,7 +1354,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_runway_days_cash_flow_positive()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L35"
+      "source_location": "L36"
     },
     {
       "id": "tests_unit_test_calculations_test_calculate_runway_days_standard",
@@ -1306,7 +1366,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_runway_days_standard()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L26"
+      "source_location": "L27"
     },
     {
       "id": "tests_unit_test_calculations_test_calculate_runway_days_zero_balance",
@@ -1318,19 +1378,7 @@
       "file_type": "code",
       "norm_label": "test_calculate_runway_days_zero_balance()",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L43"
-    },
-    {
-      "id": "api_routes_actions_execute_action_intent",
-      "label": "execute_action_intent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "execute_action_intent()",
-      "source_file": "api/routes/actions.py",
-      "source_location": "L48"
+      "source_location": "L44"
     },
     {
       "id": "api_routes_actions_get_action_intent",
@@ -1338,7 +1386,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "code",
       "norm_label": "get_action_intent()",
       "source_file": "api/routes/actions.py",
@@ -1350,23 +1398,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "code",
       "norm_label": "list_action_intents()",
       "source_file": "api/routes/actions.py",
       "source_location": "L31"
-    },
-    {
-      "id": "api_routes_actions_reject_action_intent",
-      "label": "reject_action_intent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "reject_action_intent()",
-      "source_file": "api/routes/actions.py",
-      "source_location": "L68"
     },
     {
       "id": "api_routes_actions_stage_action_intent",
@@ -1374,7 +1410,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "code",
       "norm_label": "stage_action_intent()",
       "source_file": "api/routes/actions.py",
@@ -1510,7 +1546,7 @@
       "file_type": "code",
       "norm_label": "run_copilot_supervisor()",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L59"
+      "source_location": "L68"
     },
     {
       "id": "services_agent_supervisor_run_copilot_supervisor_enrich_reply",
@@ -1522,7 +1558,7 @@
       "file_type": "code",
       "norm_label": "_enrich_reply()",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L69"
+      "source_location": "L78"
     },
     {
       "id": "services_agent_tools_format_money",
@@ -1534,7 +1570,7 @@
       "file_type": "code",
       "norm_label": "_format_money()",
       "source_file": "services/agent/tools.py",
-      "source_location": "L24"
+      "source_location": "L25"
     },
     {
       "id": "services_agent_tools_tool_analyze_cash_flow",
@@ -1546,7 +1582,7 @@
       "file_type": "code",
       "norm_label": "tool_analyze_cash_flow()",
       "source_file": "services/agent/tools.py",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "services_agent_tools_tool_stage_financial_action",
@@ -1558,7 +1594,7 @@
       "file_type": "code",
       "norm_label": "tool_stage_financial_action()",
       "source_file": "services/agent/tools.py",
-      "source_location": "L134"
+      "source_location": "L153"
     },
     {
       "id": "services_agent_tools_tool_underwrite_credit",
@@ -1570,7 +1606,7 @@
       "file_type": "code",
       "norm_label": "tool_underwrite_credit()",
       "source_file": "services/agent/tools.py",
-      "source_location": "L90"
+      "source_location": "L109"
     },
     {
       "id": "api_routes_analyze_analyze_csv",
@@ -1582,7 +1618,7 @@
       "file_type": "code",
       "norm_label": "analyze_csv()",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L43"
+      "source_location": "L47"
     },
     {
       "id": "api_routes_analyze_format_money",
@@ -1594,7 +1630,7 @@
       "file_type": "code",
       "norm_label": "_format_money()",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L77"
+      "source_location": "L96"
     },
     {
       "id": "api_main_root",
@@ -1810,7 +1846,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_enforces_configured_upload_limit()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L59"
+      "source_location": "L80"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_rejects_invalid_threshold",
@@ -1822,7 +1858,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_rejects_invalid_threshold()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L50"
+      "source_location": "L71"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_reports_file_errors_in_stable_shape",
@@ -1834,7 +1870,7 @@
       "file_type": "code",
       "norm_label": "test_analyze_api_reports_file_errors_in_stable_shape()",
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L39"
+      "source_location": "L60"
     },
     {
       "id": "tests_integration_test_analyze_api_test_analyze_api_returns_decimal_strings_and_row_provenance",
@@ -1847,6 +1883,18 @@
       "norm_label": "test_analyze_api_returns_decimal_strings_and_row_provenance()",
       "source_file": "tests/integration/test_analyze_api.py",
       "source_location": "L14"
+    },
+    {
+      "id": "tests_integration_test_analyze_api_test_analyze_api_with_cash_conversion_cycle",
+      "label": "test_analyze_api_with_cash_conversion_cycle()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 220,
+      "community_name": "test_analyze_api.py",
+      "file_type": "code",
+      "norm_label": "test_analyze_api_with_cash_conversion_cycle()",
+      "source_file": "tests/integration/test_analyze_api.py",
+      "source_location": "L42"
     },
     {
       "id": "services_blockchain_invoice_hasher_calculate_canonical_invoice_hash",
@@ -2293,18 +2341,6 @@
       "source_location": "L150"
     },
     {
-      "id": "tests_unit_test_security_gate_ledger",
-      "label": "ledger()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 224,
-      "community_name": "StagingLedger",
-      "file_type": "code",
-      "norm_label": "ledger()",
-      "source_file": "tests/unit/test_security_gate.py",
-      "source_location": "L18"
-    },
-    {
       "id": "services_ingestion_csv_parser_csvingestionerror_init",
       "label": ".__init__()",
       "_callable": true,
@@ -2413,6 +2449,18 @@
       "source_location": "L71"
     },
     {
+      "id": "services_security_three_tier_gate_requires_biometric_execution",
+      "label": "requires_biometric_execution()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "code",
+      "norm_label": "requires_biometric_execution()",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L31"
+    },
+    {
       "id": "tests_security_test_invariants_test_fastapi_health_endpoint",
       "label": "test_fastapi_health_endpoint()",
       "_callable": true,
@@ -2461,16 +2509,40 @@
       "source_location": "L19"
     },
     {
-      "id": "services_security_three_tier_gate_requires_biometric_execution",
-      "label": "requires_biometric_execution()",
+      "id": "api_routes_actions_execute_action_intent",
+      "label": "execute_action_intent()",
       "_callable": true,
       "_origin": "ast",
       "community": 231,
       "community_name": "staging_ledger.py",
       "file_type": "code",
-      "norm_label": "requires_biometric_execution()",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L31"
+      "norm_label": "execute_action_intent()",
+      "source_file": "api/routes/actions.py",
+      "source_location": "L48"
+    },
+    {
+      "id": "api_routes_actions_reject_action_intent",
+      "label": "reject_action_intent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "reject_action_intent()",
+      "source_file": "api/routes/actions.py",
+      "source_location": "L68"
+    },
+    {
+      "id": "tests_unit_test_security_gate_ledger",
+      "label": "ledger()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 238,
+      "community_name": "test_security_gate.py",
+      "file_type": "code",
+      "norm_label": "ledger()",
+      "source_file": "tests/unit/test_security_gate.py",
+      "source_location": "L18"
     },
     {
       "id": "tests_unit_test_security_gate_test_cannot_execute_already_executed_intent",
@@ -2651,6 +2723,18 @@
       "norm_label": "test_agent_chat_with_header_llm_config()",
       "source_file": "tests/integration/test_agent_api.py",
       "source_location": "L210"
+    },
+    {
+      "id": "tests_integration_test_agent_api_test_agent_chat_working_capital_cycle_detection",
+      "label": "test_agent_chat_working_capital_cycle_detection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 250,
+      "community_name": "test_agent_api.py",
+      "file_type": "code",
+      "norm_label": "test_agent_chat_working_capital_cycle_detection()",
+      "source_file": "tests/integration/test_agent_api.py",
+      "source_location": "L363"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_credit_underwriting_flow",
@@ -4599,6 +4683,24 @@
       "source_location": "L6"
     },
     {
+      "id": "agent_agents_5_security_qa_test_automator",
+      "label": "test-automator.md",
+      "_origin": "ast",
+      "community": 114,
+      "community_name": "AGENTS.md",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "test-automator",
+        "description": "Authors automated pytest suites, API integration tests, and financial assertion scripts.",
+        "trigger": "When writing automated test files, test fixtures, mocks, or running test suites.",
+        "model": "inherit"
+      },
+      "node_kind": "page",
+      "norm_label": "test-automator.md",
+      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_location": "L1"
+    },
+    {
       "id": "agent_rules_no_ai_slop",
       "label": "no-ai-slop.md",
       "_origin": "ast",
@@ -5895,55 +5997,11 @@
       "source_location": "L6"
     },
     {
-      "id": "pattern",
-      "label": "Pattern",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "pattern",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_calculations_predictive_cash",
-      "label": "predictive_cash.py",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "predictive_cash.py",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_calculations_predictive_cash_py_date",
-      "label": "date",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "date",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_calculations_predictive_cash_py_decimal",
-      "label": "Decimal",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "code",
-      "norm_label": "decimal",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "tests_unit_test_predictive_cash",
       "label": "test_predictive_cash.py",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "test_predictive_cash.py",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -5954,84 +6012,18 @@
       "label": "date",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "code",
       "norm_label": "date",
       "source_file": "",
       "source_location": ""
     },
     {
-      "id": "services_calculations_predictive_cash_rationale_1",
-      "label": "Deterministic Predictive Cash Flow and Early-Warning Crunch Engine. Projects\u2026",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "deterministic predictive cash flow and early-warning crunch engine. projects...",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_calculations_predictive_cash_rationale_110",
-      "label": "Calculates forward cash trajectory and flags predictive shortfall events.",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "calculates forward cash trajectory and flags predictive shortfall events.",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L110"
-    },
-    {
-      "id": "services_calculations_predictive_cash_rationale_64",
-      "label": "Identifies recurring obligation amount and primary day-of-month.",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "identifies recurring obligation amount and primary day-of-month.",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L64"
-    },
-    {
-      "id": "services_calculations_predictive_cash_rationale_85",
-      "label": "Identifies recurring payroll or lump-sum wage obligations from historical\u2026",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "identifies recurring payroll or lump-sum wage obligations from historical...",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L85"
-    },
-    {
-      "id": "services_calculations_predictive_cash_rationale_91",
-      "label": "Identifies recurring commercial rent or property lease obligations.",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "identifies recurring commercial rent or property lease obligations.",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L91"
-    },
-    {
-      "id": "services_calculations_predictive_cash_rationale_97",
-      "label": "Identifies recurring debt service, loan amortization, or equipment financing.",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "identifies recurring debt service, loan amortization, or equipment financing.",
-      "source_file": "services/calculations/predictive_cash.py",
-      "source_location": "L97"
-    },
-    {
       "id": "tests_unit_test_predictive_cash_rationale_1",
       "label": "Unit tests for the Predictive Cash Flow & Deficit Alerting Engine.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "unit tests for the predictive cash flow & deficit alerting engine.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6042,7 +6034,7 @@
       "label": "Verify arbitrary horizon between 91 and 365 days reflects INDICATIVE confidence.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify arbitrary horizon between 91 and 365 days reflects indicative confidence.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6053,7 +6045,7 @@
       "label": "Verify horizon exceeding 365 days is capped with advisory note.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify horizon exceeding 365 days is capped with advisory note.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6064,29 +6056,18 @@
       "label": "Verify zero or negative days raises ValueError.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify zero or negative days raises valueerror.",
       "source_file": "tests/unit/test_predictive_cash.py",
       "source_location": "L156"
     },
     {
-      "id": "tests_unit_test_predictive_cash_rationale_175",
-      "label": "Verify recurring rent and debt service patterns are identified.",
-      "_origin": "ast",
-      "community": 127,
-      "community_name": "DemoTransaction",
-      "file_type": "rationale",
-      "norm_label": "verify recurring rent and debt service patterns are identified.",
-      "source_file": "tests/unit/test_predictive_cash.py",
-      "source_location": "L175"
-    },
-    {
       "id": "tests_unit_test_predictive_cash_rationale_189",
       "label": "Verify simulation captures exact calendar day and trigger category when lump-\u2026",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify simulation captures exact calendar day and trigger category when lump-...",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6097,7 +6078,7 @@
       "label": "Verify healthy cash balance with zero daily burn results in SAFE severity.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify healthy cash balance with zero daily burn results in safe severity.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6108,7 +6089,7 @@
       "label": "Verify rapid cash burn flags a CRITICAL shortfall within the 30-day window.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify rapid cash burn flags a critical shortfall within the 30-day window.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6119,7 +6100,7 @@
       "label": "Verify a deficit between 31 and 60 days triggers WARNING severity.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify a deficit between 31 and 60 days triggers warning severity.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6130,7 +6111,7 @@
       "label": "Verify recurring payroll descriptions are identified and averaged.",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify recurring payroll descriptions are identified and averaged.",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -6141,7 +6122,7 @@
       "label": "Verify arbitrary custom day (e.g. Day 34) is computed dynamically with HIGH\u2026",
       "_origin": "ast",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "file_type": "rationale",
       "norm_label": "verify arbitrary custom day (e.g. day 34) is computed dynamically with high...",
       "source_file": "tests/unit/test_predictive_cash.py",
@@ -8455,82 +8436,125 @@
       "source_location": "L8"
     },
     {
-      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper",
-      "label": "three-tier-security-gatekeeper.md",
+      "id": "pattern",
+      "label": "Pattern",
       "_origin": "ast",
       "community": 162,
-      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
-      "file_type": "document",
-      "frontmatter": {
-        "name": "three-tier-security-gatekeeper",
-        "description": "Enforces the 3-Tier Security Matrix: Observation -&gt; Staging -&gt; Execution (HITL 2FA).",
-        "trigger": "When gating agent actions, evaluating financial execution permissions, or staging financial proposals.",
-        "model": "inherit"
-      },
-      "node_kind": "page",
-      "norm_label": "three-tier-security-gatekeeper.md",
-      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "pattern",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_calculations_predictive_cash",
+      "label": "predictive_cash.py",
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "predictive_cash.py",
+      "source_file": "services/calculations/predictive_cash.py",
       "source_location": "L1"
     },
     {
-      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_connected_skills_squad_handoffs",
-      "label": "Connected Skills & Squad Handoffs",
+      "id": "services_calculations_predictive_cash_py_date",
+      "label": "date",
       "_origin": "ast",
       "community": 162,
-      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "connected skills & squad handoffs",
-      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
-      "source_location": "L13"
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "date",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_enforced_invariants_guidelines",
-      "label": "Enforced Invariants & Guidelines",
+      "id": "services_calculations_predictive_cash_py_decimal",
+      "label": "Decimal",
       "_origin": "ast",
       "community": 162,
-      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "enforced invariants & guidelines",
-      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
-      "source_location": "L17"
+      "community_name": "DemoTransaction",
+      "file_type": "code",
+      "norm_label": "decimal",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_mission_domain_focus",
-      "label": "Mission & Domain Focus",
+      "id": "services_calculations_predictive_cash_rationale_1",
+      "label": "Deterministic Predictive Cash Flow and Early-Warning Crunch Engine. Projects\u2026",
       "_origin": "ast",
       "community": 162,
-      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "mission & domain focus",
-      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
-      "source_location": "L10"
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "deterministic predictive cash flow and early-warning crunch engine. projects...",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L1"
     },
     {
-      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_operational_workflow",
-      "label": "Operational Workflow",
+      "id": "services_calculations_predictive_cash_rationale_110",
+      "label": "Calculates forward cash trajectory and flags predictive shortfall events.",
       "_origin": "ast",
       "community": 162,
-      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "operational workflow",
-      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
-      "source_location": "L20"
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "calculates forward cash trajectory and flags predictive shortfall events.",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L110"
     },
     {
-      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_three_tier_security_gatekeeper_suite_5_security_qa",
-      "label": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
+      "id": "services_calculations_predictive_cash_rationale_64",
+      "label": "Identifies recurring obligation amount and primary day-of-month.",
       "_origin": "ast",
       "community": 162,
-      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "three-tier-security-gatekeeper (suite: 5-security-qa)",
-      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
-      "source_location": "L8"
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "identifies recurring obligation amount and primary day-of-month.",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L64"
+    },
+    {
+      "id": "services_calculations_predictive_cash_rationale_85",
+      "label": "Identifies recurring payroll or lump-sum wage obligations from historical\u2026",
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "identifies recurring payroll or lump-sum wage obligations from historical...",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L85"
+    },
+    {
+      "id": "services_calculations_predictive_cash_rationale_91",
+      "label": "Identifies recurring commercial rent or property lease obligations.",
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "identifies recurring commercial rent or property lease obligations.",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L91"
+    },
+    {
+      "id": "services_calculations_predictive_cash_rationale_97",
+      "label": "Identifies recurring debt service, loan amortization, or equipment financing.",
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "identifies recurring debt service, loan amortization, or equipment financing.",
+      "source_file": "services/calculations/predictive_cash.py",
+      "source_location": "L97"
+    },
+    {
+      "id": "tests_unit_test_predictive_cash_rationale_175",
+      "label": "Verify recurring rent and debt service patterns are identified.",
+      "_origin": "ast",
+      "community": 162,
+      "community_name": "DemoTransaction",
+      "file_type": "rationale",
+      "norm_label": "verify recurring rent and debt service patterns are identified.",
+      "source_file": "tests/unit/test_predictive_cash.py",
+      "source_location": "L175"
     },
     {
       "id": "agent_skills_agent_reach_references_video_youtube_yt_dlp",
@@ -10723,6 +10747,17 @@
       "source_location": "L58"
     },
     {
+      "id": "services_calculations_runway_rationale_71",
+      "label": "Calculate Cash Conversion Cycle (CCC) in days and determine working capital\u2026",
+      "_origin": "ast",
+      "community": 176,
+      "community_name": "test_calculations.py",
+      "file_type": "rationale",
+      "norm_label": "calculate cash conversion cycle (ccc) in days and determine working capital...",
+      "source_file": "services/calculations/runway.py",
+      "source_location": "L71"
+    },
+    {
       "id": "tests_unit_test_calculations_rationale_1",
       "label": "Unit tests for deterministic financial health calculations. Verifies pure\u2026",
       "_origin": "ast",
@@ -12178,35 +12213,13 @@
       "source_location": "L1"
     },
     {
-      "id": "api_routes_actions",
-      "label": "actions.py",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "actions.py",
-      "source_file": "api/routes/actions.py",
-      "source_location": "L1"
-    },
-    {
       "id": "api_routes_actions_py_get",
       "label": "get",
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "code",
       "norm_label": "get",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "api_routes_actions_py_post",
-      "label": "post",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "post",
       "source_file": "",
       "source_location": ""
     },
@@ -12215,40 +12228,18 @@
       "label": "StagedActionIntent",
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "code",
       "norm_label": "stagedactionintent",
       "source_file": "",
       "source_location": ""
     },
     {
-      "id": "services_security_staging_ledger_py_basemodel",
-      "label": "BaseModel",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "code",
-      "norm_label": "basemodel",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "api_routes_actions_rationale_1",
-      "label": "FastAPI router for Three-Tier Security Gate and Staged Action Intents. Manages\u2026",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "rationale",
-      "norm_label": "fastapi router for three-tier security gate and staged action intents. manages...",
-      "source_file": "api/routes/actions.py",
-      "source_location": "L1"
-    },
-    {
       "id": "api_routes_actions_rationale_26",
       "label": "Stages an action proposal in Tier 2. No funds or commitments move.",
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "rationale",
       "norm_label": "stages an action proposal in tier 2. no funds or commitments move.",
       "source_file": "api/routes/actions.py",
@@ -12259,7 +12250,7 @@
       "label": "Lists staged proposals awaiting review or historical execution records.",
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "rationale",
       "norm_label": "lists staged proposals awaiting review or historical execution records.",
       "source_file": "api/routes/actions.py",
@@ -12270,44 +12261,11 @@
       "label": "Retrieves a specific staged action intent.",
       "_origin": "ast",
       "community": 184,
-      "community_name": "actions.py",
+      "community_name": "stage_action_intent",
       "file_type": "rationale",
       "norm_label": "retrieves a specific staged action intent.",
       "source_file": "api/routes/actions.py",
       "source_location": "L40"
-    },
-    {
-      "id": "api_routes_actions_rationale_52",
-      "label": "Executes a staged proposal. Tier 3 irreversible actions require a valid\u2026",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "rationale",
-      "norm_label": "executes a staged proposal. tier 3 irreversible actions require a valid...",
-      "source_file": "api/routes/actions.py",
-      "source_location": "L52"
-    },
-    {
-      "id": "api_routes_actions_rationale_69",
-      "label": "Rejects a staged proposal.",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "rationale",
-      "norm_label": "rejects a staged proposal.",
-      "source_file": "api/routes/actions.py",
-      "source_location": "L69"
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_34",
-      "label": "Raised when an action is performed on an intent in an invalid state.",
-      "_origin": "ast",
-      "community": 184,
-      "community_name": "actions.py",
-      "file_type": "rationale",
-      "norm_label": "raised when an action is performed on an intent in an invalid state.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L34"
     },
     {
       "id": "agent_skills_3_statement_model_skill_check_categories",
@@ -13635,7 +13593,7 @@
       "source_location": "L44"
     },
     {
-      "id": "services_agent_supervisor_rationale_64",
+      "id": "services_agent_supervisor_rationale_73",
       "label": "Core reasoning supervisor dispatching requests to deterministic tools and\u2026",
       "_origin": "ast",
       "community": 195,
@@ -13643,7 +13601,7 @@
       "file_type": "rationale",
       "norm_label": "core reasoning supervisor dispatching requests to deterministic tools and...",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L64"
+      "source_location": "L73"
     },
     {
       "id": "services_agent_tools_rationale_1",
@@ -13657,29 +13615,7 @@
       "source_location": "L1"
     },
     {
-      "id": "services_agent_tools_rationale_140",
-      "label": "Stage a financial action into the immutable staging queue (Tier 2). No money\u2026",
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "supervisor.py",
-      "file_type": "rationale",
-      "norm_label": "stage a financial action into the immutable staging queue (tier 2). no money...",
-      "source_file": "services/agent/tools.py",
-      "source_location": "L140"
-    },
-    {
-      "id": "services_agent_tools_rationale_33",
-      "label": "Ingest bank statement CSV and compute deterministic cash runway and predictive\u2026",
-      "_origin": "ast",
-      "community": 195,
-      "community_name": "supervisor.py",
-      "file_type": "rationale",
-      "norm_label": "ingest bank statement csv and compute deterministic cash runway and predictive...",
-      "source_file": "services/agent/tools.py",
-      "source_location": "L33"
-    },
-    {
-      "id": "services_agent_tools_rationale_91",
+      "id": "services_agent_tools_rationale_110",
       "label": "Evaluate transactional data to generate WeBank underwriting dossier and matched\u2026",
       "_origin": "ast",
       "community": 195,
@@ -13687,7 +13623,29 @@
       "file_type": "rationale",
       "norm_label": "evaluate transactional data to generate webank underwriting dossier and matched...",
       "source_file": "services/agent/tools.py",
-      "source_location": "L91"
+      "source_location": "L110"
+    },
+    {
+      "id": "services_agent_tools_rationale_159",
+      "label": "Stage a financial action into the immutable staging queue (Tier 2). No money\u2026",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "supervisor.py",
+      "file_type": "rationale",
+      "norm_label": "stage a financial action into the immutable staging queue (tier 2). no money...",
+      "source_file": "services/agent/tools.py",
+      "source_location": "L159"
+    },
+    {
+      "id": "services_agent_tools_rationale_37",
+      "label": "Ingest bank statement CSV and compute deterministic cash runway and predictive\u2026",
+      "_origin": "ast",
+      "community": 195,
+      "community_name": "supervisor.py",
+      "file_type": "rationale",
+      "norm_label": "ingest bank statement csv and compute deterministic cash runway and predictive...",
+      "source_file": "services/agent/tools.py",
+      "source_location": "L37"
     },
     {
       "id": "agent_skills_3_statement_model_skill_identifying_template_tab_organization",
@@ -15468,18 +15426,6 @@
       "source_location": "L145"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_6_consortium_blockchain_double_financing_defense",
-      "label": "6. Consortium Blockchain & Double-Financing Defense",
-      "_origin": "ast",
-      "community": 215,
-      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "6. consortium blockchain & double-financing defense",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L242"
-    },
-    {
       "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_7_physical_code_map_verified_test_baseline",
       "label": "7. Physical Code Map & Verified Test Baseline",
       "_origin": "ast",
@@ -15528,30 +15474,6 @@
       "source_location": "L23"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_the_consortium_blockchain_solution_fisco_bcos",
-      "label": "The Consortium Blockchain Solution (FISCO BCOS)",
-      "_origin": "ast",
-      "community": 215,
-      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "the consortium blockchain solution (fisco bcos)",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L257"
-    },
-    {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_the_fraud_problem_invoice_double_financing",
-      "label": "The Fraud Problem (Invoice Double-Financing)",
-      "_origin": "ast",
-      "community": 215,
-      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "the fraud problem (invoice double-financing)",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L248"
-    },
-    {
       "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_the_three_tiers_explained_in_simple_terms",
       "label": "The Three Tiers Explained in Simple Terms",
       "_origin": "ast",
@@ -15574,18 +15496,6 @@
       "norm_label": "verified terminal proof",
       "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
       "source_location": "L349"
-    },
-    {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_is_invoice_factoring",
-      "label": "What is Invoice Factoring?",
-      "_origin": "ast",
-      "community": 215,
-      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "what is invoice factoring?",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L244"
     },
     {
       "id": "tests_e2e_test_csv_upload_e2e",
@@ -16013,6 +15923,18 @@
       "source_location": "L19"
     },
     {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_2_what_is_an_ai_financial_participant",
+      "label": "2. What is an AI Financial Participant?",
+      "_origin": "ast",
+      "community": 221,
+      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "2. what is an ai financial participant?",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L50"
+    },
+    {
       "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_3_the_5_tier_system_architecture",
       "label": "3. The 5-Tier System Architecture",
       "_origin": "ast",
@@ -16085,6 +16007,30 @@
       "source_location": "L23"
     },
     {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_the_multi_agent_office_team_analogy",
+      "label": "The Multi-Agent Office Team Analogy",
+      "_origin": "ast",
+      "community": 221,
+      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "the multi-agent office team analogy",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_the_specialist_agents_explained",
+      "label": "The Specialist Agents Explained",
+      "_origin": "ast",
+      "community": 221,
+      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "the specialist agents explained",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L81"
+    },
+    {
       "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_the_three_tiers_explained_in_simple_terms",
       "label": "The Three Tiers Explained in Simple Terms",
       "_origin": "ast",
@@ -16107,6 +16053,18 @@
       "norm_label": "verified terminal proof",
       "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
       "source_location": "L349"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_why_simple_chatbots_like_chatgpt_cannot_be_trusted_with_money",
+      "label": "Why Simple Chatbots (like ChatGPT) Cannot Be Trusted with Money",
+      "_origin": "ast",
+      "community": 221,
+      "community_name": "SME Finance Copilot \u2014 Complete Master Architecture & Beginner's Guide",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "why simple chatbots (like chatgpt) cannot be trusted with money",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L52"
     },
     {
       "id": "services_blockchain_init",
@@ -16195,6 +16153,210 @@
       "norm_label": "fixture",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_copy_ready_ai_prompt_for_member_3",
+      "label": "Copy-Ready AI Prompt for Member 3",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "copy-ready ai prompt for member 3",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L654"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_key_starter_code_backbone_603",
+      "label": "Key Starter Code Backbone",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "key starter code backbone",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L603"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_member_3_ingestion_blockchain_qa_engineer",
+      "label": "Member 3: Ingestion & Blockchain QA Engineer",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "member 3: ingestion & blockchain qa engineer",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L569"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_owned_directories_files_574",
+      "label": "Owned Directories & Files",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "owned directories & files",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L574"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_plain_english_role_571",
+      "label": "Plain-English Role",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "plain-english role",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L571"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_stop_ship_rules_648",
+      "label": "Stop-Ship Rules",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "stop-ship rules",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L648"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_verification_test_commands_641",
+      "label": "Verification & Test Commands",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "verification & test commands",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L641"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_580",
+      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what was already built & tested for you (the implemented backbone)",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L580"
+    },
+    {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_you_build_next_on_top_of_this_backbone_598",
+      "label": "What You Build Next on Top of This Backbone",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what you build next on top of this backbone",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L598"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_copy_ready_ai_prompt_for_member_3",
+      "label": "Copy-Ready AI Prompt for Member 3",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "copy-ready ai prompt for member 3",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L654"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_key_starter_code_backbone_603",
+      "label": "Key Starter Code Backbone",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "key starter code backbone",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L603"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_member_3_ingestion_blockchain_qa_engineer",
+      "label": "Member 3: Ingestion & Blockchain QA Engineer",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "member 3: ingestion & blockchain qa engineer",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L569"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_owned_directories_files_574",
+      "label": "Owned Directories & Files",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "owned directories & files",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L574"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_plain_english_role_571",
+      "label": "Plain-English Role",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "plain-english role",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L571"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_stop_ship_rules_648",
+      "label": "Stop-Ship Rules",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "stop-ship rules",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L648"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_verification_test_commands_641",
+      "label": "Verification & Test Commands",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "verification & test commands",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L641"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_580",
+      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
+      "_origin": "ast",
+      "community": 222,
+      "community_name": "invoice_hasher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what was already built & tested for you (the implemented backbone)",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L580"
     },
     {
       "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_you_build_next_on_top_of_this_backbone_598",
@@ -16593,6 +16755,30 @@
       "source_location": "L1"
     },
     {
+      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_487",
+      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
+      "_origin": "ast",
+      "community": 223,
+      "community_name": "test_matcher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what was already built & tested for you (the implemented backbone)",
+      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L487"
+    },
+    {
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_487",
+      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
+      "_origin": "ast",
+      "community": 223,
+      "community_name": "test_matcher.py",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "what was already built & tested for you (the implemented backbone)",
+      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
+      "source_location": "L487"
+    },
+    {
       "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_676",
       "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
       "_origin": "ast",
@@ -16715,13 +16901,13 @@
       "source_location": "L62"
     },
     {
-      "id": "tests_unit_test_security_gate_py_fixture",
-      "label": "fixture",
+      "id": "services_security_three_tier_gate_py_basemodel",
+      "label": "BaseModel",
       "_origin": "ast",
       "community": 224,
       "community_name": "StagingLedger",
       "file_type": "code",
-      "norm_label": "fixture",
+      "norm_label": "basemodel",
       "source_file": "",
       "source_location": ""
     },
@@ -16768,17 +16954,6 @@
       "norm_label": "validates the physical authorization token before executing tier 3 intents....",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L151"
-    },
-    {
-      "id": "services_security_staging_ledger_rationale_30",
-      "label": "Raised when an intent ID does not exist in the ledger.",
-      "_origin": "ast",
-      "community": 224,
-      "community_name": "StagingLedger",
-      "file_type": "rationale",
-      "norm_label": "raised when an intent id does not exist in the ledger.",
-      "source_file": "services/security/staging_ledger.py",
-      "source_location": "L30"
     },
     {
       "id": "services_security_staging_ledger_rationale_60",
@@ -17043,6 +17218,39 @@
       "source_location": "L78"
     },
     {
+      "id": "services_security_three_tier_gate",
+      "label": "three_tier_gate.py",
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "code",
+      "norm_label": "three_tier_gate.py",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "services_security_three_tier_gate_py_enum",
+      "label": "Enum",
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "code",
+      "norm_label": "enum",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "services_security_three_tier_gate_py_str",
+      "label": "str",
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "code",
+      "norm_label": "str",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "tests_security_test_invariants",
       "label": "test_invariants.py",
       "_origin": "ast",
@@ -17052,6 +17260,28 @@
       "norm_label": "test_invariants.py",
       "source_file": "tests/security/test_invariants.py",
       "source_location": "L1"
+    },
+    {
+      "id": "services_security_three_tier_gate_rationale_1",
+      "label": "Three-Tier Security Gate and Action Intent Staging. Aligns with\u2026",
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "rationale",
+      "norm_label": "three-tier security gate and action intent staging. aligns with...",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "services_security_three_tier_gate_rationale_32",
+      "label": "Evaluates whether an action requires Tier 3 physical biometric confirmation.",
+      "_origin": "ast",
+      "community": 228,
+      "community_name": "test_invariants.py",
+      "file_type": "rationale",
+      "norm_label": "evaluates whether an action requires tier 3 physical biometric confirmation.",
+      "source_file": "services/security/three_tier_gate.py",
+      "source_location": "L32"
     },
     {
       "id": "tests_security_test_invariants_rationale_1",
@@ -17355,6 +17585,28 @@
       "source_location": "L1"
     },
     {
+      "id": "api_routes_actions",
+      "label": "actions.py",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "actions.py",
+      "source_file": "api/routes/actions.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "api_routes_actions_py_post",
+      "label": "post",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "code",
+      "norm_label": "post",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "services_security_init",
       "label": "services/security/__init__.py",
       "_origin": "ast",
@@ -17410,48 +17662,37 @@
       "source_location": ""
     },
     {
-      "id": "services_security_three_tier_gate",
-      "label": "three_tier_gate.py",
+      "id": "api_routes_actions_rationale_1",
+      "label": "FastAPI router for Three-Tier Security Gate and Staged Action Intents. Manages\u2026",
       "_origin": "ast",
       "community": 231,
       "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "three_tier_gate.py",
-      "source_file": "services/security/three_tier_gate.py",
+      "file_type": "rationale",
+      "norm_label": "fastapi router for three-tier security gate and staged action intents. manages...",
+      "source_file": "api/routes/actions.py",
       "source_location": "L1"
     },
     {
-      "id": "services_security_three_tier_gate_py_basemodel",
-      "label": "BaseModel",
+      "id": "api_routes_actions_rationale_52",
+      "label": "Executes a staged proposal. Tier 3 irreversible actions require a valid\u2026",
       "_origin": "ast",
       "community": 231,
       "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "basemodel",
-      "source_file": "",
-      "source_location": ""
+      "file_type": "rationale",
+      "norm_label": "executes a staged proposal. tier 3 irreversible actions require a valid...",
+      "source_file": "api/routes/actions.py",
+      "source_location": "L52"
     },
     {
-      "id": "services_security_three_tier_gate_py_enum",
-      "label": "Enum",
+      "id": "api_routes_actions_rationale_69",
+      "label": "Rejects a staged proposal.",
       "_origin": "ast",
       "community": 231,
       "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "enum",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "services_security_three_tier_gate_py_str",
-      "label": "str",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "staging_ledger.py",
-      "file_type": "code",
-      "norm_label": "str",
-      "source_file": "",
-      "source_location": ""
+      "file_type": "rationale",
+      "norm_label": "rejects a staged proposal.",
+      "source_file": "api/routes/actions.py",
+      "source_location": "L69"
     },
     {
       "id": "services_security_staging_ledger_rationale_1",
@@ -17476,6 +17717,28 @@
       "source_location": "L26"
     },
     {
+      "id": "services_security_staging_ledger_rationale_30",
+      "label": "Raised when an intent ID does not exist in the ledger.",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "raised when an intent id does not exist in the ledger.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L30"
+    },
+    {
+      "id": "services_security_staging_ledger_rationale_34",
+      "label": "Raised when an action is performed on an intent in an invalid state.",
+      "_origin": "ast",
+      "community": 231,
+      "community_name": "staging_ledger.py",
+      "file_type": "rationale",
+      "norm_label": "raised when an action is performed on an intent in an invalid state.",
+      "source_file": "services/security/staging_ledger.py",
+      "source_location": "L34"
+    },
+    {
       "id": "services_security_staging_ledger_rationale_38",
       "label": "Raised when Tier 3 action lacks a valid biometric or 2FA confirmation token.",
       "_origin": "ast",
@@ -17485,28 +17748,6 @@
       "norm_label": "raised when tier 3 action lacks a valid biometric or 2fa confirmation token.",
       "source_file": "services/security/staging_ledger.py",
       "source_location": "L38"
-    },
-    {
-      "id": "services_security_three_tier_gate_rationale_1",
-      "label": "Three-Tier Security Gate and Action Intent Staging. Aligns with\u2026",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "staging_ledger.py",
-      "file_type": "rationale",
-      "norm_label": "three-tier security gate and action intent staging. aligns with...",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L1"
-    },
-    {
-      "id": "services_security_three_tier_gate_rationale_32",
-      "label": "Evaluates whether an action requires Tier 3 physical biometric confirmation.",
-      "_origin": "ast",
-      "community": 231,
-      "community_name": "staging_ledger.py",
-      "file_type": "rationale",
-      "norm_label": "evaluates whether an action requires tier 3 physical biometric confirmation.",
-      "source_file": "services/security/three_tier_gate.py",
-      "source_location": "L32"
     },
     {
       "id": "next",
@@ -17659,18 +17900,6 @@
       "source_location": "L544"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_487",
-      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
-      "_origin": "ast",
-      "community": 235,
-      "community_name": "Member 2: Frontend Dashboard Specialist",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "what was already built & tested for you (the implemented backbone)",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L487"
-    },
-    {
       "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_you_build_next_on_top_of_this_backbone_506",
       "label": "What You Build Next on Top of This Backbone",
       "_origin": "ast",
@@ -17719,112 +17948,75 @@
       "source_location": "L56"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_copy_ready_ai_prompt_for_member_3",
-      "label": "Copy-Ready AI Prompt for Member 3",
+      "id": "agent_agents_5_security_qa_test_automator_connected_skills_squad_handoffs",
+      "label": "Connected Skills & Squad Handoffs",
       "_origin": "ast",
       "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "test-automator (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "copy-ready ai prompt for member 3",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L654"
+      "norm_label": "connected skills & squad handoffs",
+      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_location": "L13"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_key_starter_code_backbone_603",
-      "label": "Key Starter Code Backbone",
+      "id": "agent_agents_5_security_qa_test_automator_enforced_invariants_guidelines",
+      "label": "Enforced Invariants & Guidelines",
       "_origin": "ast",
       "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "test-automator (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "key starter code backbone",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L603"
+      "norm_label": "enforced invariants & guidelines",
+      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_location": "L17"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_member_3_ingestion_blockchain_qa_engineer",
-      "label": "Member 3: Ingestion & Blockchain QA Engineer",
+      "id": "agent_agents_5_security_qa_test_automator_mission_domain_focus",
+      "label": "Mission & Domain Focus",
       "_origin": "ast",
       "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "test-automator (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "member 3: ingestion & blockchain qa engineer",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L569"
+      "norm_label": "mission & domain focus",
+      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_location": "L10"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_owned_directories_files_574",
-      "label": "Owned Directories & Files",
+      "id": "agent_agents_5_security_qa_test_automator_operational_workflow",
+      "label": "Operational Workflow",
       "_origin": "ast",
       "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "test-automator (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "owned directories & files",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L574"
+      "norm_label": "operational workflow",
+      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_location": "L20"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_plain_english_role_571",
-      "label": "Plain-English Role",
+      "id": "agent_agents_5_security_qa_test_automator_test_automator_suite_5_security_qa",
+      "label": "test-automator (Suite: 5-security-qa)",
       "_origin": "ast",
       "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "test-automator (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "plain-english role",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L571"
+      "norm_label": "test-automator (suite: 5-security-qa)",
+      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_location": "L8"
     },
     {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_stop_ship_rules_648",
-      "label": "Stop-Ship Rules",
+      "id": "services_security_staging_ledger_py_basemodel",
+      "label": "BaseModel",
       "_origin": "ast",
-      "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "stop-ship rules",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L648"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_verification_test_commands_641",
-      "label": "Verification & Test Commands",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "verification & test commands",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L641"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_580",
-      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "what was already built & tested for you (the implemented backbone)",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L580"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_what_you_build_next_on_top_of_this_backbone_598",
-      "label": "What You Build Next on Top of This Backbone",
-      "_origin": "ast",
-      "community": 237,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "what you build next on top of this backbone",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L598"
+      "community": 238,
+      "community_name": "test_security_gate.py",
+      "file_type": "code",
+      "norm_label": "basemodel",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "tests_unit_test_security_gate",
@@ -17836,6 +18028,17 @@
       "norm_label": "test_security_gate.py",
       "source_file": "tests/unit/test_security_gate.py",
       "source_location": "L1"
+    },
+    {
+      "id": "tests_unit_test_security_gate_py_fixture",
+      "label": "fixture",
+      "_origin": "ast",
+      "community": 238,
+      "community_name": "test_security_gate.py",
+      "file_type": "code",
+      "norm_label": "fixture",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "tests_unit_test_security_gate_rationale_1",
@@ -18564,100 +18767,52 @@
       "source_location": "L17"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_copy_ready_ai_prompt_for_member_3",
-      "label": "Copy-Ready AI Prompt for Member 3",
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_6_consortium_blockchain_double_financing_defense",
+      "label": "6. Consortium Blockchain & Double-Financing Defense",
       "_origin": "ast",
       "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "6. Consortium Blockchain & Double-Financing Defense",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "copy-ready ai prompt for member 3",
+      "norm_label": "6. consortium blockchain & double-financing defense",
       "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L654"
+      "source_location": "L242"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_key_starter_code_backbone_603",
-      "label": "Key Starter Code Backbone",
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_the_consortium_blockchain_solution_fisco_bcos",
+      "label": "The Consortium Blockchain Solution (FISCO BCOS)",
       "_origin": "ast",
       "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "6. Consortium Blockchain & Double-Financing Defense",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "key starter code backbone",
+      "norm_label": "the consortium blockchain solution (fisco bcos)",
       "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L603"
+      "source_location": "L257"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_member_3_ingestion_blockchain_qa_engineer",
-      "label": "Member 3: Ingestion & Blockchain QA Engineer",
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_the_fraud_problem_invoice_double_financing",
+      "label": "The Fraud Problem (Invoice Double-Financing)",
       "_origin": "ast",
       "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "6. Consortium Blockchain & Double-Financing Defense",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "member 3: ingestion & blockchain qa engineer",
+      "norm_label": "the fraud problem (invoice double-financing)",
       "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L569"
+      "source_location": "L248"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_owned_directories_files_574",
-      "label": "Owned Directories & Files",
+      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_is_invoice_factoring",
+      "label": "What is Invoice Factoring?",
       "_origin": "ast",
       "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
+      "community_name": "6. Consortium Blockchain & Double-Financing Defense",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "owned directories & files",
+      "norm_label": "what is invoice factoring?",
       "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L574"
-    },
-    {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_plain_english_role_571",
-      "label": "Plain-English Role",
-      "_origin": "ast",
-      "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "plain-english role",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L571"
-    },
-    {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_stop_ship_rules_648",
-      "label": "Stop-Ship Rules",
-      "_origin": "ast",
-      "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "stop-ship rules",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L648"
-    },
-    {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_verification_test_commands_641",
-      "label": "Verification & Test Commands",
-      "_origin": "ast",
-      "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "verification & test commands",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L641"
-    },
-    {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_580",
-      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
-      "_origin": "ast",
-      "community": 245,
-      "community_name": "Member 3: Ingestion & Blockchain QA Engineer",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "what was already built & tested for you (the implemented backbone)",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L580"
+      "source_location": "L244"
     },
     {
       "id": "agent_skills_earnings_analysis_references_workflow_phase_2_analysis_2_3_hours",
@@ -19230,6 +19385,17 @@
       "source_location": "L343"
     },
     {
+      "id": "tests_integration_test_agent_api_rationale_364",
+      "label": "Verify chat agent detects customer DSO and vendor DPO to compute CCC.",
+      "_origin": "ast",
+      "community": 250,
+      "community_name": "test_agent_api.py",
+      "file_type": "rationale",
+      "norm_label": "verify chat agent detects customer dso and vendor dpo to compute ccc.",
+      "source_file": "tests/integration/test_agent_api.py",
+      "source_location": "L364"
+    },
+    {
       "id": "tests_integration_test_agent_api_rationale_43",
       "label": "Verify agent invokes cash analysis tool and returns exact decimal runway\u2026",
       "_origin": "ast",
@@ -19491,18 +19657,6 @@
       "source_location": "L544"
     },
     {
-      "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_was_already_built_tested_for_you_the_implemented_backbone_487",
-      "label": "What Was Already Built & Tested for You (The Implemented Backbone)",
-      "_origin": "ast",
-      "community": 253,
-      "community_name": "Member 2: Frontend Dashboard Specialist",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "what was already built & tested for you (the implemented backbone)",
-      "source_file": "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L487"
-    },
-    {
       "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_what_you_build_next_on_top_of_this_backbone_506",
       "label": "What You Build Next on Top of This Backbone",
       "_origin": "ast",
@@ -19699,54 +19853,6 @@
       "norm_label": "autonomous ai copilot agent package for sme finance.",
       "source_file": "services/agent/__init__.py",
       "source_location": "L1"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_2_what_is_an_ai_financial_participant",
-      "label": "2. What is an AI Financial Participant?",
-      "_origin": "ast",
-      "community": 258,
-      "community_name": "2. What is an AI Financial Participant?",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "2. what is an ai financial participant?",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L50"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_the_multi_agent_office_team_analogy",
-      "label": "The Multi-Agent Office Team Analogy",
-      "_origin": "ast",
-      "community": 258,
-      "community_name": "2. What is an AI Financial Participant?",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "the multi-agent office team analogy",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L58"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_the_specialist_agents_explained",
-      "label": "The Specialist Agents Explained",
-      "_origin": "ast",
-      "community": 258,
-      "community_name": "2. What is an AI Financial Participant?",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "the specialist agents explained",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L81"
-    },
-    {
-      "id": "docs_sme_finance_copilot_complete_architecture_and_beginner_guide_why_simple_chatbots_like_chatgpt_cannot_be_trusted_with_money",
-      "label": "Why Simple Chatbots (like ChatGPT) Cannot Be Trusted with Money",
-      "_origin": "ast",
-      "community": 258,
-      "community_name": "2. What is an AI Financial Participant?",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "why simple chatbots (like chatgpt) cannot be trusted with money",
-      "source_file": "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md",
-      "source_location": "L52"
     },
     {
       "id": "sme_finance_copilot_complete_architecture_and_beginner_guide_8_four_person_team_roles_ownership_step_by_step_guides",
@@ -25812,29 +25918,11 @@
       "source_location": "L8"
     },
     {
-      "id": "agent_agents_5_security_qa_test_automator",
-      "label": "test-automator.md",
-      "_origin": "ast",
-      "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
-      "file_type": "document",
-      "frontmatter": {
-        "name": "test-automator",
-        "description": "Authors automated pytest suites, API integration tests, and financial assertion scripts.",
-        "trigger": "When writing automated test files, test fixtures, mocks, or running test suites.",
-        "model": "inherit"
-      },
-      "node_kind": "page",
-      "norm_label": "test-automator.md",
-      "source_file": ".agent/agents/5-security-qa/test-automator.md",
-      "source_location": "L1"
-    },
-    {
       "id": "agent_rules_superpowers",
       "label": "superpowers.md",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "frontmatter": {
         "trigger": "always_on",
@@ -25846,11 +25934,29 @@
       "source_location": "L1"
     },
     {
+      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper",
+      "label": "three-tier-security-gatekeeper.md",
+      "_origin": "ast",
+      "community": 75,
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
+      "file_type": "document",
+      "frontmatter": {
+        "name": "three-tier-security-gatekeeper",
+        "description": "Enforces the 3-Tier Security Matrix: Observation -&gt; Staging -&gt; Execution (HITL 2FA).",
+        "trigger": "When gating agent actions, evaluating financial execution permissions, or staging financial proposals.",
+        "model": "inherit"
+      },
+      "node_kind": "page",
+      "norm_label": "three-tier-security-gatekeeper.md",
+      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
+      "source_location": "L1"
+    },
+    {
       "id": "agent_rules_domain_alignment",
       "label": "domain-alignment.md",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "frontmatter": {
         "trigger": "model_decision",
@@ -25862,63 +25968,63 @@
       "source_location": "L1"
     },
     {
-      "id": "agent_agents_5_security_qa_test_automator_connected_skills_squad_handoffs",
+      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_connected_skills_squad_handoffs",
       "label": "Connected Skills & Squad Handoffs",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "connected skills & squad handoffs",
-      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
       "source_location": "L13"
     },
     {
-      "id": "agent_agents_5_security_qa_test_automator_enforced_invariants_guidelines",
+      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_enforced_invariants_guidelines",
       "label": "Enforced Invariants & Guidelines",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "enforced invariants & guidelines",
-      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
       "source_location": "L17"
     },
     {
-      "id": "agent_agents_5_security_qa_test_automator_mission_domain_focus",
+      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_mission_domain_focus",
       "label": "Mission & Domain Focus",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "mission & domain focus",
-      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
       "source_location": "L10"
     },
     {
-      "id": "agent_agents_5_security_qa_test_automator_operational_workflow",
+      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_operational_workflow",
       "label": "Operational Workflow",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "operational workflow",
-      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
       "source_location": "L20"
     },
     {
-      "id": "agent_agents_5_security_qa_test_automator_test_automator_suite_5_security_qa",
-      "label": "test-automator (Suite: 5-security-qa)",
+      "id": "agent_agents_5_security_qa_three_tier_security_gatekeeper_three_tier_security_gatekeeper_suite_5_security_qa",
+      "label": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "test-automator (suite: 5-security-qa)",
-      "source_file": ".agent/agents/5-security-qa/test-automator.md",
+      "norm_label": "three-tier-security-gatekeeper (suite: 5-security-qa)",
+      "source_file": ".agent/agents/5-security-qa/three-tier-security-gatekeeper.md",
       "source_location": "L8"
     },
     {
@@ -25926,7 +26032,7 @@
       "label": "1. Grilling Rounds",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "1. grilling rounds",
@@ -25938,7 +26044,7 @@
       "label": "2. Ubiquitous Vocabulary",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "2. ubiquitous vocabulary",
@@ -25950,7 +26056,7 @@
       "label": "Domain Alignment & Grilling Protocol",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "domain alignment & grilling protocol",
@@ -25962,7 +26068,7 @@
       "label": "1. Intent & Spec Gate",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "1. intent & spec gate",
@@ -25974,7 +26080,7 @@
       "label": "2. Root Cause Debugging Invariant",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "2. root cause debugging invariant",
@@ -25986,7 +26092,7 @@
       "label": "3. Verification Invariant",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "3. verification invariant",
@@ -25998,7 +26104,7 @@
       "label": "Superpowers Engineering Methodology",
       "_origin": "ast",
       "community": 75,
-      "community_name": "test-automator (Suite: 5-security-qa)",
+      "community_name": "three-tier-security-gatekeeper (Suite: 5-security-qa)",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "superpowers engineering methodology",
@@ -28455,10 +28561,22 @@
       "label": "datetime",
       "_origin": "semantic",
       "community": 127,
-      "community_name": "DemoTransaction",
+      "community_name": "test_predictive_cash.py",
       "external": true,
       "file_type": "concept",
       "norm_label": "datetime",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "pytest",
+      "label": "pytest",
+      "_origin": "semantic",
+      "community": 127,
+      "community_name": "test_predictive_cash.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "pytest",
       "source_file": "",
       "type": "external"
     },
@@ -28495,18 +28613,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "typing",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "fastapi_responses",
-      "label": "fastapi_responses",
-      "_origin": "semantic",
-      "community": 199,
-      "community_name": "analyze.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "fastapi_responses",
       "source_file": "",
       "type": "external"
     },
@@ -28619,6 +28725,18 @@
       "type": "external"
     },
     {
+      "id": "fastapi_responses",
+      "label": "fastapi_responses",
+      "_origin": "semantic",
+      "community": 223,
+      "community_name": "test_matcher.py",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "fastapi_responses",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "csv",
       "label": "csv",
       "_origin": "semantic",
@@ -28651,18 +28769,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "decimal",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "pytest",
-      "label": "pytest",
-      "_origin": "semantic",
-      "community": 228,
-      "community_name": "test_invariants.py",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "pytest",
       "source_file": "",
       "type": "external"
     },
@@ -28965,7 +29071,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L56",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -28977,7 +29083,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L60",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "api_routes_analyze_analyze_csv",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -28989,7 +29107,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L61",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -29001,7 +29119,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L64",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -29013,7 +29131,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L65",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -29229,7 +29347,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L114",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -29241,7 +29359,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L132",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -29253,7 +29371,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L155",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -29265,7 +29383,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L163",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -29277,7 +29395,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L165",
+      "source_location": "L174",
       "weight": 1.0
     },
     {
@@ -29289,7 +29407,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L221",
+      "source_location": "L249",
       "weight": 1.0
     },
     {
@@ -29301,7 +29419,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L65",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -29313,7 +29431,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L78",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -29325,7 +29443,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L87",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -29337,7 +29455,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L78",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -29349,7 +29467,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L44",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -29361,7 +29479,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L45",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -29373,7 +29491,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L50",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools_tool_analyze_cash_flow",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "services/agent/tools.py",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -29385,7 +29515,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L144",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -29397,7 +29527,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L101",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -29409,7 +29539,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L102",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -29421,7 +29551,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L103",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -29433,7 +29563,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/tools.py",
-      "source_location": "L108",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -29905,6 +30035,54 @@
       "weight": 1.0
     },
     {
+      "source": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_balanced",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_cash_generative",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L95",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_validation",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_working_capital_trap",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
       "source": "tests_unit_test_calculations_test_calculate_dab",
       "target": "services_calculations_runway_calculate_dab",
       "relation": "calls",
@@ -29913,7 +30091,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -29925,7 +30103,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L65",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -29937,7 +30115,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L73",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -29949,7 +30127,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -29961,7 +30139,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -29973,7 +30151,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -29985,7 +30163,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -30801,7 +30979,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L69",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -30921,7 +31099,7 @@
       "confidence_score": 1.0,
       "context": "decorator",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L42",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -31077,7 +31255,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/tools.py",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -31089,7 +31267,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/tools.py",
-      "source_location": "L134",
+      "source_location": "L153",
       "weight": 1.0
     },
     {
@@ -31101,7 +31279,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/tools.py",
-      "source_location": "L90",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -31442,7 +31620,7 @@
     },
     {
       "source": "api_routes_analyze",
-      "target": "services_ingestion_csv_parser_csvingestionerror",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -31454,6 +31632,18 @@
     },
     {
       "source": "api_routes_analyze",
+      "target": "services_ingestion_csv_parser_csvingestionerror",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "api_routes_analyze",
       "target": "services_ingestion_csv_parser_parse_bank_csv",
       "relation": "imports",
       "_origin": "ast",
@@ -31461,7 +31651,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L14",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -32090,7 +32280,7 @@
     },
     {
       "source": "services_agent_tools",
-      "target": "services_ingestion_csv_parser_parse_bank_csv",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -32102,7 +32292,7 @@
     },
     {
       "source": "services_agent_tools",
-      "target": "services_matcher_liquidity_matcher_match_financing_options",
+      "target": "services_ingestion_csv_parser_parse_bank_csv",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -32110,6 +32300,18 @@
       "context": "import",
       "source_file": "services/agent/tools.py",
       "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools",
+      "target": "services_matcher_liquidity_matcher_match_financing_options",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "services/agent/tools.py",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -32121,7 +32323,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "services/agent/tools.py",
-      "source_location": "L17",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -32133,7 +32335,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "services/agent/tools.py",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -32278,6 +32480,18 @@
       "context": "import",
       "source_file": "services/calculations/cash_analysis.py",
       "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "services_calculations_init",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "services/calculations/__init__.py",
+      "source_location": "L1",
       "weight": 1.0
     },
     {
@@ -32942,6 +33156,18 @@
     },
     {
       "source": "tests_unit_test_calculations",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations",
       "target": "services_calculations_runway_calculate_dab",
       "relation": "imports",
       "_origin": "ast",
@@ -33578,7 +33804,7 @@
     },
     {
       "source": "api_routes_analyze",
-      "target": "services_ingestion_csv_parser",
+      "target": "services_calculations_runway",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -33586,6 +33812,18 @@
       "context": "import",
       "source_file": "api/routes/analyze.py",
       "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "api_routes_analyze",
+      "target": "services_ingestion_csv_parser",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "api/routes/analyze.py",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -33965,7 +34203,7 @@
     },
     {
       "source": "services_agent_tools",
-      "target": "services_ingestion_csv_parser",
+      "target": "services_calculations_runway",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -33977,7 +34215,7 @@
     },
     {
       "source": "services_agent_tools",
-      "target": "services_matcher_liquidity_matcher",
+      "target": "services_ingestion_csv_parser",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -33989,6 +34227,18 @@
     },
     {
       "source": "services_agent_tools",
+      "target": "services_matcher_liquidity_matcher",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "services/agent/tools.py",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools",
       "target": "services_security_staging_ledger",
       "relation": "imports_from",
       "_origin": "ast",
@@ -33996,7 +34246,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "services/agent/tools.py",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -34872,7 +35122,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L43",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -34884,7 +35134,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L77",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -34920,7 +35170,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "services/agent/tools.py",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -35064,7 +35314,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "api/routes/analyze.py",
-      "source_location": "L43",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -48036,7 +48286,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -48047,7 +48297,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -48058,7 +48308,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L43",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -48069,7 +48319,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L77",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -51633,7 +51883,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L115",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -51644,7 +51894,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L124",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -51655,7 +51905,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L133",
+      "source_location": "L139",
       "weight": 1.0
     },
     {
@@ -51666,7 +51916,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L143",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -51677,7 +51927,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L150",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -51688,7 +51938,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L157",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -51699,7 +51949,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L165",
+      "source_location": "L171",
       "weight": 1.0
     },
     {
@@ -51710,7 +51960,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L170",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -51721,7 +51971,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L176",
+      "source_location": "L182",
       "weight": 1.0
     },
     {
@@ -51743,7 +51993,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L25",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -51754,7 +52004,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L26",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -51765,18 +52015,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L28",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_types_api",
-      "target": "frontend_src_types_api_stagingrequest",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/src/types/api.ts",
-      "source_location": "L39",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -51792,13 +52031,24 @@
     },
     {
       "source": "frontend_src_types_api",
+      "target": "frontend_src_types_api_stagingrequest",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/types/api.ts",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_types_api",
       "target": "frontend_src_types_api_executionrequest",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L46",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -51809,7 +52059,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L51",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -51820,7 +52070,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L52",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -51831,7 +52081,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L54",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -51842,7 +52092,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L66",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -51853,7 +52103,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L78",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -51864,7 +52114,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/types/api.ts",
-      "source_location": "L84",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -53074,7 +53324,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L111",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -53085,7 +53335,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L125",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -53096,7 +53346,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L136",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -53173,7 +53423,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L78",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -53217,40 +53467,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L59",
-      "weight": 1.0
-    },
-    {
-      "source": "services_agent_tools",
-      "target": "services_agent_tools_tool_stage_financial_action",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/agent/tools.py",
-      "source_location": "L134",
-      "weight": 1.0
-    },
-    {
-      "source": "services_agent_tools",
-      "target": "services_agent_tools_format_money",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/agent/tools.py",
-      "source_location": "L24",
-      "weight": 1.0
-    },
-    {
-      "source": "services_agent_tools",
-      "target": "services_agent_tools_tool_analyze_cash_flow",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/agent/tools.py",
-      "source_location": "L28",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -53261,7 +53478,40 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/tools.py",
-      "source_location": "L90",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools",
+      "target": "services_agent_tools_tool_stage_financial_action",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/agent/tools.py",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools",
+      "target": "services_agent_tools_format_money",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/agent/tools.py",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools",
+      "target": "services_agent_tools_tool_analyze_cash_flow",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/agent/tools.py",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -53471,6 +53721,17 @@
       "confidence_score": 1.0,
       "source_file": "services/calculations/runway.py",
       "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "services_calculations_runway",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/calculations/runway.py",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -54663,6 +54924,17 @@
     },
     {
       "source": "tests_integration_test_agent_api",
+      "target": "tests_integration_test_agent_api_test_agent_chat_working_capital_cycle_detection",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/integration/test_agent_api.py",
+      "source_location": "L363",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_integration_test_agent_api",
       "target": "tests_integration_test_agent_api_test_agent_cash_diagnostic_flow",
       "relation": "contains",
       "_origin": "ast",
@@ -54707,13 +54979,24 @@
     },
     {
       "source": "tests_integration_test_analyze_api",
+      "target": "tests_integration_test_analyze_api_test_analyze_api_with_cash_conversion_cycle",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/integration/test_analyze_api.py",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_integration_test_analyze_api",
       "target": "tests_integration_test_analyze_api_test_analyze_api_reports_file_errors_in_stable_shape",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L39",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -54724,7 +55007,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L50",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -54735,7 +55018,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_analyze_api.py",
-      "source_location": "L59",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -54883,13 +55166,24 @@
     },
     {
       "source": "tests_unit_test_calculations",
+      "target": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_validation",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations",
       "target": "tests_unit_test_calculations_test_calculate_net_burn",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L16",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -54900,7 +55194,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -54911,7 +55205,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -54922,7 +55216,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -54933,7 +55227,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L51",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -54944,7 +55238,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -54955,7 +55249,40 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/unit/test_calculations.py",
-      "source_location": "L69",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations",
+      "target": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_working_capital_trap",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations",
+      "target": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_balanced",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_unit_test_calculations",
+      "target": "tests_unit_test_calculations_test_calculate_cash_conversion_cycle_cash_generative",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/unit/test_calculations.py",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -55734,7 +56061,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -55745,7 +56072,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L20",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -55800,7 +56127,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L125",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -55822,7 +56149,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L111",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -55833,7 +56160,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L78",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -55844,7 +56171,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/schema.py",
-      "source_location": "L136",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -56871,14 +57198,14 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_supervisor_rationale_64",
+      "source": "services_agent_supervisor_rationale_73",
       "target": "services_agent_supervisor_run_copilot_supervisor",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L64",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -56893,36 +57220,36 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_tools_rationale_140",
-      "target": "services_agent_tools_tool_stage_financial_action",
-      "relation": "rationale_for",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/agent/tools.py",
-      "source_location": "L140",
-      "weight": 1.0
-    },
-    {
-      "source": "services_agent_tools_rationale_33",
-      "target": "services_agent_tools_tool_analyze_cash_flow",
-      "relation": "rationale_for",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "services/agent/tools.py",
-      "source_location": "L33",
-      "weight": 1.0
-    },
-    {
-      "source": "services_agent_tools_rationale_91",
+      "source": "services_agent_tools_rationale_110",
       "target": "services_agent_tools_tool_underwrite_credit",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/tools.py",
-      "source_location": "L91",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools_rationale_159",
+      "target": "services_agent_tools_tool_stage_financial_action",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/agent/tools.py",
+      "source_location": "L159",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_tools_rationale_37",
+      "target": "services_agent_tools_tool_analyze_cash_flow",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/agent/tools.py",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -57176,6 +57503,17 @@
       "confidence_score": 1.0,
       "source_file": "services/calculations/runway.py",
       "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "services_calculations_runway_rationale_71",
+      "target": "services_calculations_runway_calculate_cash_conversion_cycle",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/calculations/runway.py",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -57715,6 +58053,17 @@
       "confidence_score": 1.0,
       "source_file": "tests/integration/test_agent_api.py",
       "source_location": "L343",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_integration_test_agent_api_rationale_364",
+      "target": "tests_integration_test_agent_api_test_agent_chat_working_capital_cycle_detection",
+      "relation": "rationale_for",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/integration/test_agent_api.py",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -59852,7 +60201,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L62",
+      "source_location": "L71",
       "weight": 0.8
     },
     {
@@ -60068,7 +60417,7 @@
       "confidence_score": 0.95,
       "context": "parameter_type",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L60",
+      "source_location": "L69",
       "weight": 0.8
     },
     {
@@ -60216,7 +60565,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "api/routes/analyze.py",
-      "source_location": "L57",
+      "source_location": "L64",
       "weight": 0.8
     },
     {
@@ -60271,7 +60620,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L156",
+      "source_location": "L165",
       "weight": 0.8
     },
     {

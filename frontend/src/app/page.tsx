@@ -137,6 +137,19 @@ export default function HomePage() {
       setModelsMessage(null);
       return;
     }
+
+    if (['gemini', 'anthropic', 'openai', 'deepseek', 'groq'].includes(cfg.provider) && !cfg.api_key) {
+      setAvailableModels([]);
+      setModelsMessage('API not connected. Enter your API key and verify connection to load available models.');
+      return;
+    }
+
+    if (cfg.provider === 'custom' && !cfg.base_url) {
+      setAvailableModels([]);
+      setModelsMessage('Base URL required. Enter Base URL and verify connection to load available models.');
+      return;
+    }
+
     setLoadingModels(true);
     setModelsMessage(null);
     try {
@@ -150,16 +163,19 @@ export default function HomePage() {
         }),
       });
       const data: FetchModelsResponse = await res.json();
-      if (data.models && data.models.length > 0) {
+      if (data.success && data.models && data.models.length > 0) {
         setAvailableModels(data.models);
-        setModelsMessage(data.message || `Discovered ${data.models.length} models.`);
-        // If current model isn't in fetched list, keep it as valid
+        setModelsMessage(`✅ Connected: Discovered ${data.models.length} live models.`);
         const match = data.models.find((m) => m.id === cfg.model_name);
         if (!match && !customModelMode && data.models[0]) {
           setDraftConfig((prev) => ({ ...prev, model_name: data.models[0].id }));
         }
+      } else {
+        setAvailableModels([]);
+        setModelsMessage(data.message || '⚠️ Unable to discover models. Verify your API credentials.');
       }
     } catch (cause) {
+      setAvailableModels([]);
       setModelsMessage(cause instanceof Error ? cause.message : 'Could not fetch remote models.');
     } finally {
       setLoadingModels(false);
@@ -177,6 +193,9 @@ export default function HomePage() {
       });
       const data: TestConnectionResponse = await res.json();
       setTestResult(data);
+      if (data.success && draftConfig.provider !== 'offline') {
+        fetchModels(draftConfig);
+      }
     } catch (cause) {
       setTestResult({
         success: false,
@@ -598,13 +617,18 @@ export default function HomePage() {
                     const nextCfg: LLMConfig = {
                       ...draftConfig,
                       provider: p,
-                      model_name: info.defaultModel,
+                      model_name: p === 'offline' ? 'deterministic-v1' : '',
                       base_url: info.defaultUrl || '',
                     };
                     setDraftConfig(nextCfg);
                     setTestResult(null);
                     setCustomModelMode(false);
-                    fetchModels(nextCfg);
+                    setAvailableModels(p === 'offline' ? [{ id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' }] : []);
+                    if (p === 'offline' || nextCfg.api_key) {
+                      fetchModels(nextCfg);
+                    } else {
+                      setModelsMessage('API not connected. Enter your API key and verify connection to load available models.');
+                    }
                   }}
                 >
                   {Object.entries(PRESETS).map(([id, info]) => (
@@ -668,27 +692,57 @@ export default function HomePage() {
 
                   {!customModelMode ? (
                     <div>
-                      <select
-                        id="model-select"
-                        className="select-input"
-                        value={draftConfig.model_name || ''}
-                        onChange={(e) => {
-                          if (e.target.value === '__custom__') {
-                            setCustomModelMode(true);
-                          } else {
-                            setDraftConfig({ ...draftConfig, model_name: e.target.value });
-                          }
-                        }}
-                      >
-                        {availableModels.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                        <option value="__custom__">➕ Custom / Fine-Tuned Model Name…</option>
-                      </select>
-                      {modelsMessage && (
-                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{modelsMessage}</div>
+                      {availableModels.length > 0 ? (
+                        <>
+                          <select
+                            id="model-select"
+                            className="select-input"
+                            value={draftConfig.model_name || ''}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setCustomModelMode(true);
+                              } else {
+                                setDraftConfig({ ...draftConfig, model_name: e.target.value });
+                              }
+                            }}
+                          >
+                            {availableModels.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                            <option value="__custom__">➕ Custom / Fine-Tuned Model Name…</option>
+                          </select>
+                          {modelsMessage && (
+                            <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4, fontWeight: 500 }}>
+                              {modelsMessage}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div
+                          style={{
+                            background: 'var(--surface-2)',
+                            border: '1px dashed var(--border)',
+                            borderRadius: 6,
+                            padding: '12px 14px',
+                            fontSize: 12,
+                          }}
+                        >
+                          <div style={{ color: 'var(--muted)', marginBottom: 8, lineHeight: 1.4 }}>
+                            {loadingModels
+                              ? '⏳ Querying provider endpoint to discover models…'
+                              : (modelsMessage || '⚠️ API not connected. Enter your API key above and click "Test Connection" to discover models.')}
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ fontSize: 11, padding: '4px 10px', width: 'auto' }}
+                            onClick={() => setCustomModelMode(true)}
+                          >
+                            ✏️ Or Type Model Name Manually
+                          </button>
+                        </div>
                       )}
                     </div>
                   ) : (
