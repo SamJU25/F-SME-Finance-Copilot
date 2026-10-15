@@ -122,6 +122,28 @@ class SessionStore:
             self._persist_session(rec)
             return rec
 
+    def clear_statement(self, session_id: str) -> Optional[SessionRecord]:
+        """Clears statement CSV, cached dossier, and statement-derived facts from the session."""
+        with self._store_lock:
+            rec = self._sessions.get(session_id)
+            if not rec:
+                return None
+            rec.csv_content = None
+            rec.cached_dossier = None
+            for fact in [
+                "current_balance",
+                "average_daily_burn",
+                "runway_days",
+                "cash_status",
+                "daily_average_balance",
+                "risk_tier",
+                "max_qualified_limit",
+            ]:
+                rec.financial_facts.pop(fact, None)
+            rec.updated_at = datetime.now(timezone.utc).isoformat()
+            self._persist_session(rec)
+            return rec
+
     def append_turn(
         self,
         session_id: str,

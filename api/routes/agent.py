@@ -85,6 +85,18 @@ async def clear_session(session_id: str) -> dict:
     return {"session_id": session_id, "cleared": removed}
 
 
+@router.delete(
+    "/session/{session_id}/statement",
+    status_code=status.HTTP_200_OK,
+    summary="Clear Statement from Active Session",
+    description="Purges uploaded CSV statement and cached calculations from the session while preserving conversation history.",
+)
+async def clear_session_statement(session_id: str) -> dict:
+    """Clears statement CSV and cached calculation metrics for the session."""
+    rec = session_store.clear_statement(session_id)
+    return {"session_id": session_id, "statement_cleared": rec is not None}
+
+
 @router.post(
     "/chat",
     response_model=CopilotResponse,

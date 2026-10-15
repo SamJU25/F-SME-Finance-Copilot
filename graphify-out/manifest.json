@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792093527.599942,
-    "seen": 1792093559.8028624,
-    "ast_hash": "d2f41cdf700255d6aca592f070f351fd",
+    "mtime": 1792094771.1288154,
+    "seen": 1792094797.132093,
+    "ast_hash": "713e5c6e5500ba656e68a549aad94c94",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1434,9 +1434,9 @@
     "semantic_hash": ""
   },
   "api/routes/agent.py": {
-    "mtime": 1792083229.8520875,
-    "seen": 1792083488.3977208,
-    "ast_hash": "1140c7d1a667660fcc3fa314a4572418",
+    "mtime": 1792094593.068729,
+    "seen": 1792094797.131382,
+    "ast_hash": "5899d2beecab8152a8bee317bd087117",
     "semantic_hash": ""
   },
   "services/agent/__init__.py": {
@@ -1578,21 +1578,21 @@
     "semantic_hash": ""
   },
   "services/agent/session_store.py": {
-    "mtime": 1792082524.2645926,
-    "seen": 1792083488.3996913,
-    "ast_hash": "e43b3268f51f59c12c74b49de2f2f61d",
+    "mtime": 1792094584.066468,
+    "seen": 1792094797.1338158,
+    "ast_hash": "4ba8e6e3638f933c7ef1980dec5bf79b",
     "semantic_hash": ""
   },
   "tests/integration/test_session_memory_api.py": {
-    "mtime": 1792083292.6460893,
-    "seen": 1792083488.4026783,
-    "ast_hash": "98845bbf550479c46f779bd650da5241",
+    "mtime": 1792094623.6014447,
+    "seen": 1792094797.137019,
+    "ast_hash": "9904059542da76955054a520c31b3aca",
     "semantic_hash": ""
   },
   "tests/unit/test_session_store.py": {
-    "mtime": 1792083281.5828395,
-    "seen": 1792083488.4038985,
-    "ast_hash": "f42221628dcd2a2f5165864f475fbe11",
+    "mtime": 1792094602.9703667,
+    "seen": 1792094797.1382344,
+    "ast_hash": "9efc665c5aa942aa9da390b4ebe50e9c",
     "semantic_hash": ""
   }
 }

@@ -311,6 +311,7 @@ export default function HomePage() {
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const [sessionSearch, setSessionSearch] = useState('');
   const sessionMenuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -680,13 +681,88 @@ export default function HomePage() {
     }
   }
 
+  function handleFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0] ?? null;
+    setFile(picked);
+    setResult(null);
+    setError(null);
+    if (picked) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = (e.target?.result as string) || '';
+        setCsvText(content);
+        try {
+          localStorage.setItem(`sme_copilot_csv_${sessionId}`, content);
+          localStorage.setItem('sme_copilot_csv_text', content);
+        } catch {
+          // LocalStorage fallback
+        }
+      };
+      reader.readAsText(picked);
+      executeAnalysis(picked, threshold);
+      const fileTitle = deriveSessionTitle(undefined, picked.name);
+      setSessions((prev) => {
+        const idx = prev.findIndex((s) => s.id === sessionId);
+        if (idx >= 0) {
+          const current = prev[idx];
+          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session' || current.title === 'New Conversation';
+          if (isGeneric) {
+            const next = [...prev];
+            next[idx] = { ...current, title: fileTitle, updatedAt: new Date().toISOString() };
+            try {
+              localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(next));
+            } catch {
+              // LocalStorage fallback
+            }
+            return next;
+          }
+        }
+        return prev;
+      });
+    } else {
+      setCsvText(null);
+    }
+  }
+
+  async function handleRemoveCsv() {
+    setFile(null);
+    setCsvText(null);
+    setResult(null);
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    try {
+      localStorage.removeItem(`sme_copilot_csv_${sessionId}`);
+      localStorage.removeItem('sme_copilot_csv_text');
+    } catch {
+      // LocalStorage fallback
+    }
+    try {
+      await fetch(`${API_URL}/api/v1/agent/session/${encodeURIComponent(sessionId)}/statement`, {
+        method: 'DELETE',
+        headers: {
+          'X-Tenant-ID': 'SME-COFFEE-001',
+          'X-Session-ID': sessionId,
+        },
+      });
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  function handleChangeCsv() {
+    fileInputRef.current?.click();
+  }
+
   async function analyze(event?: FormEvent<HTMLFormElement>) {
     if (event) event.preventDefault();
-    if (!file) {
+    if (!file && !csvText) {
       setError('Choose a CSV file before reviewing cash activity.');
       return;
     }
-    await executeAnalysis(file, threshold);
+    const targetFile = file || new File([csvText || ''], 'statement.csv', { type: 'text/csv' });
+    await executeAnalysis(targetFile, threshold);
   }
 
   async function sendChatMessage(promptText?: string) {
@@ -1132,59 +1208,76 @@ export default function HomePage() {
                 />
               </div>
 
-              <div className="dropzone">
-                <span className="upload-icon" aria-hidden="true">↑</span>
-                <label className="field-label" htmlFor="csv-file">Choose a CSV file</label>
-                <input
-                  id="csv-file"
-                  className="file-input"
-                  aria-label="Choose bank statement CSV file"
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(event) => {
-                    const picked = event.target.files?.[0] ?? null;
-                    setFile(picked);
-                    setResult(null);
-                    setError(null);
-                    if (picked) {
-                      const reader = new FileReader();
-                      reader.onload = (e) => setCsvText(e.target?.result as string);
-                      reader.readAsText(picked);
-                      executeAnalysis(picked, threshold);
-                      const fileTitle = deriveSessionTitle(undefined, picked.name);
-                      setSessions((prev) => {
-                        const idx = prev.findIndex((s) => s.id === sessionId);
-                        if (idx >= 0) {
-                          const current = prev[idx];
-                          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session' || current.title === 'New Conversation';
-                          if (isGeneric) {
-                            const next = [...prev];
-                            next[idx] = { ...current, title: fileTitle, updatedAt: new Date().toISOString() };
-                            try {
-                              localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(next));
-                            } catch {
-                              // LocalStorage fallback
-                            }
-                            return next;
-                          }
-                        }
-                        return prev;
-                      });
-                    } else {
-                      setCsvText(null);
-                    }
-                  }}
-                />
-                <div className="file-name">
-                  {file ? `${file.name} (${file.size} bytes)` : 'UTF-8 CSV · max 1 MB'}
+              {file || csvText ? (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    id="csv-file"
+                    className="file-input"
+                    aria-label="Choose bank statement CSV file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    style={{ display: 'none' }}
+                    onChange={handleFileInputChange}
+                  />
+                  <div className="uploaded-file-card" role="region" aria-label="Active uploaded bank statement">
+                    <div className="uploaded-file-info">
+                      <span className="uploaded-file-icon" aria-hidden="true">📄</span>
+                      <div className="uploaded-file-meta">
+                        <span className="uploaded-file-name">
+                          {file ? file.name : 'Active_Statement.csv'}
+                        </span>
+                        <span className="uploaded-file-size">
+                          {file
+                            ? `${(file.size / 1024).toFixed(1)} KB · Active in Session`
+                            : csvText
+                            ? `${(csvText.length / 1024).toFixed(1)} KB · Active in Session`
+                            : 'Statement Loaded'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="uploaded-file-actions">
+                      <button
+                        type="button"
+                        className="change-csv-btn"
+                        onClick={handleChangeCsv}
+                        title="Replace with another CSV statement"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        className="remove-csv-btn"
+                        onClick={handleRemoveCsv}
+                        title="Remove statement from active session"
+                      >
+                        <span aria-hidden="true">✕</span> Remove
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="dropzone">
+                  <span className="upload-icon" aria-hidden="true">↑</span>
+                  <label className="field-label" htmlFor="csv-file">Choose a CSV file</label>
+                  <input
+                    ref={fileInputRef}
+                    id="csv-file"
+                    className="file-input"
+                    aria-label="Choose bank statement CSV file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleFileInputChange}
+                  />
+                  <div className="file-name">UTF-8 CSV · max 1 MB</div>
                 </div>
-              </div>
+              )}
 
               <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
                 Format: <code>{CSV_HEADER}</code>
               </div>
 
-              <button className="submit" type="submit" disabled={loading || !file} style={{ marginTop: 16 }}>
+              <button className="submit" type="submit" disabled={loading || (!file && !csvText)} style={{ marginTop: 16 }}>
                 {loading ? 'Analyzing statement…' : 'Analyze cash activity'}
               </button>
             </form>

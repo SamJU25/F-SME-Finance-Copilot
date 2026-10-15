@@ -208,6 +208,102 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
 .file-input { width: min(100%, 320px); min-height: 44px; padding: 8px; border: 1px solid #a9beb0; border-radius: 8px; background: white; color: var(--ink); cursor: pointer; font-size: 13px; }
 .file-input::file-selector-button { min-height: 30px; margin-right: 10px; padding: 0 10px; border: 1px solid #a9beb0; border-radius: 6px; background: #f5f8f4; color: var(--green); cursor: pointer; font-weight: 600; }
 .file-name { max-width: 100%; margin-top: 12px; overflow-wrap: anywhere; color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+
+/* Uploaded Statement Card State */
+.uploaded-file-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 80px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: #f7faf8;
+  border: 1px solid #c9e4d5;
+  border-radius: 12px;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.uploaded-file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.uploaded-file-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.uploaded-file-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.uploaded-file-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uploaded-file-size {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.uploaded-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.change-csv-btn {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.change-csv-btn:hover {
+  background: #f0f4f1;
+  border-color: #b7c6ba;
+}
+.remove-csv-btn {
+  padding: 6px 12px;
+  background: #fae5e2;
+  border: 1px solid #f0c3bf;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+}
+.remove-csv-btn:hover {
+  background: #f7d5d0;
+  border-color: #e5a8a2;
+}
+.remove-csv-btn:active, .change-csv-btn:active {
+  transform: scale(0.97);
+}
 .submit { width: 100%; min-height: 50px; margin-top: 18px; border: 0; border-radius: 9px; background: var(--green); color: white; cursor: pointer; font-weight: 600; font-size: 14.5px; letter-spacing: -0.01em; transition: background .15s ease, transform .15s ease; }
 .submit:hover:not(:disabled) { background: #0e5945; transform: translateY(-1px); }
 .submit:disabled { cursor: wait; opacity: .62; }

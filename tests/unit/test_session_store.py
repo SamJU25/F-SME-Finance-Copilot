@@ -105,3 +105,23 @@ def test_session_clear():
     assert deleted is True
     assert store.get("sess_to_delete") is None
     assert not os.path.exists(disk_path)
+
+
+def test_session_clear_statement():
+    store = SessionStore.get_instance()
+    csv_sample = "header\ntx_1,100"
+    store.update_statement("sess_test_clear_stmt", csv_sample, dossier={"dab": 5000})
+    store.append_turn("sess_test_clear_stmt", user_text="Hello", agent_text="Hi")
+    store.set_financial_fact("sess_test_clear_stmt", "runway_days", 45)
+    store.set_financial_fact("sess_test_clear_stmt", "custom_note", "keep_me")
+
+    cleared_rec = store.clear_statement("sess_test_clear_stmt")
+    assert cleared_rec is not None
+    assert cleared_rec.csv_content is None
+    assert cleared_rec.cached_dossier is None
+    # Statement-derived facts should be cleared
+    assert "runway_days" not in cleared_rec.financial_facts
+    # Unrelated facts should be preserved
+    assert cleared_rec.financial_facts.get("custom_note") == "keep_me"
+    # Conversation messages must be preserved
+    assert len(cleared_rec.messages) == 2
