@@ -182,7 +182,6 @@ export default function HomePage() {
     if (cfg.provider === 'offline') {
       setAvailableModels([
         { id: 'llama-3.2-1b-instruct-onnx', name: 'Meta Llama-3.2-1B-Instruct (On-Device ONNX)' },
-        { id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' },
       ]);
       setModelsMessage('✅ On-device SLM active: Meta Llama-3.2-1B-Instruct (Zero external keys).');
       return;
@@ -790,7 +789,6 @@ export default function HomePage() {
                       p === 'offline'
                         ? [
                             { id: 'llama-3.2-1b-instruct-onnx', name: 'Meta Llama-3.2-1B-Instruct (On-Device ONNX)' },
-                            { id: 'deterministic-v1', name: 'Deterministic Financial Engine (Offline)' },
                           ]
                         : []
                     );

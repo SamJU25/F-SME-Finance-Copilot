@@ -44,7 +44,7 @@ def mask_pii(text: str) -> str:
 
 PROVIDER_DEFAULTS = {
     "offline": {
-        "model": "deterministic-v1",
+        "model": "llama-3.2-1b-instruct-onnx",
         "url": "local",
     },
     "gemini": {
@@ -101,7 +101,7 @@ def _resolve_endpoint(provider: str, base_url: Optional[str], model: Optional[st
     if p_lower == "anthropic":
         return base_url or defaults.get("url", ""), model_name
 
-    return "local", "deterministic-v1"
+    return "local", "llama-3.2-1b-instruct-onnx"
 
 
 def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
@@ -109,30 +109,21 @@ def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
     provider = (req.provider or "offline").lower()
 
     if provider == "offline":
-        model_req = (req.model_name or "deterministic-v1").lower()
-        if model_req in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama"):
-            from services.agent.local_slm import LocalSLMEngine
-            engine = LocalSLMEngine.get_instance()
-            if engine.is_available():
-                return TestConnectionResponse(
-                    success=True,
-                    message="Offline on-device AI ready: Meta Llama-3.2-1B-Instruct (CPU INT4, zero external keys).",
-                    provider="offline",
-                    model_name="llama-3.2-1b-instruct-onnx",
-                    latency_ms=0,
-                )
+        from services.agent.local_slm import LocalSLMEngine
+        engine = LocalSLMEngine.get_instance()
+        if engine.is_available():
             return TestConnectionResponse(
-                success=False,
-                message="Llama-3.2-1B ONNX weights not found on disk. Falling back to deterministic engine.",
+                success=True,
+                message="Offline on-device AI ready: Meta Llama-3.2-1B-Instruct (CPU INT4, zero external keys).",
                 provider="offline",
-                model_name="deterministic-v1",
+                model_name="llama-3.2-1b-instruct-onnx",
                 latency_ms=0,
             )
         return TestConnectionResponse(
-            success=True,
-            message="Offline deterministic financial engine ready (0 external keys needed).",
+            success=False,
+            message="Llama-3.2-1B ONNX weights not found on disk. Please verify models/llama-3.2-1b-instruct-onnx directory.",
             provider="offline",
-            model_name="deterministic-v1",
+            model_name="llama-3.2-1b-instruct-onnx",
             latency_ms=0,
         )
 
@@ -352,7 +343,7 @@ def query_external_llm(
 
 FALLBACK_CATALOG: dict[str, list[ModelItem]] = {
     "offline": [
-        ModelItem(id="deterministic-v1", name="Deterministic Financial Engine (Offline)"),
+        ModelItem(id="llama-3.2-1b-instruct-onnx", name="Meta Llama-3.2-1B-Instruct (On-Device ONNX)"),
     ],
     "gemini": [
         ModelItem(id="gemini-2.0-flash", name="Gemini 2.0 Flash (Recommended)"),
@@ -397,14 +388,12 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
     if provider == "offline":
         from services.agent.local_slm import LocalSLMEngine
         engine = LocalSLMEngine.get_instance()
-        models = [ModelItem(id="deterministic-v1", name="Deterministic Financial Engine (Offline)")]
-        if engine.is_available():
-            models.append(ModelItem(id="llama-3.2-1b-instruct-onnx", name="Meta Llama-3.2-1B-Instruct (On-Device ONNX)"))
+        models = [ModelItem(id="llama-3.2-1b-instruct-onnx", name="Meta Llama-3.2-1B-Instruct (On-Device ONNX)")]
         return FetchModelsResponse(
             success=True,
             provider="offline",
             models=models,
-            message="Offline engine ready with local on-device neural model." if engine.is_available() else "Offline deterministic engine ready.",
+            message="Offline engine ready with local on-device neural model (Meta Llama-3.2-1B-Instruct)." if engine.is_available() else "Offline on-device model files not detected on disk.",
         )
 
     # If missing required credentials, return empty models list (never pretend with hardcoded list)

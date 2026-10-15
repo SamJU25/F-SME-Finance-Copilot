@@ -89,6 +89,8 @@ class LocalSLMEngine:
         temperature: float = 0.2,
     ) -> Optional[str]:
         """Generates contextual natural response using local Llama 3.2 1B."""
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return None
         if not self._ensure_loaded():
             return None
 

@@ -180,7 +180,7 @@ def test_agent_test_connection_offline():
     data = response.json()
     assert data["success"] is True
     assert data["provider"] == "offline"
-    assert "deterministic" in data["message"].lower()
+    assert "meta llama" in data["message"].lower() or "on-device" in data["message"].lower()
 
 
 def test_agent_test_connection_missing_api_key():
@@ -211,7 +211,7 @@ def test_agent_chat_with_header_llm_config():
     """Verify chat route parses X-LLM-Config header and maintains deterministic financial invariants."""
     import json
 
-    llm_header = json.dumps({"provider": "offline", "model_name": "deterministic-v1"})
+    llm_header = json.dumps({"provider": "offline", "model_name": "llama-3.2-1b-instruct-onnx"})
     response = client.post(
         "/api/v1/agent/chat",
         headers={"X-LLM-Config": llm_header},
@@ -249,7 +249,7 @@ def test_agent_fetch_models_offline():
     assert data["success"] is True
     assert data["provider"] == "offline"
     assert len(data["models"]) >= 1
-    assert data["models"][0]["id"] == "deterministic-v1"
+    assert data["models"][0]["id"] == "llama-3.2-1b-instruct-onnx"
 
 
 def test_agent_fetch_models_missing_key():
@@ -507,8 +507,8 @@ def test_agent_offline_llama_connection_and_discovery():
     data_models = res_models.json()
     assert data_models["success"] is True
     model_ids = [m["id"] for m in data_models["models"]]
-    assert "deterministic-v1" in model_ids
     assert "llama-3.2-1b-instruct-onnx" in model_ids
+    assert "deterministic-v1" not in model_ids
 
 
 

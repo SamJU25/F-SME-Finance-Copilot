@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792060264.9481275,
-    "seen": 1792060363.2666178,
-    "ast_hash": "60245d2db451b9ab85a737198481a29d",
+    "mtime": 1792063739.5974188,
+    "seen": 1792063877.9100842,
+    "ast_hash": "ebe15d6e9209c3c273d0c870ecedde8f",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1458,9 +1458,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792059874.9775002,
-    "seen": 1792060086.397284,
-    "ast_hash": "f8dba286a3758242ce89ec8403c5f480",
+    "mtime": 1792061648.9118533,
+    "seen": 1792061714.6925714,
+    "ast_hash": "3d38bc197fdc965db1155ba5c4ccb89f",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1470,15 +1470,15 @@
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
-    "mtime": 1792059376.1706338,
-    "seen": 1792059439.9861846,
-    "ast_hash": "75b6e462536650ad98c3cbdd2467ef71",
+    "mtime": 1792063772.278068,
+    "seen": 1792063877.9132073,
+    "ast_hash": "f5021b00d0d6f17813bafd298ef9826c",
     "semantic_hash": ""
   },
   "services/agent/llm_bridge.py": {
-    "mtime": 1792059307.3166592,
-    "seen": 1792059439.9838552,
-    "ast_hash": "0599d6eb470c03254da25318c4751a5e",
+    "mtime": 1792063704.3981223,
+    "seen": 1792063877.9109132,
+    "ast_hash": "999712d3ac03306f318736716ed84bc6",
     "semantic_hash": ""
   },
   "services/calculations/predictive_cash.py": {
@@ -1494,9 +1494,9 @@
     "semantic_hash": ""
   },
   "services/agent/semantic_router.py": {
-    "mtime": 1792057848.79605,
-    "seen": 1792058063.272362,
-    "ast_hash": "82bcac9524fd83217d7ac8a246ec6aaa",
+    "mtime": 1792061634.1022356,
+    "seen": 1792061714.6925688,
+    "ast_hash": "a59ad397cc8820c44b4171aa8ed962d9",
     "semantic_hash": ""
   },
   "scripts/download_llama.py": {
@@ -1506,9 +1506,15 @@
     "semantic_hash": ""
   },
   "services/agent/local_slm.py": {
-    "mtime": 1792059008.6205685,
-    "seen": 1792059439.9838576,
-    "ast_hash": "b9699ee7b4593a9bd2ac3e3f699067c7",
+    "mtime": 1792063670.2948403,
+    "seen": 1792063877.9109151,
+    "ast_hash": "a1701baac193747be2977d79f9673a9c",
+    "semantic_hash": ""
+  },
+  "services/agent/prompts.py": {
+    "mtime": 1792062360.0780172,
+    "seen": 1792062813.8140888,
+    "ast_hash": "c445db00910051c24c4b18ff90b18968",
     "semantic_hash": ""
   }
 }
