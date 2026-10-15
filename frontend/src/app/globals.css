@@ -123,18 +123,94 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
   background: #fafbf9;
+  gap: 10px;
 }
-.chat-header h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-.chat-header .badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 99px;
-  background: var(--green-soft);
-  color: var(--green);
-  font-family: var(--mono);
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.session-selector-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  max-width: 230px;
+}
+.session-selector-wrap:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(20, 107, 85, 0.1);
+}
+.session-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.session-combobox {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.chat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.model-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.model-settings-btn:hover {
+  background: var(--paper);
+  border-color: #bfcac1;
+}
+.model-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--green);
+  flex-shrink: 0;
+}
+.model-chip-name {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-gear-icon {
+  font-size: 12px;
+  opacity: 0.8;
 }
 .chat-close {
   background: transparent;
@@ -143,6 +219,55 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
   color: var(--muted);
   cursor: pointer;
   padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+.chat-close:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Session Limit Breakline */
+.session-breakline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  width: 100%;
+}
+.breakline-divider {
+  flex: 1;
+  height: 1px;
+  background: #d8ded8;
+}
+.breakline-content {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+.breakline-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #fdf5e6;
+  border: 1px dashed #e8c488;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #875412;
+}
+.breakline-icon {
+  font-size: 12px;
+}
+.breakline-sub {
+  font-size: 10.5px;
+  color: #9c6c2e;
 }
 
 .chat-body {

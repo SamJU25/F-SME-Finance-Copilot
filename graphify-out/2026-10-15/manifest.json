@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792079862.0594704,
-    "seen": 1792080334.8330534,
-    "ast_hash": "19125cb6e73a4b10d5ab4eeea9baa679",
+    "mtime": 1792083429.7862313,
+    "seen": 1792083488.3983476,
+    "ast_hash": "feb81a41b0885039159ba901ccc6f667",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1440,9 +1440,9 @@
     "semantic_hash": ""
   },
   "api/routes/agent.py": {
-    "mtime": 1792079658.0603733,
-    "seen": 1792080334.8323252,
-    "ast_hash": "e1a0227fcbaf1fbd9f8d7c9d511758fd",
+    "mtime": 1792083229.8520875,
+    "seen": 1792083488.3977208,
+    "ast_hash": "1140c7d1a667660fcc3fa314a4572418",
     "semantic_hash": ""
   },
   "services/agent/__init__.py": {
@@ -1452,15 +1452,15 @@
     "semantic_hash": ""
   },
   "services/agent/schema.py": {
-    "mtime": 1792068678.9160216,
-    "seen": 1792068828.1076646,
-    "ast_hash": "2d0f8c11212a3512b3a9696e9c5ca184",
+    "mtime": 1792082647.6524768,
+    "seen": 1792083488.3996892,
+    "ast_hash": "5485caf0601c0bbc810183956df6b467",
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792078859.9673057,
-    "seen": 1792079129.0426424,
-    "ast_hash": "0f3375c7bfe4039bb692fb5e60ee3524",
+    "mtime": 1792083253.7856662,
+    "seen": 1792083488.4001231,
+    "ast_hash": "cb9e84709aaaed48c26c77fe7c93d648",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1581,6 +1581,24 @@
     "mtime": 1792078981.8858588,
     "seen": 1792079129.042641,
     "ast_hash": "14c2a51c0cd60b40370657c4cfa3f66e",
+    "semantic_hash": ""
+  },
+  "services/agent/session_store.py": {
+    "mtime": 1792082524.2645926,
+    "seen": 1792083488.3996913,
+    "ast_hash": "e43b3268f51f59c12c74b49de2f2f61d",
+    "semantic_hash": ""
+  },
+  "tests/integration/test_session_memory_api.py": {
+    "mtime": 1792083292.6460893,
+    "seen": 1792083488.4026783,
+    "ast_hash": "98845bbf550479c46f779bd650da5241",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_session_store.py": {
+    "mtime": 1792083281.5828395,
+    "seen": 1792083488.4038985,
+    "ast_hash": "f42221628dcd2a2f5165864f475fbe11",
     "semantic_hash": ""
   }
 }

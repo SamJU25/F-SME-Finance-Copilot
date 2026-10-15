@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Fragment, useEffect, useState } from 'react';
 import type {
   CashAnalysisResponse,
   CopilotResponse,
@@ -13,6 +13,19 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 const CSV_HEADER = 'transaction_id,posted_on,amount,currency,description,closing_balance';
+const SESSION_MESSAGE_LIMIT = 20;
+
+export interface SessionItem {
+  id: string;
+  title: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+const DEFAULT_WELCOME_MESSAGE: { role: 'agent'; text: string } = {
+  role: 'agent',
+  text: 'Hello, I am your Autonomous SME Finance Copilot. You can pick an inquiry below, ask any financial question, or upload your transactional bank statement on the left to run live diagnostics.',
+};
 
 const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defaultUrl?: string; description: string }> = {
   offline: {
@@ -75,14 +88,13 @@ function money(value: string, currency: string): string {
 
 function getEngineDisplayName(config: LLMConfig): string {
   if (config.provider === 'offline') {
-    return 'Private On-Device Engine';
+    return 'Llama 3.2 (Offline)';
+  }
+  if (config.model_name && !config.model_name.startsWith('http')) {
+    return config.model_name;
   }
   const preset = PRESETS[config.provider as LLMProviderId];
-  const providerName = preset ? preset.name : config.provider;
-  if (config.model_name && !config.model_name.startsWith('http')) {
-    return `${providerName} (${config.model_name})`;
-  }
-  return `${providerName} Engine`;
+  return preset ? preset.name : config.provider;
 }
 
 function FormattedChatBubble({ text }: { text: string }) {
@@ -203,11 +215,9 @@ export default function HomePage() {
   const [chatLoading, setChatLoading] = useState(false);
   const [executedIntents, setExecutedIntents] = useState<Record<string, boolean>>({});
   const [sessionId, setSessionId] = useState<string>('');
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([
-    {
-      role: 'agent',
-      text: 'Hello, I am your Autonomous SME Finance Copilot. You can pick an inquiry below, ask any financial question, or upload your transactional bank statement on the left to run live diagnostics.',
-    },
+    DEFAULT_WELCOME_MESSAGE,
   ]);
 
   // Multi-Provider AI Settings State
@@ -231,18 +241,56 @@ export default function HomePage() {
 
   useEffect(() => {
     try {
+      let storedSessionsList: SessionItem[] = [];
+      const rawSessions = localStorage.getItem('sme_copilot_sessions_list');
+      if (rawSessions) {
+        try {
+          const parsed = JSON.parse(rawSessions);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            storedSessionsList = parsed;
+          }
+        } catch {
+          // JSON parse fallback
+        }
+      }
+
       let storedSession = localStorage.getItem('sme_copilot_session_id');
       if (!storedSession) {
-        storedSession = `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+        storedSession = storedSessionsList[0]?.id || `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
         localStorage.setItem('sme_copilot_session_id', storedSession);
       }
       setSessionId(storedSession);
 
-      const savedMsgs = localStorage.getItem('sme_copilot_chat_history');
+      const existing = storedSessionsList.find((s) => s.id === storedSession);
+      if (!existing) {
+        const initialItem: SessionItem = {
+          id: storedSession,
+          title: 'Session 1',
+          updatedAt: new Date().toISOString(),
+          messageCount: 1,
+        };
+        storedSessionsList = [initialItem, ...storedSessionsList];
+        try {
+          localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(storedSessionsList));
+        } catch {
+          // LocalStorage fallback
+        }
+      }
+      setSessions(storedSessionsList);
+
+      const sessionChatKey = `sme_copilot_chat_${storedSession}`;
+      let savedMsgs = localStorage.getItem(sessionChatKey);
+      if (!savedMsgs) {
+        savedMsgs = localStorage.getItem('sme_copilot_chat_history');
+      }
       if (savedMsgs) {
-        const parsed = JSON.parse(savedMsgs);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+        try {
+          const parsed = JSON.parse(savedMsgs);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+          }
+        } catch {
+          // LocalStorage fallback
         }
       }
 
@@ -280,14 +328,56 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (messages && messages.length > 0) {
-      try {
-        localStorage.setItem('sme_copilot_chat_history', JSON.stringify(messages));
-      } catch {
-        // LocalStorage fallback
-      }
+    if (!sessionId || !messages || messages.length === 0) return;
+    try {
+      const sessionChatKey = `sme_copilot_chat_${sessionId}`;
+      localStorage.setItem(sessionChatKey, JSON.stringify(messages));
+      localStorage.setItem('sme_copilot_chat_history', JSON.stringify(messages));
+
+      const firstUserMsg = messages.find((m) => m.role === 'user');
+      setSessions((prev) => {
+        const idx = prev.findIndex((s) => s.id === sessionId);
+        let updatedTitle = `Session ${prev.length || 1}`;
+        if (firstUserMsg && firstUserMsg.text) {
+          const cleanPrompt = firstUserMsg.text.replace(/\s+/g, ' ').trim();
+          updatedTitle = cleanPrompt.length > 24 ? `${cleanPrompt.slice(0, 24)}…` : cleanPrompt;
+        }
+
+        let nextSessions: SessionItem[];
+        if (idx >= 0) {
+          const current = prev[idx];
+          const isGeneric = current.title.startsWith('Session ') || current.title === 'Current Session' || current.title === 'New Session';
+          const newTitle = isGeneric && firstUserMsg ? updatedTitle : current.title;
+          const updatedItem: SessionItem = {
+            ...current,
+            title: newTitle,
+            messageCount: messages.length,
+            updatedAt: new Date().toISOString(),
+          };
+          nextSessions = [...prev];
+          nextSessions[idx] = updatedItem;
+        } else {
+          nextSessions = [
+            {
+              id: sessionId,
+              title: updatedTitle,
+              messageCount: messages.length,
+              updatedAt: new Date().toISOString(),
+            },
+            ...prev,
+          ];
+        }
+        try {
+          localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(nextSessions));
+        } catch {
+          // LocalStorage fallback
+        }
+        return nextSessions;
+      });
+    } catch {
+      // LocalStorage fallback
     }
-  }, [messages]);
+  }, [messages, sessionId]);
 
   async function fetchModels(cfg: LLMConfig) {
     if (cfg.provider === 'offline') {
@@ -499,28 +589,83 @@ export default function HomePage() {
     }
   }
 
-  async function handleClearChat() {
-    if (sessionId) {
+  function handleCreateNewSession() {
+    const newSessionId = `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    const newMsgs = [DEFAULT_WELCOME_MESSAGE];
+    const newSessionItem: SessionItem = {
+      id: newSessionId,
+      title: `Session ${sessions.length + 1}`,
+      updatedAt: new Date().toISOString(),
+      messageCount: 1,
+    };
+
+    setSessionId(newSessionId);
+    setMessages(newMsgs);
+    setSessions((prev) => {
+      const updated = [newSessionItem, ...prev];
       try {
-        await fetch(`${API_URL}/api/v1/agent/session/${sessionId}`, { method: 'DELETE' });
+        localStorage.setItem('sme_copilot_session_id', newSessionId);
+        localStorage.setItem(`sme_copilot_chat_${newSessionId}`, JSON.stringify(newMsgs));
+        localStorage.setItem('sme_copilot_chat_history', JSON.stringify(newMsgs));
+        localStorage.setItem('sme_copilot_sessions_list', JSON.stringify(updated));
       } catch {
-        // Backend clear error fallback
+        // LocalStorage fallback
+      }
+      return updated;
+    });
+  }
+
+  async function handleSwitchSession(targetId: string) {
+    if (targetId === '__new__') {
+      handleCreateNewSession();
+      return;
+    }
+    if (!targetId || targetId === sessionId) return;
+
+    const sessionChatKey = `sme_copilot_chat_${targetId}`;
+    let loaded = false;
+    try {
+      const saved = localStorage.getItem(sessionChatKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          loaded = true;
+        }
+      }
+    } catch {
+      // LocalStorage parse fallback
+    }
+
+    if (!loaded) {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/agent/session/${targetId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.history && Array.isArray(data.history) && data.history.length > 0) {
+            const mapped = data.history.map((h: { role: 'user' | 'agent'; text: string }) => ({
+              role: h.role,
+              text: h.text,
+            }));
+            setMessages(mapped);
+            loaded = true;
+          }
+        }
+      } catch {
+        // Backend fallback
       }
     }
-    const newSession = `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    setSessionId(newSession);
-    try {
-      localStorage.setItem('sme_copilot_session_id', newSession);
-      localStorage.removeItem('sme_copilot_chat_history');
-    } catch {
-      // LocalStorage error fallback
+
+    if (!loaded) {
+      setMessages([DEFAULT_WELCOME_MESSAGE]);
     }
-    setMessages([
-      {
-        role: 'agent',
-        text: 'Hello, I am your Autonomous SME Finance Copilot. You can pick an inquiry below, ask any financial question, or upload your transactional bank statement on the left to run live diagnostics.',
-      },
-    ]);
+
+    setSessionId(targetId);
+    try {
+      localStorage.setItem('sme_copilot_session_id', targetId);
+    } catch {
+      // LocalStorage fallback
+    }
   }
 
   async function executeBiometric(intentId: string) {
@@ -722,153 +867,140 @@ export default function HomePage() {
       {chatOpen && (
         <div className="chat-drawer" role="complementary" aria-label="Autonomous AI Copilot Chat Drawer">
           <div className="chat-header">
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 16 }}>🤖</span>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>AI Finance Copilot</h3>
-              </div>
-              <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    fontSize: 11.5,
-                    color: 'var(--muted)',
-                    fontWeight: 500,
-                  }}
+            <div className="chat-header-left">
+              <div className="session-selector-wrap">
+                <span className="session-icon" aria-hidden="true">💬</span>
+                <select
+                  className="session-combobox"
+                  aria-label="Select Chat Session"
+                  value={sessionId}
+                  onChange={(e) => handleSwitchSession(e.target.value)}
                 >
-                  <span
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--green)',
-                      display: 'inline-block',
-                    }}
-                  />
-                  {getEngineDisplayName(llmConfig)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowSettings(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '0 2px',
-                    fontSize: 11,
-                    color: 'var(--green)',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    textUnderlineOffset: 2,
-                    fontWeight: 500,
-                  }}
-                  title="Configure AI Engine"
-                >
-                  Change
-                </button>
-                <span style={{ color: 'var(--border)' }}>·</span>
-                <button
-                  type="button"
-                  onClick={handleClearChat}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '0 2px',
-                    fontSize: 11,
-                    color: 'var(--muted)',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    textUnderlineOffset: 2,
-                    fontWeight: 500,
-                  }}
-                  title="Clear conversation history and start a new session"
-                >
-                  New Session
-                </button>
+                  <option value="__new__">➕ New Session</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title} ({s.messageCount || 1} msgs)
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-            <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
-              ✕
-            </button>
+
+            <div className="chat-header-right">
+              <button
+                type="button"
+                className="model-settings-btn"
+                onClick={() => {
+                  setDraftConfig(llmConfig);
+                  setShowSettings(true);
+                  fetchModels(llmConfig);
+                }}
+                title="Configure AI Engine & Select Models"
+                aria-label="Configure AI Model Settings"
+              >
+                <span className="model-chip-dot" />
+                <span className="model-chip-name">{getEngineDisplayName(llmConfig)}</span>
+                <span className="model-gear-icon" aria-hidden="true">⚙️</span>
+              </button>
+              <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="chat-body">
             {messages.map((m, idx) => (
-              <div key={idx} className={`chat-msg ${m.role}`}>
-                <div className="chat-bubble">
-                  <FormattedChatBubble text={m.text} />
-                </div>
+              <Fragment key={idx}>
+                {idx > 0 && idx % SESSION_MESSAGE_LIMIT === 0 && (
+                  <div className="session-breakline" role="separator" aria-label="Session limit reached">
+                    <div className="breakline-divider" />
+                    <div className="breakline-content">
+                      <span className="breakline-pill">
+                        <span className="breakline-icon">⚡</span>
+                        <span>Session Context Boundary ({idx} messages reached)</span>
+                      </span>
+                      <span className="breakline-sub">
+                        Continuing conversation below · Prior context compressed for optimal agent reasoning
+                      </span>
+                    </div>
+                    <div className="breakline-divider" />
+                  </div>
+                )}
+                <div className={`chat-msg ${m.role}`}>
+                  <div className="chat-bubble">
+                    <FormattedChatBubble text={m.text} />
+                  </div>
 
-                {/* Predictive Early-Warning Alert Card */}
-                {m.data?.metrics?.has_projected_deficit && (
-                  <div className="chat-card" style={{ borderColor: '#e0837b', background: '#fdf2f1' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9b3d37', fontWeight: 700 }}>
-                      <span>🚨</span>
-                      <span>{m.data.metrics.deficit_severity} DEFICIT EARLY WARNING</span>
-                    </div>
-                    <div style={{ marginTop: 4, color: '#172b2d' }}>
-                      Projected shortfall of <strong>${m.data.metrics.projected_shortfall_amount}</strong> in <strong>{m.data.metrics.days_until_deficit} days</strong> ({m.data.metrics.projected_deficit_date}).
-                    </div>
-                    {m.data.metrics.recommended_bridge_amount && (
-                      <div style={{ marginTop: 6, fontSize: 11, color: '#5e7071' }}>
-                        💡 Recommended working capital bridge: <strong>${m.data.metrics.recommended_bridge_amount}</strong>
+                  {/* Predictive Early-Warning Alert Card */}
+                  {m.data?.metrics?.has_projected_deficit && (
+                    <div className="chat-card" style={{ borderColor: '#e0837b', background: '#fdf2f1' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9b3d37', fontWeight: 700 }}>
+                        <span>🚨</span>
+                        <span>{m.data.metrics.deficit_severity} DEFICIT EARLY WARNING</span>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Structured Metrics Card */}
-                {m.data?.metrics && (
-                  <div className="chat-card">
-                    <strong>Calculated Cash Metrics</strong>
-                    {m.data.metrics.current_balance && <div>Balance: ${m.data.metrics.current_balance}</div>}
-                    {m.data.metrics.average_daily_burn && <div>Burn: ${m.data.metrics.average_daily_burn}/day</div>}
-                    {m.data.metrics.runway_days !== undefined && <div>Runway: {m.data.metrics.runway_days} days</div>}
-                    {m.data.metrics.daily_average_balance && <div>Daily Avg Balance: ${m.data.metrics.daily_average_balance}</div>}
-                    {m.data.metrics.risk_tier && <div>Risk Tier: {m.data.metrics.risk_tier}</div>}
-                  </div>
-                )}
-
-
-                {/* Pre-Qualified Financing Options */}
-                {m.data?.matched_options && m.data.matched_options.length > 0 && (
-                  <div className="chat-card">
-                    <strong>Pre-Qualified Financing Facilities:</strong>
-                    <ul style={{ paddingLeft: 18, margin: '6px 0 0' }}>
-                      {m.data.matched_options.map((opt, oIdx) => (
-                        <li key={oIdx} style={{ marginTop: 4 }}>
-                          <strong>{opt.facility_name}</strong> ({opt.provider})<br />
-                          Limit: ${Number(opt.max_amount).toLocaleString()} · APR: {opt.apr_percent}% · Term: {opt.term_days}d
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Tier 3 Biometric Approval Card */}
-                {m.data?.staged_action && (
-                  <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
-                    <strong>
-                      {executedIntents[m.data.staged_action.intent_id]
-                        ? '✅ Execution Completed (WebAuthn Signed)'
-                        : '⚠️ Tier 3 HITL Biometric Approval Required'}
-                    </strong>
-                    <div style={{ marginTop: 4 }}>
-                      Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                      <div style={{ marginTop: 4, color: '#172b2d' }}>
+                        Projected shortfall of <strong>${m.data.metrics.projected_shortfall_amount}</strong> in <strong>{m.data.metrics.days_until_deficit} days</strong> ({m.data.metrics.projected_deficit_date}).
+                      </div>
+                      {m.data.metrics.recommended_bridge_amount && (
+                        <div style={{ marginTop: 6, fontSize: 11, color: '#5e7071' }}>
+                          💡 Recommended working capital bridge: <strong>${m.data.metrics.recommended_bridge_amount}</strong>
+                        </div>
+                      )}
                     </div>
-                    {!executedIntents[m.data.staged_action.intent_id] && (
-                      <button
-                        className="biometric-btn"
-                        type="button"
-                        onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
-                      >
-                        👆 Confirm Biometric WebAuthn Passkey
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                  )}
+
+                  {/* Structured Metrics Card */}
+                  {m.data?.metrics && (
+                    <div className="chat-card">
+                      <strong>Calculated Cash Metrics</strong>
+                      {m.data.metrics.current_balance && <div>Balance: ${m.data.metrics.current_balance}</div>}
+                      {m.data.metrics.average_daily_burn && <div>Burn: ${m.data.metrics.average_daily_burn}/day</div>}
+                      {m.data.metrics.runway_days !== undefined && <div>Runway: {m.data.metrics.runway_days} days</div>}
+                      {m.data.metrics.daily_average_balance && <div>Daily Avg Balance: ${m.data.metrics.daily_average_balance}</div>}
+                      {m.data.metrics.risk_tier && <div>Risk Tier: {m.data.metrics.risk_tier}</div>}
+                    </div>
+                  )}
+
+
+                  {/* Pre-Qualified Financing Options */}
+                  {m.data?.matched_options && m.data.matched_options.length > 0 && (
+                    <div className="chat-card">
+                      <strong>Pre-Qualified Financing Facilities:</strong>
+                      <ul style={{ paddingLeft: 18, margin: '6px 0 0' }}>
+                        {m.data.matched_options.map((opt, oIdx) => (
+                          <li key={oIdx} style={{ marginTop: 4 }}>
+                            <strong>{opt.facility_name}</strong> ({opt.provider})<br />
+                            Limit: ${Number(opt.max_amount).toLocaleString()} · APR: {opt.apr_percent}% · Term: {opt.term_days}d
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Tier 3 Biometric Approval Card */}
+                  {m.data?.staged_action && (
+                    <div className={`chat-card ${executedIntents[m.data.staged_action.intent_id] ? 'executed' : 'biometric'}`}>
+                      <strong>
+                        {executedIntents[m.data.staged_action.intent_id]
+                          ? '✅ Execution Completed (WebAuthn Signed)'
+                          : '⚠️ Tier 3 HITL Biometric Approval Required'}
+                      </strong>
+                      <div style={{ marginTop: 4 }}>
+                        Action: {m.data.staged_action.action_type} · Amount: ${(m.data.staged_action.amount_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                      </div>
+                      {!executedIntents[m.data.staged_action.intent_id] && (
+                        <button
+                          className="biometric-btn"
+                          type="button"
+                          onClick={() => executeBiometric(m.data!.staged_action!.intent_id)}
+                        >
+                          👆 Confirm Biometric WebAuthn Passkey
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Fragment>
             ))}
             {/* Starter Prompt Cards (Only visible before user asks a question) */}
             {!messages.some((m) => m.role === 'user') && (
