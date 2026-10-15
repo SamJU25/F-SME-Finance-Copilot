@@ -48,8 +48,6 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     if inspect_for_prompt_injection(message):
         return "SECURITY_DEFENSE_TRIGGERED"
 
-    msg_lower = message.lower().strip()
-
     # 1. Explicit request parameters take highest priority
     if request.staged_action_type:
         return "ACTION_STAGING"
@@ -66,20 +64,22 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
     if vector_intent != "GENERAL_ASSISTANCE":
         return vector_intent
 
-    # 3. Contextual Follow-up from History or Loaded Statement
-    if request.csv_content and any(k in msg_lower for k in [
-        "explain", "what does this mean", "tell me more", "summary", "summarize",
-        "details", "status", "overview", "what now", "help me understand",
-        "what should i do", "what next", "next steps", "recommendation", "advice", "what to do"
-    ]):
-        return "CASH_DIAGNOSTIC"
-
+    # 3. Contextual Dialogue Disambiguation via History Vector Routing
     if request.history:
-        recent_text = " ".join(h.text.lower() for h in request.history[-2:])
-        if any(k in recent_text for k in ["loan", "credit", "apr", "facility", "financing"]) and any(k in msg_lower for k in ["which one", "best option", "recommend", "apply", "how", "option", "options", "what about"]):
-            return "CREDIT_UNDERWRITING"
-        if any(k in recent_text for k in ["runway", "burn", "balance", "deficit"]) and any(k in msg_lower for k in ["days", "how long", "when", "how much", "why"]):
+        recent_text = " ".join(getattr(h, "text", "") for h in request.history[-2:] if getattr(h, "text", ""))
+        if recent_text:
+            ctx_intent, ctx_score = semantic_classify(f"{recent_text} {message}")
+            if ctx_intent != "GENERAL_ASSISTANCE":
+                return ctx_intent
+
+    # 4. Contextual Disambiguation when Financial Statement is Loaded
+    if request.csv_content:
+        sub_intent = semantic_classify_sub_intent(message)
+        if sub_intent != "GENERAL":
             return "CASH_DIAGNOSTIC"
+        stmt_intent, stmt_score = semantic_classify(f"financial statement analysis {message}")
+        if stmt_intent != "GENERAL_ASSISTANCE":
+            return stmt_intent
 
     return "GENERAL_ASSISTANCE"
 

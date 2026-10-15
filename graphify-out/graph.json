@@ -29839,7 +29839,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/supervisor.py",
-      "source_location": "L65",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "services_agent_supervisor_detect_intent",
+      "target": "services_agent_semantic_router_semantic_classify_sub_intent",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "services/agent/supervisor.py",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -61659,5 +61671,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4940424dfac8594f288acc42e163e630992156e1"
+  "built_at_commit": "bc607383e53443c4f7a4a41a7b7e23ed842a98f2"
 }
