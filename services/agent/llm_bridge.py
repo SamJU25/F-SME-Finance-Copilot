@@ -67,10 +67,6 @@ PROVIDER_DEFAULTS = {
         "model": "llama-3.3-70b-versatile",
         "url": "https://api.groq.com/openai/v1/chat/completions",
     },
-    "ollama": {
-        "model": "qwen2.5:14b",
-        "url": "http://localhost:11434/v1/chat/completions",
-    },
 }
 
 
@@ -368,11 +364,6 @@ FALLBACK_CATALOG: dict[str, list[ModelItem]] = {
         ModelItem(id="llama-3.3-70b-versatile", name="Llama 3.3 70B Versatile"),
         ModelItem(id="mixtral-8x7b-32768", name="Mixtral 8x7B"),
         ModelItem(id="llama-3.1-8b-instant", name="Llama 3.1 8B Instant"),
-    ],
-    "ollama": [
-        ModelItem(id="qwen2.5:14b", name="Qwen 2.5 14B"),
-        ModelItem(id="llama3.3:latest", name="Llama 3.3"),
-        ModelItem(id="mistral:latest", name="Mistral"),
     ],
     "custom": [
         ModelItem(id="custom-model", name="Custom Model"),

@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792063031.8202124,
-    "seen": 1792063071.617724,
-    "ast_hash": "d800bb74e4870cfff997ca50e228a8c8",
+    "mtime": 1792063739.5974188,
+    "seen": 1792063877.9100842,
+    "ast_hash": "ebe15d6e9209c3c273d0c870ecedde8f",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1470,15 +1470,15 @@
     "semantic_hash": ""
   },
   "tests/integration/test_agent_api.py": {
-    "mtime": 1792059376.1706338,
-    "seen": 1792059439.9861846,
-    "ast_hash": "75b6e462536650ad98c3cbdd2467ef71",
+    "mtime": 1792063772.278068,
+    "seen": 1792063877.9132073,
+    "ast_hash": "f5021b00d0d6f17813bafd298ef9826c",
     "semantic_hash": ""
   },
   "services/agent/llm_bridge.py": {
-    "mtime": 1792059307.3166592,
-    "seen": 1792059439.9838552,
-    "ast_hash": "0599d6eb470c03254da25318c4751a5e",
+    "mtime": 1792063704.3981223,
+    "seen": 1792063877.9109132,
+    "ast_hash": "999712d3ac03306f318736716ed84bc6",
     "semantic_hash": ""
   },
   "services/calculations/predictive_cash.py": {
@@ -1506,9 +1506,9 @@
     "semantic_hash": ""
   },
   "services/agent/local_slm.py": {
-    "mtime": 1792059008.6205685,
-    "seen": 1792059439.9838576,
-    "ast_hash": "b9699ee7b4593a9bd2ac3e3f699067c7",
+    "mtime": 1792063670.2948403,
+    "seen": 1792063877.9109151,
+    "ast_hash": "a1701baac193747be2977d79f9673a9c",
     "semantic_hash": ""
   },
   "services/agent/prompts.py": {

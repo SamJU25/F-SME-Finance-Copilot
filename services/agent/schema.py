@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class LLMConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    provider: str = Field(default="offline", description="Provider identifier: offline, gemini, anthropic, openai, deepseek, groq, ollama, or custom")
+    provider: str = Field(default="offline", description="Provider identifier: offline, gemini, anthropic, openai, deepseek, groq, or custom")
     api_key: Optional[str] = Field(default=None, description="API Key for cloud LLM")
     base_url: Optional[str] = Field(default=None, description="Custom base URL ending in /v1")
     model_name: Optional[str] = Field(default=None, description="Target model identifier")
@@ -18,7 +18,7 @@ class LLMConfig(BaseModel):
 class TestConnectionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    provider: str = Field(default="offline", description="offline, gemini, anthropic, openai, deepseek, groq, ollama, custom")
+    provider: str = Field(default="offline", description="offline, gemini, anthropic, openai, deepseek, groq, custom")
     api_key: Optional[str] = Field(default=None, description="API Key for provider")
     base_url: Optional[str] = Field(default=None, description="Base URL for custom endpoint")
     model_name: Optional[str] = Field(default=None, description="Model identifier")

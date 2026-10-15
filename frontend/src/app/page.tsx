@@ -50,12 +50,6 @@ const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defau
     defaultUrl: 'https://api.groq.com/openai/v1',
     description: 'Sub-second latency (<300ms) for real-time interactive financial Q&A.',
   },
-  ollama: {
-    name: 'Local Ollama',
-    defaultModel: 'qwen2.5:14b',
-    defaultUrl: 'http://localhost:11434/v1',
-    description: 'Self-hosted local inference engine. Zero cloud egress for strict compliance.',
-  },
   custom: {
     name: 'Custom (OpenAI-Compatible)',
     defaultModel: 'custom-model',
@@ -163,6 +157,15 @@ export default function HomePage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.provider === 'offline' && (!parsed.model_name || parsed.model_name === 'deterministic-v1')) {
+          parsed.model_name = 'llama-3.2-1b-instruct-onnx';
+          try {
+            localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
+          } catch {
+            // LocalStorage write fallback
+          }
+        }
+        if (parsed.provider === 'ollama') {
+          parsed.provider = 'offline';
           parsed.model_name = 'llama-3.2-1b-instruct-onnx';
           try {
             localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
@@ -814,13 +817,13 @@ export default function HomePage() {
               {draftConfig.provider !== 'offline' && (
                 <div>
                   <label className="field-label" htmlFor="api-key-input">
-                    API Key {draftConfig.provider === 'ollama' ? '(Optional)' : '(Required)'}
+                    API Key (Required)
                   </label>
                   <input
                     id="api-key-input"
                     className="text-input"
                     type="password"
-                    placeholder={draftConfig.provider === 'ollama' ? 'ollama' : 'Paste API Key (e.g. AIzaSy..., sk-ant..., sk-...)'}
+                    placeholder="Paste API Key (e.g. AIzaSy..., sk-ant..., sk-...)"
                     value={draftConfig.api_key || ''}
                     onChange={(e) => {
                       const updated = { ...draftConfig, api_key: e.target.value };
@@ -830,14 +833,14 @@ export default function HomePage() {
                 </div>
               )}
 
-              {(draftConfig.provider === 'custom' || draftConfig.provider === 'ollama') && (
+              {draftConfig.provider === 'custom' && (
                 <div>
                   <label className="field-label" htmlFor="base-url-input">Base URL</label>
                   <input
                     id="base-url-input"
                     className="text-input"
                     type="text"
-                    placeholder="e.g. http://localhost:11434/v1 or https://openrouter.ai/api/v1"
+                    placeholder="e.g. https://openrouter.ai/api/v1 or http://localhost:11434/v1"
                     value={draftConfig.base_url || ''}
                     onChange={(e) => setDraftConfig({ ...draftConfig, base_url: e.target.value })}
                   />

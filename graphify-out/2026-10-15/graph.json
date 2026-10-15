@@ -1693,7 +1693,7 @@
       "file_type": "code",
       "norm_label": "query_external_llm()",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L253"
+      "source_location": "L244"
     },
     {
       "id": "services_agent_llm_bridge_resolve_endpoint",
@@ -1777,7 +1777,7 @@
       "file_type": "code",
       "norm_label": "fetch_remote_models()",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L392"
+      "source_location": "L383"
     },
     {
       "id": "services_agent_llm_bridge_test_llm_connection",
@@ -1801,7 +1801,7 @@
       "file_type": "code",
       "norm_label": "generate_local_reply()",
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L147"
+      "source_location": "L149"
     },
     {
       "id": "services_agent_local_slm_localslmengine_ensure_loaded",
@@ -2089,7 +2089,7 @@
       "file_type": "code",
       "norm_label": "analyze()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L303"
+      "source_location": "L302"
     },
     {
       "id": "frontend_src_app_page_homepage_executeanalysis",
@@ -2101,7 +2101,7 @@
       "file_type": "code",
       "norm_label": "executeanalysis()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L271"
+      "source_location": "L270"
     },
     {
       "id": "frontend_src_app_page_homepage_executebiometric",
@@ -2113,7 +2113,7 @@
       "file_type": "code",
       "norm_label": "executebiometric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L368"
+      "source_location": "L367"
     },
     {
       "id": "frontend_src_app_page_homepage_fetchmodels",
@@ -2137,7 +2137,7 @@
       "file_type": "code",
       "norm_label": "handleloadsample()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L312"
+      "source_location": "L311"
     },
     {
       "id": "frontend_src_app_page_homepage_handlesavesettings",
@@ -2149,7 +2149,7 @@
       "file_type": "code",
       "norm_label": "handlesavesettings()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L260"
+      "source_location": "L259"
     },
     {
       "id": "frontend_src_app_page_homepage_handletestconnection",
@@ -2161,7 +2161,7 @@
       "file_type": "code",
       "norm_label": "handletestconnection()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L235"
+      "source_location": "L234"
     },
     {
       "id": "frontend_src_app_page_homepage_sendchatmessage",
@@ -2173,7 +2173,7 @@
       "file_type": "code",
       "norm_label": "sendchatmessage()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L327"
+      "source_location": "L326"
     },
     {
       "id": "frontend_src_app_page_metric",
@@ -2185,7 +2185,7 @@
       "file_type": "code",
       "norm_label": "metric()",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L995"
+      "source_location": "L993"
     },
     {
       "id": "frontend_src_app_page_money",
@@ -13189,7 +13189,7 @@
       "source_location": "L1"
     },
     {
-      "id": "services_agent_llm_bridge_rationale_259",
+      "id": "services_agent_llm_bridge_rationale_250",
       "label": "Queries configured external LLM with PII redaction, multi-turn history, and\u2026",
       "_origin": "ast",
       "community": 184,
@@ -13197,7 +13197,7 @@
       "file_type": "rationale",
       "norm_label": "queries configured external llm with pii redaction, multi-turn history, and...",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L259"
+      "source_location": "L250"
     },
     {
       "id": "services_agent_llm_bridge_rationale_78",
@@ -14415,7 +14415,7 @@
       "source_location": "L108"
     },
     {
-      "id": "services_agent_llm_bridge_rationale_393",
+      "id": "services_agent_llm_bridge_rationale_384",
       "label": "Dynamically queries the target provider's live models endpoint to discover\u2026",
       "_origin": "ast",
       "community": 195,
@@ -14423,7 +14423,7 @@
       "file_type": "rationale",
       "norm_label": "dynamically queries the target provider's live models endpoint to discover...",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L393"
+      "source_location": "L384"
     },
     {
       "id": "services_agent_schema_rationale_1",
@@ -14775,7 +14775,7 @@
       "source_location": "L1"
     },
     {
-      "id": "services_agent_local_slm_rationale_153",
+      "id": "services_agent_local_slm_rationale_155",
       "label": "Convenience helper to generate an offline response using local Llama 3.2.",
       "_origin": "ast",
       "community": 199,
@@ -14783,7 +14783,7 @@
       "file_type": "rationale",
       "norm_label": "convenience helper to generate an offline response using local llama 3.2.",
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L153"
+      "source_location": "L155"
     },
     {
       "id": "services_agent_local_slm_rationale_29",
@@ -29980,7 +29980,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L509",
+      "source_location": "L508",
       "weight": 1.0
     },
     {
@@ -29992,7 +29992,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L509",
+      "source_location": "L508",
       "weight": 1.0
     },
     {
@@ -30004,7 +30004,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L592",
+      "source_location": "L591",
       "weight": 1.0
     },
     {
@@ -30016,7 +30016,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L309",
+      "source_location": "L308",
       "weight": 1.0
     },
     {
@@ -30028,7 +30028,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L321",
+      "source_location": "L320",
       "weight": 1.0
     },
     {
@@ -30040,7 +30040,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L247",
+      "source_location": "L246",
       "weight": 1.0
     },
     {
@@ -30052,7 +30052,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L395",
+      "source_location": "L386",
       "weight": 1.0
     },
     {
@@ -30064,7 +30064,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L399",
+      "source_location": "L390",
       "weight": 1.0
     },
     {
@@ -30076,7 +30076,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L403",
+      "source_location": "L392",
       "weight": 1.0
     },
     {
@@ -30088,7 +30088,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L264",
+      "source_location": "L255",
       "weight": 1.0
     },
     {
@@ -30100,7 +30100,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L265",
+      "source_location": "L256",
       "weight": 1.0
     },
     {
@@ -30112,7 +30112,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L115",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -30124,7 +30124,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L117",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -30136,7 +30136,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L156",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -30148,7 +30148,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L154",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -30172,7 +30172,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L92",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -32020,7 +32020,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L271",
+      "source_location": "L270",
       "weight": 1.0
     },
     {
@@ -32032,7 +32032,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L327",
+      "source_location": "L326",
       "weight": 1.0
     },
     {
@@ -32044,7 +32044,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L368",
+      "source_location": "L367",
       "weight": 1.0
     },
     {
@@ -32332,7 +32332,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L253",
+      "source_location": "L244",
       "weight": 1.0
     },
     {
@@ -32344,7 +32344,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L147",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -33148,7 +33148,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L114",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -53262,7 +53262,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L995",
+      "source_location": "L993",
       "weight": 1.0
     },
     {
@@ -53273,7 +53273,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L235",
+      "source_location": "L234",
       "weight": 1.0
     },
     {
@@ -53284,7 +53284,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L260",
+      "source_location": "L259",
       "weight": 1.0
     },
     {
@@ -53295,7 +53295,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L303",
+      "source_location": "L302",
       "weight": 1.0
     },
     {
@@ -53306,7 +53306,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L312",
+      "source_location": "L311",
       "weight": 1.0
     },
     {
@@ -54725,7 +54725,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L253",
+      "source_location": "L244",
       "weight": 1.0
     },
     {
@@ -54747,7 +54747,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L392",
+      "source_location": "L383",
       "weight": 1.0
     },
     {
@@ -54769,7 +54769,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L147",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -58852,14 +58852,14 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_llm_bridge_rationale_259",
+      "source": "services_agent_llm_bridge_rationale_250",
       "target": "services_agent_llm_bridge_query_external_llm",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L259",
+      "source_location": "L250",
       "weight": 1.0
     },
     {
@@ -58874,14 +58874,14 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_llm_bridge_rationale_393",
+      "source": "services_agent_llm_bridge_rationale_384",
       "target": "services_agent_llm_bridge_fetch_remote_models",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L393",
+      "source_location": "L384",
       "weight": 1.0
     },
     {
@@ -58907,14 +58907,14 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_local_slm_rationale_153",
+      "source": "services_agent_local_slm_rationale_155",
       "target": "services_agent_local_slm_generate_local_reply",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/local_slm.py",
-      "source_location": "L153",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
@@ -62221,7 +62221,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L256",
+      "source_location": "L247",
       "weight": 0.8
     },
     {
@@ -62401,7 +62401,7 @@
       "confidence_score": 0.95,
       "context": "parameter_type",
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L392",
+      "source_location": "L383",
       "weight": 0.8
     },
     {
@@ -62640,7 +62640,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L399",
+      "source_location": "L390",
       "weight": 0.8
     },
     {
@@ -62651,7 +62651,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "services/agent/llm_bridge.py",
-      "source_location": "L115",
+      "source_location": "L113",
       "weight": 0.8
     },
     {
@@ -62733,5 +62733,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b9a7e7a2965ef8c9eb30a3e1607198d783c6c2ea"
+  "built_at_commit": "9fd0bdc1b141f101a8a5a5d1c7576d5cab150ac5"
 }

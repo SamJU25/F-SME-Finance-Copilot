@@ -143,7 +143,6 @@ export type LLMProviderId =
   | 'openai'
   | 'deepseek'
   | 'groq'
-  | 'ollama'
   | 'custom';
 
 export interface LLMConfig {
