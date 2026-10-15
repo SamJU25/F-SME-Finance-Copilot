@@ -74,11 +74,20 @@ def detect_intent(message: str, request: AgentChatRequest) -> str:
 
     # 3. Contextual Dialogue Disambiguation via History Vector Routing
     if request.history:
-        recent_text = " ".join(getattr(h, "text", "") for h in request.history[-2:] if getattr(h, "text", ""))
-        if recent_text:
-            ctx_intent, ctx_score = semantic_classify(f"{recent_text} {message}")
-            if ctx_intent != "GENERAL_ASSISTANCE":
-                return ctx_intent
+        is_direct_general = bool(
+            re.search(
+                r"^\s*(who\s+are\s+you|who\s+is\s+this|what\s+(are\s+you|do\s+you\s+do)|tell\s+me\s+about\s+yourself|hi|hello|hey|good\s+(morning|afternoon|evening)|help)\b",
+                message,
+                re.IGNORECASE,
+            )
+        )
+        if not is_direct_general:
+            last_entry = request.history[-1]
+            last_text = getattr(last_entry, "text", "") if hasattr(last_entry, "text") else (last_entry.get("text", "") if isinstance(last_entry, dict) else "")
+            if last_text and len(message.split()) <= 6:
+                ctx_intent, ctx_score = semantic_classify(f"{last_text} {message}")
+                if ctx_intent != "GENERAL_ASSISTANCE":
+                    return ctx_intent
 
     # 4. Contextual Disambiguation when Financial Statement is Loaded
     if request.csv_content:
@@ -112,6 +121,12 @@ def run_copilot_supervisor(
         and LocalSLMEngine.get_instance().is_available()
     ):
         effective_config = LLMConfig(provider="offline", model_name="llama-3.2-1b-instruct-onnx")
+
+    is_local = (
+        effective_config
+        and (effective_config.provider or "").lower() == "offline"
+        and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
+    )
 
     def _enrich_reply(base_reply: str, prompt_type: str = "diagnostic") -> str:
         # 1. On-Device Local SLM Execution (Meta Llama-3.2-1B-Instruct ONNX)
@@ -215,6 +230,44 @@ def run_copilot_supervisor(
     # 2. Credit Underwriting Flow
     if intent == "CREDIT_UNDERWRITING":
         if not request.csv_content:
+            if is_local:
+                sys_directive = (
+                    f"{COPILOT_PERSONA_BASE}\n\n"
+                    "The business owner is inquiring about financing or credit underwriting, but has not yet uploaded a bank statement CSV.\n"
+                    "Respond conversationally and concisely in 2 sentences. Explain how digital underwriting evaluates Daily Average Balance (DAB) and revenue volatility to match pre-qualified credit lines, and invite them to upload their bank statement to see their actual credit limits and APR options."
+                )
+                local_reply = generate_local_reply(
+                    prompt=request.message,
+                    system_instruction=sys_directive,
+                    history=request.history,
+                    max_new_tokens=90,
+                )
+                if local_reply:
+                    return CopilotResponse(
+                        reply=local_reply,
+                        intent_detected=intent,
+                        requires_biometric_hitl=False,
+                    )
+
+            if effective_config and (effective_config.provider or "").lower() != "offline":
+                sys_directive = (
+                    f"{COPILOT_PERSONA_BASE}\n\n"
+                    "The business owner is inquiring about financing or credit underwriting, but has not yet uploaded a bank statement CSV.\n"
+                    "Respond conversationally and concisely in 2 sentences. Explain how digital underwriting evaluates Daily Average Balance (DAB) and revenue volatility to match pre-qualified credit lines, and invite them to upload their bank statement to see their actual credit limits and APR options."
+                )
+                ai_reply = query_external_llm(
+                    prompt=request.message,
+                    system_instruction=sys_directive,
+                    config=effective_config,
+                    history=request.history,
+                )
+                if ai_reply:
+                    return CopilotResponse(
+                        reply=ai_reply,
+                        intent_detected=intent,
+                        requires_biometric_hitl=False,
+                    )
+
             return CopilotResponse(
                 reply=(
                     "To evaluate digital credit underwriting and match pre-qualified financing options, "
@@ -269,6 +322,44 @@ def run_copilot_supervisor(
     # 3. Cash Flow Diagnostic Flow
     if intent == "CASH_DIAGNOSTIC":
         if not request.csv_content:
+            if is_local:
+                sys_directive = (
+                    f"{COPILOT_PERSONA_BASE}\n\n"
+                    "The user is asking a financial question, but has not yet uploaded a bank statement CSV.\n"
+                    "Respond conversationally, helpfully, and concisely in 2 sentences. Answer their inquiry directly and explain that uploading a bank statement CSV allows you to calculate their exact daily burn rate, runway days, and overdraft alerts."
+                )
+                local_reply = generate_local_reply(
+                    prompt=request.message,
+                    system_instruction=sys_directive,
+                    history=request.history,
+                    max_new_tokens=90,
+                )
+                if local_reply:
+                    return CopilotResponse(
+                        reply=local_reply,
+                        intent_detected=intent,
+                        requires_biometric_hitl=False,
+                    )
+
+            if effective_config and (effective_config.provider or "").lower() != "offline":
+                sys_directive = (
+                    f"{COPILOT_PERSONA_BASE}\n\n"
+                    "The user is asking a financial question, but has not yet uploaded a bank statement CSV.\n"
+                    "Respond conversationally, helpfully, and concisely in 2 sentences. Answer their inquiry directly and explain that uploading a bank statement CSV allows you to calculate their exact daily burn rate, runway days, and overdraft alerts."
+                )
+                ai_reply = query_external_llm(
+                    prompt=request.message,
+                    system_instruction=sys_directive,
+                    config=effective_config,
+                    history=request.history,
+                )
+                if ai_reply:
+                    return CopilotResponse(
+                        reply=ai_reply,
+                        intent_detected=intent,
+                        requires_biometric_hitl=False,
+                    )
+
             return CopilotResponse(
                 reply=(
                     "To diagnose your cash runway, burn rate, and overdraft risks, "
