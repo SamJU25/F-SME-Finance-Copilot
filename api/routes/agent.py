@@ -22,6 +22,8 @@ from services.agent.schema import (
 )
 from services.agent.supervisor import run_copilot_supervisor
 
+from services.agent.session_store import session_store, SessionRecord
+
 router = APIRouter(prefix="/api/v1/agent", tags=["Autonomous Agent"])
 
 
@@ -53,6 +55,35 @@ async def agent_fetch_models(
     return fetch_remote_models(request)
 
 
+@router.get(
+    "/session/{session_id}",
+    response_model=Optional[SessionRecord],
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve Active Agent Session",
+    description="Fetches full session history, cached transactional dossier, and episodic memory facts.",
+)
+async def get_session(session_id: str) -> Optional[SessionRecord]:
+    """Retrieves session record from the persistent store."""
+    rec = session_store.get(session_id)
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session '{session_id}' not found.",
+        )
+    return rec
+
+
+@router.delete(
+    "/session/{session_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Clear Active Agent Session",
+    description="Wipes session conversation history, statement cache, and episodic facts from memory and disk.",
+)
+async def clear_session(session_id: str) -> dict:
+    """Clears session record from memory and removes serialized disk cache."""
+    removed = session_store.clear(session_id)
+    return {"session_id": session_id, "cleared": removed}
+
 
 @router.post(
     "/chat",
@@ -65,10 +96,15 @@ async def agent_chat(
     request: AgentChatRequest,
     x_tenant_id: Optional[str] = Header(default=None, alias="X-Tenant-ID"),
     x_llm_config: Optional[str] = Header(default=None, alias="X-LLM-Config"),
+    x_session_id: Optional[str] = Header(default=None, alias="X-Session-ID"),
 ) -> CopilotResponse:
-    """Dispatches user prompt to the Agent Supervisor with authoritative header-based tenant isolation."""
+    """Dispatches user prompt to the Agent Supervisor with authoritative header-based tenant and session isolation."""
     try:
         effective_tenant = x_tenant_id or request.tenant_id or "SME-DEFAULT"
+        effective_session_id = x_session_id or request.session_id
+        if not effective_session_id:
+            import uuid
+            effective_session_id = f"sess_{uuid.uuid4().hex[:12]}"
         effective_llm_config = request.llm_config
 
         if x_llm_config:
@@ -82,7 +118,9 @@ async def agent_chat(
             request,
             tenant_id=effective_tenant,
             llm_config=effective_llm_config,
+            session_id=effective_session_id,
         )
+        response.session_id = effective_session_id
         return response
     except Exception as exc:
         import traceback

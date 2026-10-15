@@ -202,6 +202,7 @@ export default function HomePage() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [executedIntents, setExecutedIntents] = useState<Record<string, boolean>>({});
+  const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'agent'; text: string; data?: CopilotResponse }>>([
     {
       role: 'agent',
@@ -230,6 +231,26 @@ export default function HomePage() {
 
   useEffect(() => {
     try {
+      let storedSession = localStorage.getItem('sme_copilot_session_id');
+      if (!storedSession) {
+        storedSession = `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+        localStorage.setItem('sme_copilot_session_id', storedSession);
+      }
+      setSessionId(storedSession);
+
+      const savedMsgs = localStorage.getItem('sme_copilot_chat_history');
+      if (savedMsgs) {
+        const parsed = JSON.parse(savedMsgs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+
+      const savedCsv = localStorage.getItem('sme_copilot_csv_text');
+      if (savedCsv) {
+        setCsvText(savedCsv);
+      }
+
       const saved = localStorage.getItem('sme_copilot_llm_config');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -257,6 +278,16 @@ export default function HomePage() {
       // LocalStorage access fallback
     }
   }, []);
+
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      try {
+        localStorage.setItem('sme_copilot_chat_history', JSON.stringify(messages));
+      } catch {
+        // LocalStorage fallback
+      }
+    }
+  }, [messages]);
 
   async function fetchModels(cfg: LLMConfig) {
     if (cfg.provider === 'offline') {
@@ -413,14 +444,21 @@ export default function HomePage() {
     setChatLoading(true);
 
     try {
+      const activeSession = sessionId || `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+      if (!sessionId) {
+        setSessionId(activeSession);
+      }
+
       const response = await fetch(`${API_URL}/api/v1/agent/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Tenant-ID': 'SME-COFFEE-001',
+          'X-Session-ID': activeSession,
           'X-LLM-Config': JSON.stringify(llmConfig),
         },
         body: JSON.stringify({
+          session_id: activeSession,
           message: textToSend,
           history: messages.slice(-6).map((m) => ({ role: m.role, text: m.text })),
           csv_content: csvText,
@@ -434,6 +472,10 @@ export default function HomePage() {
         const errorDetail = body?.detail || 'Agent service encountered an error. Please try again.';
         setMessages([...newMsgs, { role: 'agent', text: `⚠️ ${errorDetail}` }]);
         return;
+      }
+
+      if (body.session_id && body.session_id !== activeSession) {
+        setSessionId(body.session_id);
       }
 
       setMessages([
@@ -455,6 +497,30 @@ export default function HomePage() {
     } finally {
       setChatLoading(false);
     }
+  }
+
+  async function handleClearChat() {
+    if (sessionId) {
+      try {
+        await fetch(`${API_URL}/api/v1/agent/session/${sessionId}`, { method: 'DELETE' });
+      } catch {
+        // Backend clear error fallback
+      }
+    }
+    const newSession = `sess_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    setSessionId(newSession);
+    try {
+      localStorage.setItem('sme_copilot_session_id', newSession);
+      localStorage.removeItem('sme_copilot_chat_history');
+    } catch {
+      // LocalStorage error fallback
+    }
+    setMessages([
+      {
+        role: 'agent',
+        text: 'Hello, I am your Autonomous SME Finance Copilot. You can pick an inquiry below, ask any financial question, or upload your transactional bank statement on the left to run live diagnostics.',
+      },
+    ]);
   }
 
   async function executeBiometric(intentId: string) {
@@ -700,6 +766,25 @@ export default function HomePage() {
                   title="Configure AI Engine"
                 >
                   Change
+                </button>
+                <span style={{ color: 'var(--border)' }}>·</span>
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 2px',
+                    fontSize: 11,
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                    fontWeight: 500,
+                  }}
+                  title="Clear conversation history and start a new session"
+                >
+                  New Session
                 </button>
               </div>
             </div>

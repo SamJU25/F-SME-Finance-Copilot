@@ -50,6 +50,7 @@ from services.agent.schema import (
     CopilotResponse,
     LLMConfig,
 )
+from services.agent.session_store import session_store
 from services.agent.tools import (
     tool_analyze_cash_flow,
     tool_calculate_break_even,
@@ -127,10 +128,12 @@ def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMC
     # 2. Check for Bank Statement CSV pasted directly into chat message
     has_statement = bool(request.csv_content) or ("transaction_id" in message and "amount" in message)
     eval_message = message
-    if not request.csv_content and "transaction_id" in message and "amount" in message:
+    if "transaction_id" in message and "amount" in message:
         csv_start = message.find("transaction_id")
         if csv_start != -1:
             eval_message = message[:csv_start].strip()
+    if not eval_message:
+        eval_message = message
 
     # 3. Dynamic LLM Intent Routing (without hardcoded sentence catalogs)
     return classify_intent_dynamic(
@@ -186,16 +189,60 @@ def run_copilot_supervisor(
     request: AgentChatRequest,
     tenant_id: Optional[str] = None,
     llm_config: Optional[LLMConfig] = None,
+    session_id: Optional[str] = None,
 ) -> CopilotResponse:
     """Core reasoning supervisor dispatching requests to deterministic tools and formatting responses."""
     effective_tenant = tenant_id or request.tenant_id or "SME-DEFAULT"
+    effective_session = session_id or request.session_id
+    if not effective_session:
+        import uuid
+        effective_session = f"sess_{uuid.uuid4().hex[:12]}"
     effective_config = llm_config or request.llm_config
+
+    session_rec = session_store.get_or_create(effective_session, tenant_id=effective_tenant)
 
     effective_csv = request.csv_content
     if not effective_csv and request.message and "transaction_id" in request.message and "amount" in request.message:
         csv_start = request.message.find("transaction_id")
         if csv_start != -1:
             effective_csv = request.message[csv_start:].strip()
+
+    # Statement Memory: Persist if provided; restore if omitted in follow-up turns
+    if effective_csv:
+        session_store.update_statement(effective_session, effective_csv, tenant_id=effective_tenant)
+        request.csv_content = effective_csv
+    elif session_rec and session_rec.csv_content:
+        effective_csv = session_rec.csv_content
+        request.csv_content = effective_csv
+
+    # Conversation History Memory: Hydrate from session store if empty
+    if not request.history and session_rec and session_rec.messages:
+        request.history = session_rec.messages[-6:]
+
+    def _finalize(resp: CopilotResponse) -> CopilotResponse:
+        resp.session_id = effective_session
+        session_store.append_turn(
+            effective_session,
+            user_text=request.message,
+            agent_text=resp.reply,
+            tenant_id=effective_tenant,
+        )
+        if resp.metrics:
+            if resp.metrics.current_balance is not None:
+                session_store.set_financial_fact(effective_session, "current_balance", resp.metrics.current_balance)
+            if resp.metrics.average_daily_burn is not None:
+                session_store.set_financial_fact(effective_session, "average_daily_burn", resp.metrics.average_daily_burn)
+            if resp.metrics.runway_days is not None:
+                session_store.set_financial_fact(effective_session, "runway_days", resp.metrics.runway_days)
+            if resp.metrics.cash_status is not None:
+                session_store.set_financial_fact(effective_session, "cash_status", resp.metrics.cash_status)
+            if resp.metrics.daily_average_balance is not None:
+                session_store.set_financial_fact(effective_session, "daily_average_balance", resp.metrics.daily_average_balance)
+            if resp.metrics.risk_tier is not None:
+                session_store.set_financial_fact(effective_session, "risk_tier", resp.metrics.risk_tier)
+            if resp.metrics.max_qualified_limit is not None:
+                session_store.set_financial_fact(effective_session, "max_qualified_limit", resp.metrics.max_qualified_limit)
+        return resp
 
     # Default to Local SLM (Llama 3.2 1B ONNX) if available and not in automated test harness
     if (
@@ -229,6 +276,9 @@ def run_copilot_supervisor(
                 if prompt_type == "underwriting"
                 else get_cash_diagnostic_prompt(base_reply)
             )
+            if session_rec and session_rec.financial_facts:
+                facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
+                sys_directive += f"\nKnown verified business facts: {facts_str}"
             raw_advice = generate_local_reply(
                 prompt=request.message,
                 system_instruction=sys_directive,
@@ -253,6 +303,9 @@ def run_copilot_supervisor(
             if prompt_type == "underwriting"
             else get_cash_diagnostic_prompt(base_reply)
         )
+        if session_rec and session_rec.financial_facts:
+            facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
+            sys_directive += f"\nKnown verified business facts: {facts_str}"
         ai_reply = query_external_llm(
             prompt=request.message,
             system_instruction=sys_directive,
@@ -270,7 +323,7 @@ def run_copilot_supervisor(
 
     # 0. Prompt Injection Defense Barrier
     if intent == "SECURITY_DEFENSE_TRIGGERED":
-        return CopilotResponse(
+        return _finalize(CopilotResponse(
             reply=(
                 "Security Alert: Adversarial prompt injection pattern detected. "
                 "System execution remains strictly constrained by the Three-Tier Security Gate. "
@@ -278,11 +331,11 @@ def run_copilot_supervisor(
             ),
             intent_detected="SECURITY_DEFENSE_TRIGGERED",
             requires_biometric_hitl=False,
-        )
+        ))
 
     # 0b. Credential Security Guard & Onboarding Guidance
     if intent == "CREDENTIAL_SECURITY_ALERT":
-        return CopilotResponse(
+        return _finalize(CopilotResponse(
             reply=(
                 "Security Alert: An API key or secret token was detected in your message.\n\n"
                 "For banking-grade security, API keys and credentials should never be pasted into the chat conversation. "
@@ -296,7 +349,7 @@ def run_copilot_supervisor(
             ),
             intent_detected="CREDENTIAL_SECURITY_ALERT",
             requires_biometric_hitl=False,
-        )
+        ))
 
     # 1. Action Staging Flow (Tier 2 Proposal Creation)
     if intent == "ACTION_STAGING":
@@ -330,7 +383,7 @@ def run_copilot_supervisor(
             "Physical biometric passkey verification (WebAuthn FIDO2) is required to execute."
         )
 
-        return CopilotResponse(
+        return _finalize(CopilotResponse(
             reply=reply,
             intent_detected=intent,
             staged_action=AgentActionProposal(
@@ -342,7 +395,7 @@ def run_copilot_supervisor(
                 biometric_required=True,
             ),
             requires_biometric_hitl=True,
-        )
+        ))
 
     # 1b. Deterministic Quantitative Financial Calculations
     sub_intent = classify_sub_intent_dynamic(request.message, history=request.history)
@@ -354,7 +407,7 @@ def run_copilot_supervisor(
         enrich_fn=_enrich_reply,
     )
     if quant_resp is not None:
-        return quant_resp
+        return _finalize(quant_resp)
 
     # 2. Credit Underwriting Flow
     if intent == "CREDIT_UNDERWRITING":
@@ -372,11 +425,11 @@ def run_copilot_supervisor(
                     max_new_tokens=220,
                 )
                 if local_reply:
-                    return CopilotResponse(
+                    return _finalize(CopilotResponse(
                         reply=sanitize_cfo_reply(local_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
-                    )
+                    ))
 
             if effective_config and (effective_config.provider or "").lower() != "offline":
                 sys_directive = (
@@ -391,13 +444,13 @@ def run_copilot_supervisor(
                     history=request.history,
                 )
                 if ai_reply:
-                    return CopilotResponse(
+                    return _finalize(CopilotResponse(
                         reply=sanitize_cfo_reply(ai_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
-                    )
+                    ))
 
-            return CopilotResponse(
+            return _finalize(CopilotResponse(
                 reply=(
                     "To evaluate digital credit underwriting and match pre-qualified financing options, "
                     "please provide your transactional bank statement CSV.\n\n"
@@ -407,15 +460,21 @@ def run_copilot_supervisor(
                     "- You will receive matched credit facilities with true APR disclosures."
                 ),
                 intent_detected=intent,
-            )
+            ))
 
         try:
             uw_result = tool_underwrite_credit(effective_csv, nsf_count=request.nsf_count)
+            session_store.update_statement(
+                effective_session,
+                effective_csv,
+                dossier=uw_result.get("dossier"),
+                tenant_id=effective_tenant,
+            )
         except CSVIngestionError as exc:
-            return CopilotResponse(
+            return _finalize(CopilotResponse(
                 reply=f"Statement ingestion failed: {exc.code} - {str(exc)}",
                 intent_detected=intent,
-            )
+            ))
 
         dossier = uw_result["dossier"]
         matched_opts = [AgentMatchedOption(**opt) for opt in uw_result["matched_options"]]
@@ -445,13 +504,13 @@ def run_copilot_supervisor(
             "To apply, request staging for the chosen facility."
         )
 
-        return CopilotResponse(
+        return _finalize(CopilotResponse(
             reply=_enrich_reply(reply, prompt_type="underwriting"),
             intent_detected=intent,
             metrics=metrics,
             matched_options=matched_opts,
             requires_biometric_hitl=False,
-        )
+        ))
 
     # 3. Cash Flow Diagnostic Flow
     if intent == "CASH_DIAGNOSTIC":
@@ -469,11 +528,11 @@ def run_copilot_supervisor(
                     max_new_tokens=220,
                 )
                 if local_reply:
-                    return CopilotResponse(
+                    return _finalize(CopilotResponse(
                         reply=sanitize_cfo_reply(local_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
-                    )
+                    ))
 
             if effective_config and (effective_config.provider or "").lower() != "offline":
                 sys_directive = (
@@ -488,13 +547,13 @@ def run_copilot_supervisor(
                     history=request.history,
                 )
                 if ai_reply:
-                    return CopilotResponse(
+                    return _finalize(CopilotResponse(
                         reply=sanitize_cfo_reply(ai_reply),
                         intent_detected=intent,
                         requires_biometric_hitl=False,
-                    )
+                    ))
 
-            return CopilotResponse(
+            return _finalize(CopilotResponse(
                 reply=(
                     "To diagnose your cash runway, burn rate, and overdraft risks, "
                     "please provide your transactional bank statement CSV.\n\n"
@@ -504,7 +563,7 @@ def run_copilot_supervisor(
                     "- You can ask custom horizon queries such as 'What is my runway in 45 days?'"
                 ),
                 intent_detected=intent,
-            )
+            ))
 
         # Dynamic target horizon day detection (e.g. "34 days", "55 days", "in 120 days")
         target_days: Optional[int] = request.target_horizon_days
@@ -546,11 +605,17 @@ def run_copilot_supervisor(
                 dpo_days=dpo,
                 dio_days=dio,
             )
+            session_store.update_statement(
+                effective_session,
+                effective_csv,
+                dossier=cash_result,
+                tenant_id=effective_tenant,
+            )
         except CSVIngestionError as exc:
-            return CopilotResponse(
+            return _finalize(CopilotResponse(
                 reply=f"Statement ingestion failed: {exc.code} - {str(exc)}",
                 intent_detected=intent,
-            )
+            ))
 
         metrics = AgentMetricsSummary(
             current_balance=cash_result["current_balance"],
@@ -649,17 +714,17 @@ def run_copilot_supervisor(
                 f"{pred_line}{target_line}{wc_line}"
             )
 
-        return CopilotResponse(
+        return _finalize(CopilotResponse(
             reply=_enrich_reply(reply),
             intent_detected=intent,
             metrics=metrics,
             requires_biometric_hitl=False,
-        )
+        ))
 
 
     # 4. General Financial Dialogue & Off-Topic Handling
     if is_off_topic_query(request.message, history=request.history):
-        return CopilotResponse(
+        return _finalize(CopilotResponse(
             reply=(
                 "As the Autonomous SME Finance Copilot, I specialize exclusively in SME business liquidity, "
                 "working capital auditing, and transactional credit underwriting.\n\n"
@@ -668,7 +733,7 @@ def run_copilot_supervisor(
             ),
             intent_detected="GENERAL_ASSISTANCE",
             requires_biometric_hitl=False,
-        )
+        ))
 
     is_local = (
         effective_config
@@ -679,6 +744,9 @@ def run_copilot_supervisor(
         sys_directive = get_conversational_system_prompt()
         if effective_csv:
             sys_directive += "\nNote: A transactional bank statement is already loaded into session."
+        if session_rec and session_rec.financial_facts:
+            facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
+            sys_directive += f"\nKnown verified business facts: {facts_str}"
         local_reply = generate_local_reply(
             prompt=request.message,
             system_instruction=sys_directive,
@@ -686,16 +754,19 @@ def run_copilot_supervisor(
             max_new_tokens=220,
         )
         if local_reply:
-            return CopilotResponse(
+            return _finalize(CopilotResponse(
                 reply=sanitize_cfo_reply(local_reply),
                 intent_detected="GENERAL_ASSISTANCE",
                 requires_biometric_hitl=False,
-            )
+            ))
 
     if effective_config and (effective_config.provider or "").lower() != "offline":
         sys_directive = get_conversational_system_prompt()
         if effective_csv:
             sys_directive += "\nNote: A transactional bank statement is already loaded into session."
+        if session_rec and session_rec.financial_facts:
+            facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
+            sys_directive += f"\nKnown verified business facts: {facts_str}"
         ai_reply = query_external_llm(
             prompt=request.message,
             system_instruction=sys_directive,
@@ -703,11 +774,11 @@ def run_copilot_supervisor(
             history=request.history,
         )
         if ai_reply:
-            return CopilotResponse(
+            return _finalize(CopilotResponse(
                 reply=sanitize_cfo_reply(ai_reply),
                 intent_detected="GENERAL_ASSISTANCE",
                 requires_biometric_hitl=False,
-            )
+            ))
 
     if effective_csv:
         general_reply = (
@@ -723,8 +794,8 @@ def run_copilot_supervisor(
             "2. Ask any question: 'What is my runway?', 'Do I have overdraft risk?', or 'What loans qualify?'.\n"
             "3. Stage financing proposals securely under Tier 2, requiring Tier 3 biometric confirmation to execute."
         )
-    return CopilotResponse(
+    return _finalize(CopilotResponse(
         reply=general_reply,
         intent_detected="GENERAL_ASSISTANCE",
         requires_biometric_hitl=False,
-    )
+    ))

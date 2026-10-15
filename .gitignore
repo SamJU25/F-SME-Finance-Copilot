@@ -61,3 +61,6 @@ TEAM_CHEAT_SHEET*
 # Local Model Weights
 models/
 
+# Local Session Store Cache
+.sessions/
+

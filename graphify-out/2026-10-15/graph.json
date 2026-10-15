@@ -2008,7 +2008,7 @@
       "file_type": "code",
       "norm_label": "classify_sub_intent_dynamic()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L340"
+      "source_location": "L347"
     },
     {
       "id": "services_agent_dynamic_router_fastembedsemanticrouter_get_instance",
@@ -2032,7 +2032,7 @@
       "file_type": "code",
       "norm_label": "is_ai_disclaimer()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L249"
+      "source_location": "L256"
     },
     {
       "id": "services_agent_dynamic_router_is_off_topic_query",
@@ -2044,7 +2044,7 @@
       "file_type": "code",
       "norm_label": "is_off_topic_query()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L259"
+      "source_location": "L266"
     },
     {
       "id": "services_agent_local_slm_generate_local_reply",
@@ -2344,7 +2344,7 @@
       "file_type": "code",
       "norm_label": "classify_intent_dynamic()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L318"
+      "source_location": "L325"
     },
     {
       "id": "services_agent_dynamic_router_parse_intent_label",
@@ -2368,7 +2368,7 @@
       "file_type": "code",
       "norm_label": "_query_llm_for_intent()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L264"
+      "source_location": "L271"
     },
     {
       "id": "services_agent_llm_bridge_extract_history_turn",
@@ -4192,7 +4192,7 @@
       "file_type": "code",
       "norm_label": ".classify_sub_intent()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L243"
+      "source_location": "L250"
     },
     {
       "id": "services_agent_dynamic_router_fastembedsemanticrouter_init",
@@ -4216,7 +4216,7 @@
       "file_type": "code",
       "norm_label": ".is_disclaimer()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L234"
+      "source_location": "L241"
     },
     {
       "id": "services_agent_dynamic_router_fastembedsemanticrouter_is_off_topic",
@@ -4228,7 +4228,7 @@
       "file_type": "code",
       "norm_label": ".is_off_topic()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L229"
+      "source_location": "L236"
     },
     {
       "id": "services_agent_dynamic_router_is_in_domain_finance_query",
@@ -4240,7 +4240,7 @@
       "file_type": "code",
       "norm_label": "is_in_domain_finance_query()",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L254"
+      "source_location": "L261"
     },
     {
       "id": "tests_integration_test_agent_api_test_agent_chat_sub_intent_cfo_advice",
@@ -14839,7 +14839,7 @@
       "source_location": "L1"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_250",
+      "id": "services_agent_dynamic_router_rationale_257",
       "label": "Detects whether generated text is an unhelpful AI disclaimer or refusal using\u2026",
       "_origin": "ast",
       "community": 184,
@@ -14847,10 +14847,10 @@
       "file_type": "rationale",
       "norm_label": "detects whether generated text is an unhelpful ai disclaimer or refusal using...",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L250"
+      "source_location": "L257"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_260",
+      "id": "services_agent_dynamic_router_rationale_267",
       "label": "Detects if a user message is non-financial and off-topic using vector semantic\u2026",
       "_origin": "ast",
       "community": 184,
@@ -14858,10 +14858,10 @@
       "file_type": "rationale",
       "norm_label": "detects if a user message is non-financial and off-topic using vector semantic...",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L260"
+      "source_location": "L267"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_341",
+      "id": "services_agent_dynamic_router_rationale_348",
       "label": "Classifies cash diagnostic sub-intent dynamically using vector semantic\u2026",
       "_origin": "ast",
       "community": 184,
@@ -14869,7 +14869,7 @@
       "file_type": "rationale",
       "norm_label": "classifies cash diagnostic sub-intent dynamically using vector semantic...",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L341"
+      "source_location": "L348"
     },
     {
       "id": "services_agent_local_slm_rationale_157",
@@ -16340,7 +16340,7 @@
       "source_location": "L1"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_270",
+      "id": "services_agent_dynamic_router_rationale_277",
       "label": "Queries either local on-device SLM or cloud LLM to classify user intent\u2026",
       "_origin": "ast",
       "community": 195,
@@ -16348,7 +16348,7 @@
       "file_type": "rationale",
       "norm_label": "queries either local on-device slm or cloud llm to classify user intent...",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L270"
+      "source_location": "L277"
     },
     {
       "id": "services_agent_dynamic_router_rationale_30",
@@ -16362,7 +16362,7 @@
       "source_location": "L30"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_324",
+      "id": "services_agent_dynamic_router_rationale_331",
       "label": "Dynamically classifies user message into a financial intent using vector\u2026",
       "_origin": "ast",
       "community": 195,
@@ -16370,7 +16370,7 @@
       "file_type": "rationale",
       "norm_label": "dynamically classifies user message into a financial intent using vector...",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L324"
+      "source_location": "L331"
     },
     {
       "id": "services_agent_llm_bridge_rationale_1",
@@ -23360,7 +23360,7 @@
       "source_location": "L140"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_230",
+      "id": "services_agent_dynamic_router_rationale_237",
       "label": "Determines if query is out of domain using semantic distance.",
       "_origin": "ast",
       "community": 266,
@@ -23368,10 +23368,10 @@
       "file_type": "rationale",
       "norm_label": "determines if query is out of domain using semantic distance.",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L230"
+      "source_location": "L237"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_235",
+      "id": "services_agent_dynamic_router_rationale_242",
       "label": "Determines if text is an unhelpful AI capability disclaimer or refusal via\u2026",
       "_origin": "ast",
       "community": 266,
@@ -23379,10 +23379,10 @@
       "file_type": "rationale",
       "norm_label": "determines if text is an unhelpful ai capability disclaimer or refusal via...",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L235"
+      "source_location": "L242"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_244",
+      "id": "services_agent_dynamic_router_rationale_251",
       "label": "Classifies cash diagnostic sub-intent via semantic prototype matching.",
       "_origin": "ast",
       "community": 266,
@@ -23390,10 +23390,10 @@
       "file_type": "rationale",
       "norm_label": "classifies cash diagnostic sub-intent via semantic prototype matching.",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L244"
+      "source_location": "L251"
     },
     {
-      "id": "services_agent_dynamic_router_rationale_255",
+      "id": "services_agent_dynamic_router_rationale_262",
       "label": "Evaluates whether user message is within the SME Finance & Copilot domain.",
       "_origin": "ast",
       "community": 266,
@@ -23401,7 +23401,7 @@
       "file_type": "rationale",
       "norm_label": "evaluates whether user message is within the sme finance & copilot domain.",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L255"
+      "source_location": "L262"
     },
     {
       "id": "services_agent_dynamic_router_rationale_41",
@@ -32940,7 +32940,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L331",
+      "source_location": "L338",
       "weight": 1.0
     },
     {
@@ -32952,7 +32952,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L336",
+      "source_location": "L343",
       "weight": 1.0
     },
     {
@@ -32964,7 +32964,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L342",
+      "source_location": "L349",
       "weight": 1.0
     },
     {
@@ -32976,7 +32976,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L245",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -33000,7 +33000,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L231",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -33012,7 +33012,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L251",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -33024,7 +33024,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L256",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -33036,7 +33036,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L261",
+      "source_location": "L268",
       "weight": 1.0
     },
     {
@@ -33048,7 +33048,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L292",
+      "source_location": "L299",
       "weight": 1.0
     },
     {
@@ -33060,7 +33060,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L300",
+      "source_location": "L307",
       "weight": 1.0
     },
     {
@@ -33072,7 +33072,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L305",
+      "source_location": "L312",
       "weight": 1.0
     },
     {
@@ -37416,7 +37416,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L318",
+      "source_location": "L325",
       "weight": 1.0
     },
     {
@@ -37428,7 +37428,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L340",
+      "source_location": "L347",
       "weight": 1.0
     },
     {
@@ -37452,7 +37452,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L243",
+      "source_location": "L250",
       "weight": 1.0
     },
     {
@@ -37464,7 +37464,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L229",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -37476,7 +37476,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L254",
+      "source_location": "L261",
       "weight": 1.0
     },
     {
@@ -37488,7 +37488,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L259",
+      "source_location": "L266",
       "weight": 1.0
     },
     {
@@ -37500,7 +37500,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L264",
+      "source_location": "L271",
       "weight": 1.0
     },
     {
@@ -38916,7 +38916,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L291",
+      "source_location": "L298",
       "weight": 1.0
     },
     {
@@ -38928,7 +38928,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L304",
+      "source_location": "L311",
       "weight": 1.0
     },
     {
@@ -63085,7 +63085,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L249",
+      "source_location": "L256",
       "weight": 1.0
     },
     {
@@ -63096,7 +63096,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L254",
+      "source_location": "L261",
       "weight": 1.0
     },
     {
@@ -63107,7 +63107,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L259",
+      "source_location": "L266",
       "weight": 1.0
     },
     {
@@ -63118,7 +63118,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L264",
+      "source_location": "L271",
       "weight": 1.0
     },
     {
@@ -63140,7 +63140,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L318",
+      "source_location": "L325",
       "weight": 1.0
     },
     {
@@ -63151,7 +63151,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L340",
+      "source_location": "L347",
       "weight": 1.0
     },
     {
@@ -67747,7 +67747,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L229",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -67758,7 +67758,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L234",
+      "source_location": "L241",
       "weight": 1.0
     },
     {
@@ -67769,7 +67769,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L243",
+      "source_location": "L250",
       "weight": 1.0
     },
     {
@@ -68433,80 +68433,80 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_230",
+      "source": "services_agent_dynamic_router_rationale_237",
       "target": "services_agent_dynamic_router_fastembedsemanticrouter_is_off_topic",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L230",
+      "source_location": "L237",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_235",
+      "source": "services_agent_dynamic_router_rationale_242",
       "target": "services_agent_dynamic_router_fastembedsemanticrouter_is_disclaimer",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L235",
+      "source_location": "L242",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_244",
+      "source": "services_agent_dynamic_router_rationale_251",
       "target": "services_agent_dynamic_router_fastembedsemanticrouter_classify_sub_intent",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L244",
+      "source_location": "L251",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_250",
+      "source": "services_agent_dynamic_router_rationale_257",
       "target": "services_agent_dynamic_router_is_ai_disclaimer",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L250",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_255",
+      "source": "services_agent_dynamic_router_rationale_262",
       "target": "services_agent_dynamic_router_is_in_domain_finance_query",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L255",
+      "source_location": "L262",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_260",
+      "source": "services_agent_dynamic_router_rationale_267",
       "target": "services_agent_dynamic_router_is_off_topic_query",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L260",
+      "source_location": "L267",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_270",
+      "source": "services_agent_dynamic_router_rationale_277",
       "target": "services_agent_dynamic_router_query_llm_for_intent",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L270",
+      "source_location": "L277",
       "weight": 1.0
     },
     {
@@ -68521,25 +68521,25 @@
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_324",
+      "source": "services_agent_dynamic_router_rationale_331",
       "target": "services_agent_dynamic_router_classify_intent_dynamic",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L324",
+      "source_location": "L331",
       "weight": 1.0
     },
     {
-      "source": "services_agent_dynamic_router_rationale_341",
+      "source": "services_agent_dynamic_router_rationale_348",
       "target": "services_agent_dynamic_router_classify_sub_intent_dynamic",
       "relation": "rationale_for",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L341",
+      "source_location": "L348",
       "weight": 1.0
     },
     {
@@ -73123,7 +73123,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L322",
+      "source_location": "L329",
       "weight": 0.8
     },
     {
@@ -73135,7 +73135,7 @@
       "confidence_score": 0.95,
       "context": "generic_arg",
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L268",
+      "source_location": "L275",
       "weight": 0.8
     },
     {
@@ -73614,7 +73614,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "services/agent/dynamic_router.py",
-      "source_location": "L292",
+      "source_location": "L299",
       "weight": 0.8
     },
     {
@@ -73839,5 +73839,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7b58842600fa3cda82712c5a3ac52b6e1ea17ffa"
+  "built_at_commit": "88c67898f6bb31969e2e3c251e30a5d781bd1b13"
 }

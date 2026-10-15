@@ -93,6 +93,7 @@ class AgentChatRequest(BaseModel):
     dso_days: Optional[int] = Field(default=None, ge=0, description="Optional Days Sales Outstanding")
     dpo_days: Optional[int] = Field(default=None, ge=0, description="Optional Days Payable Outstanding")
     dio_days: Optional[int] = Field(default=None, ge=0, description="Optional Days Inventory Outstanding")
+    session_id: Optional[str] = Field(default=None, description="Client session identifier")
 
 
 
@@ -166,3 +167,4 @@ class CopilotResponse(BaseModel):
     matched_options: List[AgentMatchedOption] = Field(default_factory=list)
     staged_action: Optional[AgentActionProposal] = None
     requires_biometric_hitl: bool = False
+    session_id: Optional[str] = None
