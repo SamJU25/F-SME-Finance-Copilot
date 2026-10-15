@@ -1404,20 +1404,18 @@ export default function HomePage() {
                                 </div>
                               </div>
                             </div>
-                            {sessions.length > 1 && (
-                              <button
-                                type="button"
-                                className="session-delete-btn"
-                                title="Delete this session"
-                                onClick={(e) => handleDeleteSession(s.id, e)}
-                                aria-label={`Delete session ${s.title}`}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                  <polyline points="3 6 5 6 21 6"></polyline>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="session-delete-btn"
+                              title="Delete this session chat"
+                              onClick={(e) => handleDeleteSession(s.id, e)}
+                              aria-label={`Delete session ${s.title}`}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                            </button>
                           </div>
                         );
                       })}
@@ -1431,19 +1429,6 @@ export default function HomePage() {
             </div>
 
             <div className="chat-header-right">
-              <button
-                type="button"
-                className="chat-header-new-btn"
-                onClick={() => handleCreateNewSession()}
-                title="Start a new chat session"
-                aria-label="New Session"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>New</span>
-              </button>
               <button className="chat-close" onClick={() => setChatOpen(false)} type="button" aria-label="Close Drawer">
                 ✕
               </button>

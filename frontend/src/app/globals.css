@@ -545,17 +545,18 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
   opacity: 0.6;
 }
 .session-delete-btn {
-  background: none;
+  background: transparent;
   border: none;
-  color: #9aa89d;
+  color: #7d8c80;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  display: flex;
+  padding: 4px 6px;
+  border-radius: 5px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 0.75;
   transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
 }
 .session-menu-item:hover .session-delete-btn {
   opacity: 1;
@@ -563,6 +564,7 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
 .session-delete-btn:hover {
   color: var(--red);
   background: #fae5e2;
+  opacity: 1;
 }
 
 .session-empty-hint {
@@ -577,29 +579,6 @@ input[type='number'] { width: 100%; min-height: 48px; padding: 0 14px; border: 1
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.chat-header-new-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: #f1f8f4;
-  border: 1px solid #c9e4d5;
-  border-radius: 7px;
-  padding: 5px 10px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--green);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-}
-.chat-header-new-btn:hover {
-  background: var(--green-soft);
-  border-color: var(--green);
-}
-.chat-header-new-btn:active {
-  transform: scale(0.97);
 }
 
 .chat-close {
