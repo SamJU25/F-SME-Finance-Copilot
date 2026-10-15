@@ -1848,286 +1848,269 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="executive-workspace">
-            {/* Statement Context Bar */}
-            <div className="statement-context-bar" role="region" aria-label="Statement Context">
-              <div className="statement-context-left">
-                <span className="statement-context-icon" aria-hidden="true">
-                  {filesList.length > 1 ? '📚' : '📄'}
-                </span>
-                <div>
-                  <div className="statement-context-filename">
-                    {filesList.length > 1
-                      ? `${filesList.length} Statements (Consolidated Treasury)`
-                      : file
-                      ? file.name
-                      : 'Active_Statement.csv'}
-                  </div>
-                  <div className="statement-context-meta">
-                    {filesList.length > 1
-                      ? `${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
-                      : file
-                      ? `${(file.size / 1024).toFixed(1)} KB`
-                      : csvText
-                      ? `${(csvText.length / 1024).toFixed(1)} KB`
-                      : ''}
-                    {result.start_date && result.end_date && (
-                      <> · <time dateTime={result.start_date}>{result.start_date}</time> to <time dateTime={result.end_date}>{result.end_date}</time></>
-                    )}
-                  </div>
-                </div>
-
-                {result.analysis_mode && (
-                  <span
-                    className={`mode-badge ${result.analysis_mode === 'HISTORICAL_AUDIT' ? 'audit' : 'live'}`}
-                    role="status"
-                    title={
-                      result.analysis_mode === 'HISTORICAL_AUDIT'
-                        ? `Statement closed ${result.statement_age_days} days ago. Metrics evaluate historical liquidity.`
-                        : `Statement is current (closed ${result.statement_age_days ?? 0} days ago).`
-                    }
-                  >
-                    <span className="mode-dot" aria-hidden="true" />
-                    {result.analysis_mode === 'HISTORICAL_AUDIT'
-                      ? `Audit · Closed ${result.statement_age_days}d ago`
-                      : 'Live Operating'}
+            {/* Unified Institutional Treasury Control Shelf */}
+            <div className="treasury-control-shelf" role="region" aria-label="Treasury Controls & Overview">
+              {/* Row 1: Statement Identity, Operational Mode, Cash Health & Runway Horizon Control */}
+              <div className="control-shelf-primary-row">
+                <div className="control-shelf-entity">
+                  <span className="control-shelf-icon" aria-hidden="true">
+                    {filesList.length > 1 ? '🏛️' : '📄'}
                   </span>
-                )}
-
-                <span
-                  className={`status ${result.cash_status}`}
-                  role="status"
-                  aria-label={`Liquidity status: ${CASH_STATUS_LABELS[result.cash_status] || result.cash_status}`}
-                >
-                  <span className="status-dot" aria-hidden="true" />
-                  {CASH_STATUS_LABELS[result.cash_status] || result.cash_status.replaceAll('_', ' ')}
-                </span>
-              </div>
-
-              <div className="statement-context-actions">
-                <div className="threshold-quick-select" title="Runway alert horizon">
-                  <span className="threshold-quick-label">Horizon:</span>
-                  <div className="threshold-quick-pills">
-                    {RUNWAY_HORIZON_PRESETS.map((preset) => {
-                      const isSelected = threshold === preset.days;
-                      return (
-                        <button
-                          key={preset.days}
-                          type="button"
-                          className={`threshold-quick-pill ${isSelected ? 'active' : ''}`}
-                          onClick={() => handleUpdateThreshold(preset.days)}
-                        >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
+                  <div className="control-shelf-titles">
+                    <div className="control-shelf-name">
+                      {filesList.length > 1
+                        ? `Consolidated Treasury Portfolio (${filesList.length} Statements)`
+                        : file
+                        ? file.name
+                        : result.accounts_breakdown?.[0]?.account_id || 'Active Operating Statement'}
+                    </div>
+                    <div className="control-shelf-meta">
+                      {filesList.length > 1
+                        ? `${(filesList.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1)} KB`
+                        : file
+                        ? `${(file.size / 1024).toFixed(1)} KB`
+                        : csvText
+                        ? `${(csvText.length / 1024).toFixed(1)} KB`
+                        : ''}
+                      {result.start_date && result.end_date && (
+                        <> · <time dateTime={result.start_date}>{result.start_date}</time> to <time dateTime={result.end_date}>{result.end_date}</time></>
+                      )}
+                      {result.period_days && (
+                        <> · <span>{result.period_days} Days</span></>
+                      )}
+                    </div>
                   </div>
-                  <div className="threshold-quick-custom" title="Custom warning horizon in days">
-                    <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      className="threshold-quick-input"
-                      value={threshold}
-                      onChange={(e) => setThreshold(e.target.value)}
-                      onBlur={() => {
-                        const num = Number(threshold);
-                        if (!threshold || isNaN(num) || num < 1) {
-                          handleUpdateThreshold('30');
-                        } else {
-                          handleUpdateThreshold(threshold);
+
+                  <div className="control-shelf-badges">
+                    {result.analysis_mode && (
+                      <span
+                        className={`mode-badge ${result.analysis_mode === 'HISTORICAL_AUDIT' ? 'audit' : 'live'}`}
+                        role="status"
+                        title={
+                          result.analysis_mode === 'HISTORICAL_AUDIT'
+                            ? `Statement closed ${result.statement_age_days} days ago. Metrics evaluate historical liquidity.`
+                            : `Statement is current (closed ${result.statement_age_days ?? 0} days ago).`
                         }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
-                      aria-label="Custom warning horizon days"
-                    />
-                    <span className="threshold-quick-unit">d</span>
+                      >
+                        <span className="mode-dot" aria-hidden="true" />
+                        {result.analysis_mode === 'HISTORICAL_AUDIT'
+                          ? `Audit · Closed ${result.statement_age_days}d ago`
+                          : 'Live Operating'}
+                      </span>
+                    )}
+
+                    <span
+                      className={`status ${result.cash_status}`}
+                      role="status"
+                      aria-label={`Liquidity status: ${CASH_STATUS_LABELS[result.cash_status] || result.cash_status}`}
+                    >
+                      <span className="status-dot" aria-hidden="true" />
+                      {CASH_STATUS_LABELS[result.cash_status] || result.cash_status.replaceAll('_', ' ')}
+                    </span>
                   </div>
                 </div>
 
-                <input
-                  ref={fileInputRef}
-                  id="csv-file-active"
-                  className="file-input"
-                  aria-label="Upload CSV statements"
-                  type="file"
-                  accept=".csv,text/csv"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={handleFileInputChange}
-                />
-                {filesList.length <= 1 && (
+                <div className="control-shelf-actions">
+                  {/* Unified Segmented Runway Horizon Control */}
+                  <div className="horizon-segmented-group" title="Runway alert horizon">
+                    <span className="horizon-group-label">Horizon:</span>
+                    <div className="horizon-segmented-control">
+                      {RUNWAY_HORIZON_PRESETS.map((preset) => {
+                        const isSelected = threshold === preset.days;
+                        return (
+                          <button
+                            key={preset.days}
+                            type="button"
+                            className={`horizon-pill ${isSelected ? 'active' : ''}`}
+                            onClick={() => handleUpdateThreshold(preset.days)}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                      <span className="horizon-divider" aria-hidden="true" />
+                      <div
+                        className={`horizon-custom-pill ${!RUNWAY_HORIZON_PRESETS.some((p) => p.days === threshold) ? 'active' : ''}`}
+                        title="Enter custom warning days"
+                      >
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          className="horizon-custom-input"
+                          value={threshold}
+                          onChange={(e) => setThreshold(e.target.value)}
+                          onBlur={() => {
+                            const num = Number(threshold);
+                            if (!threshold || isNaN(num) || num < 1) {
+                              handleUpdateThreshold('30');
+                            } else {
+                              handleUpdateThreshold(threshold);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          aria-label="Custom warning horizon days"
+                        />
+                        <span className="horizon-custom-unit">d</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
-                    className="context-action-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Add another statement to consolidate treasury"
+                    className="control-shelf-reset-btn"
+                    onClick={handleRemoveCsv}
+                    title="Reset workspace and upload new statements"
                   >
-                    <span style={{ fontWeight: 700, color: 'var(--green)' }}>+</span>
-                    <span>Add Statement</span>
+                    <span aria-hidden="true">✕</span> Reset
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="context-action-btn danger"
-                  onClick={handleRemoveCsv}
-                  title="Reset workspace"
-                >
-                  <span aria-hidden="true">✕</span> Reset
-                </button>
-              </div>
-            </div>
-
-            {/* Active Statements Tag Bar if multiple statements */}
-            {filesList.length > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>
-                  Consolidated ({filesList.length}):
-                </span>
-                {filesList.map((f, idx) => (
-                  <span
-                    key={`${f.name}_${idx}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '3px 8px',
-                      background: 'white',
-                      border: '1px solid var(--line)',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      color: 'var(--ink)',
-                    }}
-                  >
-                    <span>📄 {f.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSingleFile(idx)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                        fontSize: 11,
-                        color: 'var(--muted)',
-                        lineHeight: 1,
-                      }}
-                      title={`Remove ${f.name} from consolidated analysis`}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    background: 'none',
-                    border: '1px dashed #97aca0',
-                    borderRadius: 6,
-                    padding: '3px 8px',
-                    fontSize: 11.5,
-                    color: 'var(--green)',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  + Add Statement
-                </button>
-              </div>
-            )}
-
-            {/* Account & Month Filter Bar */}
-            <div className="workspace-filter-bar" role="region" aria-label="Account and Period Filters">
-              <div className="filter-controls-left">
-                {/* Account Combobox / Switcher */}
-                <div className="filter-group">
-                  <label className="filter-label" htmlFor="account-selector">
-                    <span>🏛️</span> Account:
-                  </label>
-                  <select
-                    id="account-selector"
-                    className="filter-select"
-                    value={selectedAccount}
-                    onChange={(e) => handleSelectAccount(e.target.value)}
-                    aria-label="Select treasury account view"
-                  >
-                    <option value="all">
-                      {isSingleAccountPortfolio
-                        ? `Consolidated Timeline (All ${result.accounts_breakdown?.length} Statements) — ${money(result.current_balance, result.currency)}`
-                        : `All Accounts (Consolidated Treasury) — ${money(result.current_balance, result.currency)}`}
-                    </option>
-                    {result.accounts_breakdown &&
-                      result.accounts_breakdown.map((acc, idx) => (
-                        <option key={idx} value={acc.file_name}>
-                          {isSingleAccountPortfolio
-                            ? `Statement: ${acc.file_name} — ${money(acc.closing_balance, result.currency)}`
-                            : `${acc.account_id} (${acc.file_name}) — ${money(acc.closing_balance, result.currency)}`}
-                        </option>
-                      ))}
-                  </select>
                 </div>
+              </div>
 
-                {/* Period / Month Selector */}
-                {availableMonths.length > 1 && (
+              {/* Row 2: Secondary Toolbar (Account Combobox, Period Combobox, Queued Statements, Single Add Button) */}
+              <div className="control-shelf-toolbar-row">
+                <div className="toolbar-filters-left">
+                  {/* Account Combobox / Switcher */}
                   <div className="filter-group">
-                    <label className="filter-label" htmlFor="month-selector">
-                      <span>📅</span> Period:
+                    <label className="filter-label" htmlFor="account-selector">
+                      <span>🏛️</span> Account:
                     </label>
                     <select
-                      id="month-selector"
+                      id="account-selector"
                       className="filter-select"
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      aria-label="Select statement calendar month"
+                      value={selectedAccount}
+                      onChange={(e) => handleSelectAccount(e.target.value)}
+                      aria-label="Select treasury account view"
                     >
                       <option value="all">
-                        Full Timeline ({result.period_days} Days)
+                        {isSingleAccountPortfolio
+                          ? `Consolidated Timeline (All ${result.accounts_breakdown?.length} Statements) — ${money(result.current_balance, result.currency)}`
+                          : `All Accounts (Consolidated Treasury) — ${money(result.current_balance, result.currency)}`}
                       </option>
-                      {availableMonths.map((m) => (
-                        <option key={m.key} value={m.key}>
-                          {m.label}
-                        </option>
-                      ))}
+                      {result.accounts_breakdown &&
+                        result.accounts_breakdown.map((acc, idx) => (
+                          <option key={idx} value={acc.file_name}>
+                            {isSingleAccountPortfolio
+                              ? `Statement: ${acc.file_name} — ${money(acc.closing_balance, result.currency)}`
+                              : `${acc.account_id} (${acc.file_name}) — ${money(acc.closing_balance, result.currency)}`}
+                          </option>
+                        ))}
                     </select>
                   </div>
-                )}
-              </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                {result.has_overlaps_deduped && (
-                  <span className="filter-badge deduped" title="Overlapping statement dates deduplicated automatically">
-                    ✓ Overlaps Auto-Merged
-                  </span>
-                )}
-                {result.calendar_gaps && result.calendar_gaps.length > 0 && (
-                  <span className="filter-badge continuity" title="Calendar continuity alert detected">
-                    ⚠️ {result.calendar_gaps.length} Statement Gap{result.calendar_gaps.length > 1 ? 's' : ''}
-                  </span>
-                )}
-                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>
-                  {selectedAccount === 'all'
-                    ? isSingleAccountPortfolio
-                      ? `1 Account (${result.accounts_breakdown?.length} Statements Merged)`
-                      : `${uniqueAccountClusters.length || filesList.length || 1} Accounts Consolidated`
-                    : `Viewing: ${selectedAccount}`}
-                </span>
+                  {/* Period / Month Selector */}
+                  {availableMonths.length > 1 && (
+                    <div className="filter-group">
+                      <label className="filter-label" htmlFor="month-selector">
+                        <span>📅</span> Period:
+                      </label>
+                      <select
+                        id="month-selector"
+                        className="filter-select"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        aria-label="Select statement calendar month"
+                      >
+                        <option value="all">
+                          Full Timeline ({result.period_days} Days)
+                        </option>
+                        {availableMonths.map((m) => (
+                          <option key={m.key} value={m.key}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {result.has_overlaps_deduped && (
+                    <span className="filter-badge deduped" title="Overlapping statement dates deduplicated automatically">
+                      ✓ Overlaps Auto-Merged
+                    </span>
+                  )}
+                  {result.calendar_gaps && result.calendar_gaps.length > 0 && (
+                    <span className="filter-badge continuity" title="Calendar continuity alert detected">
+                      ⚠️ {result.calendar_gaps.length} Statement Gap{result.calendar_gaps.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                <div className="toolbar-sources-right">
+                  <input
+                    ref={fileInputRef}
+                    id="csv-file-active"
+                    className="file-input"
+                    aria-label="Upload CSV statements"
+                    type="file"
+                    accept=".csv,text/csv"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleFileInputChange}
+                  />
+
+                  {/* Source Statement Chips */}
+                  {filesList.length > 1 ? (
+                    <div className="statement-chips-group">
+                      <span className="statement-chips-label">Sources:</span>
+                      {filesList.map((f, idx) => (
+                        <span key={`${f.name}_${idx}`} className="statement-chip">
+                          <span className="statement-chip-name" title={f.name}>📄 {f.name}</span>
+                          <button
+                            type="button"
+                            className="statement-chip-remove"
+                            onClick={() => handleRemoveSingleFile(idx)}
+                            title={`Remove ${f.name} from consolidated analysis`}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                      <button
+                        type="button"
+                        className="add-statement-chip-btn"
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Add another statement to consolidate"
+                      >
+                        + Add Statement
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="single-statement-toolbar-actions">
+                      <button
+                        type="button"
+                        className="add-statement-chip-btn"
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Add another statement from another bank or month to consolidate treasury"
+                      >
+                        <span style={{ fontWeight: 700 }}>+</span> Add Statement
+                      </button>
+                      <span className="account-count-indicator">
+                        {selectedAccount === 'all'
+                          ? isSingleAccountPortfolio
+                            ? `${result.accounts_breakdown?.length || 1} Statement Active`
+                            : `${uniqueAccountClusters.length || 1} Account Active`
+                          : `Filtered: ${selectedAccount}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Calendar Month Focus Banner if a month is selected */}
             {selectedMonthStats && (
-              <div style={{ marginTop: 12, padding: '10px 16px', background: 'white', border: '1px solid var(--line)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                <div style={{ fontSize: 13, color: 'var(--ink)' }}>
+              <div className="month-focus-banner" role="status">
+                <div className="month-focus-title">
                   <strong>Calendar Month Focus:</strong> {availableMonths.find((m) => m.key === selectedMonth)?.label}
                 </div>
-                <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
-                  <span>Inflows: <strong className="tabular-num" style={{ color: '#15803d' }}>+{money(selectedMonthStats.inflow.toFixed(2), result.currency)}</strong></span>
-                  <span>Outflows: <strong className="tabular-num" style={{ color: '#b91c1c' }}>-{money(selectedMonthStats.outflow.toFixed(2), result.currency)}</strong></span>
-                  <span>Net Change: <strong className="tabular-num" style={{ color: selectedMonthStats.net >= 0 ? '#15803d' : '#b91c1c' }}>{money(selectedMonthStats.net.toFixed(2), result.currency)}</strong></span>
+                <div className="month-focus-metrics">
+                  <span>Inflows: <strong className="tabular-num text-positive">+{money(selectedMonthStats.inflow.toFixed(2), result.currency)}</strong></span>
+                  <span>Outflows: <strong className="tabular-num text-negative">-{money(selectedMonthStats.outflow.toFixed(2), result.currency)}</strong></span>
+                  <span>Net Change: <strong className={`tabular-num ${selectedMonthStats.net >= 0 ? 'text-positive' : 'text-negative'}`}>{money(selectedMonthStats.net.toFixed(2), result.currency)}</strong></span>
                 </div>
               </div>
             )}
@@ -2141,10 +2124,10 @@ export default function HomePage() {
                       ? 'Total Treasury Liquidity'
                       : `${displayResult?.accounts_breakdown?.[0]?.account_id || selectedAccount} Balance`}
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
+                  <span className="verdict-card-tag">
                     {selectedAccount === 'all'
                       ? isSingleAccountPortfolio
-                        ? `1 Account (${result.accounts_breakdown?.length} Statements)`
+                        ? `${result.accounts_breakdown?.length || 2} Statements Merged`
                         : uniqueAccountClusters.length > 1
                         ? `${uniqueAccountClusters.length} Accounts`
                         : 'Primary Treasury'
