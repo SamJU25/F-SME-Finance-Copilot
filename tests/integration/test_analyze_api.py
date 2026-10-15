@@ -36,6 +36,8 @@ def test_analyze_api_returns_decimal_strings_and_row_provenance():
         "cash_conversion_cycle_days": None,
         "working_capital_status": None,
         "working_capital_rationale": None,
+        "start_date": "2026-10-01",
+        "end_date": "2026-10-02",
     }
 
 

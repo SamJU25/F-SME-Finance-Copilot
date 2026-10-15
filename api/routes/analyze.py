@@ -41,6 +41,8 @@ class CashAnalysisResponse(BaseModel):
     cash_conversion_cycle_days: int | None = None
     working_capital_status: Literal["WORKING_CAPITAL_TRAP", "BALANCED", "CASH_GENERATIVE"] | None = None
     working_capital_rationale: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
@@ -90,6 +92,8 @@ async def analyze_csv(
         cash_conversion_cycle_days=ccc_days,
         working_capital_status=wc_status,
         working_capital_rationale=wc_rationale,
+        start_date=result.start_date,
+        end_date=result.end_date,
     )
 
 

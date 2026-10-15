@@ -23,6 +23,8 @@ class CashAnalysisResult:
     cash_status: str
     gross_inflows: Decimal = Decimal("0.00")
     gross_outflows: Decimal = Decimal("0.00")
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 def calculate_cash_analysis(
@@ -80,4 +82,6 @@ def calculate_cash_analysis(
         cash_status=cash_status,
         gross_inflows=gross_inflows,
         gross_outflows=gross_outflows,
+        start_date=first_date.isoformat(),
+        end_date=last_date.isoformat(),
     )

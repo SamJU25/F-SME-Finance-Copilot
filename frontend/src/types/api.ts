@@ -22,6 +22,8 @@ export interface CashAnalysisResponse {
   cash_conversion_cycle_days?: number | null;
   working_capital_status?: 'WORKING_CAPITAL_TRAP' | 'BALANCED' | 'CASH_GENERATIVE' | null;
   working_capital_rationale?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 // Three-Tier Security Gate & Staged Action Intents

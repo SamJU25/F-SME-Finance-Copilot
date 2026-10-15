@@ -1345,7 +1345,17 @@ export default function HomePage() {
 
           <section className="panel" aria-labelledby="result-title">
             <div className="result-head">
-              <h2 id="result-title">Cash Summary</h2>
+              <div>
+                <h2 id="result-title">Cash Summary</h2>
+                {result?.end_date && (
+                  <p className="result-as-of">
+                    As of statement close: <time dateTime={result.end_date}>{result.end_date}</time>
+                    {result.start_date && (
+                      <span className="result-span"> · {result.start_date} to {result.end_date}</span>
+                    )}
+                  </p>
+                )}
+              </div>
               {result && (
                 <span
                   className={`status ${result.cash_status}`}

@@ -425,8 +425,11 @@ input[type='number'].threshold-custom-input {
 .side-note strong { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600; }
 .side-note p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .result { margin-top: 24px; }
-.result-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.result-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .result-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.015em; }
+.result-as-of { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.result-as-of time { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+.result-span { font-family: var(--mono); font-size: 11px; color: var(--muted); opacity: 0.85; }
 .status { display: inline-flex; min-height: 26px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 99px; font-size: 11.5px; font-weight: 600; cursor: default; user-select: none; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .status.CASH_NONPOSITIVE { background: var(--red-soft); color: var(--red); }
