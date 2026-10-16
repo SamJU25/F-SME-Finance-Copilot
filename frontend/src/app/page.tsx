@@ -1931,7 +1931,14 @@ export default function HomePage() {
                       <span className="horizon-divider" aria-hidden="true" />
                       <div
                         className={`horizon-custom-pill ${!RUNWAY_HORIZON_PRESETS.some((p) => p.days === threshold) ? 'active' : ''}`}
-                        title="Enter custom warning days"
+                        title="Click to enter custom warning horizon in days"
+                        onClick={(e) => {
+                          const input = e.currentTarget.querySelector('input');
+                          if (input && document.activeElement !== input) {
+                            input.focus();
+                            input.select();
+                          }
+                        }}
                       >
                         <input
                           type="number"
