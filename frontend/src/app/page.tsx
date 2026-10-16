@@ -1930,39 +1930,43 @@ export default function HomePage() {
                       })}
                       <span className="horizon-divider" aria-hidden="true" />
                       <div
-                        className={`horizon-custom-pill ${!RUNWAY_HORIZON_PRESETS.some((p) => p.days === threshold) ? 'active' : ''}`}
+                        className={`horizon-custom-selector ${!RUNWAY_HORIZON_PRESETS.some((p) => p.days === threshold) ? 'active' : ''}`}
                         title="Click to enter custom warning horizon in days"
                         onClick={(e) => {
                           const input = e.currentTarget.querySelector('input');
-                          if (input && document.activeElement !== input) {
+                          if (input) {
                             input.focus();
                             input.select();
                           }
                         }}
                       >
-                        <input
-                          type="number"
-                          min="1"
-                          max="365"
-                          className="horizon-custom-input"
-                          value={threshold}
-                          onChange={(e) => setThreshold(e.target.value)}
-                          onBlur={() => {
-                            const num = Number(threshold);
-                            if (!threshold || isNaN(num) || num < 1) {
-                              handleUpdateThreshold('30');
-                            } else {
-                              handleUpdateThreshold(threshold);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              (e.target as HTMLInputElement).blur();
-                            }
-                          }}
-                          aria-label="Custom warning horizon days"
-                        />
-                        <span className="horizon-custom-unit">d</span>
+                        <span className="custom-selector-icon" aria-hidden="true">✎</span>
+                        <span className="custom-selector-label">Custom:</span>
+                        <div className="custom-input-frame">
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            className="horizon-custom-input"
+                            value={threshold}
+                            onChange={(e) => setThreshold(e.target.value)}
+                            onBlur={() => {
+                              const num = Number(threshold);
+                              if (!threshold || isNaN(num) || num < 1) {
+                                handleUpdateThreshold('30');
+                              } else {
+                                handleUpdateThreshold(threshold);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur();
+                              }
+                            }}
+                            aria-label="Custom warning horizon days"
+                          />
+                          <span className="custom-unit-tag">d</span>
+                        </div>
                       </div>
                     </div>
                   </div>
