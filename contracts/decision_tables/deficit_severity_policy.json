@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "DeficitSeverityRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "DeficitSeverityPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_has",
+            "field": "has_deficit",
+            "name": "Has Deficit"
+          },
+          {
+            "id": "in_days",
+            "field": "days_until_deficit",
+            "name": "Days Until Deficit"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_sev",
+            "field": "severity",
+            "name": "Deficit Severity Horizon"
+          },
+          {
+            "id": "out_has_proj",
+            "field": "has_projected_deficit",
+            "name": "Has Projected Deficit"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_safe",
+            "_description": "No projected cash deficit across evaluated horizon",
+            "in_has": "false",
+            "in_days": "",
+            "out_sev": "'SAFE'",
+            "out_has_proj": "false"
+          },
+          {
+            "_id": "rule_critical",
+            "_description": "Deficit within 30 days is Critical emergency",
+            "in_has": "true",
+            "in_days": "<= 30",
+            "out_sev": "'CRITICAL'",
+            "out_has_proj": "true"
+          },
+          {
+            "_id": "rule_warning",
+            "_description": "Deficit within 31 to 60 days is Warning horizon",
+            "in_has": "true",
+            "in_days": "<= 60",
+            "out_sev": "'WARNING'",
+            "out_has_proj": "true"
+          },
+          {
+            "_id": "rule_watch",
+            "_description": "Deficit beyond 60 days is Watch horizon",
+            "in_has": "true",
+            "in_days": "> 60",
+            "out_sev": "'WATCH'",
+            "out_has_proj": "true"
+          },
+          {
+            "_id": "rule_fallback",
+            "_description": "Fallback rule default to Safe",
+            "in_has": "",
+            "in_days": "",
+            "out_sev": "'SAFE'",
+            "out_has_proj": "false"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "DeficitSeverityResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

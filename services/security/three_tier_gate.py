@@ -31,6 +31,14 @@ class StagedActionIntent(BaseModel):
 def requires_biometric_execution(action_type: str) -> bool:
     """
     Evaluates whether an action requires Tier 3 physical biometric confirmation.
+    Evaluated by reference via DecisionEngineRegistry (zero hardcoded rules).
     """
-    tier_3_actions = {"TRANSFER", "DRAW_CREDIT_LINE", "PLEDGE_INVOICE"}
-    return action_type in tier_3_actions
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    req = DecisionRequest(
+        domain=DecisionDomain.SECURITY_GATE,
+        input_state={"action_type": action_type},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    res = DecisionEngineRegistry.get_instance().evaluate(req)
+    return bool(res.output_payload.get("requires_biometric_execution", res.selected_choice == "TIER_3_EXECUTION"))

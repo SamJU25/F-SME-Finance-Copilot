@@ -1,0 +1,76 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "SecurityGateRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "SecurityGatePolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_act",
+            "field": "action_type",
+            "name": "Action Type"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_tier",
+            "field": "security_tier",
+            "name": "Security Tier"
+          },
+          {
+            "id": "out_bio",
+            "field": "requires_biometric_execution",
+            "name": "Requires WebAuthn Biometric HITL"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_tier_3",
+            "_description": "Irreversible financial disbursements require strict Tier 3 biometric authorization",
+            "in_act": "'TRANSFER', 'DRAW_CREDIT_LINE', 'PLEDGE_INVOICE'",
+            "out_tier": "'TIER_3_EXECUTION'",
+            "out_bio": "true"
+          },
+          {
+            "_id": "rule_tier_2",
+            "_description": "Staging intent into audit ledger without fund movement",
+            "in_act": "'STAGE_TRANSFER', 'FACTOR_INVOICE', 'PREPARE_APPLICATION'",
+            "out_tier": "'TIER_2_STAGING'",
+            "out_bio": "false"
+          },
+          {
+            "_id": "rule_tier_1",
+            "_description": "Autonomous read-only observations and ledger queries",
+            "in_act": "",
+            "out_tier": "'TIER_1_OBSERVATION'",
+            "out_bio": "false"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "SecurityGateResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

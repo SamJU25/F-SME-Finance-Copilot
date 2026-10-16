@@ -217,18 +217,20 @@ def calculate_predictive_cash(
                 primary_deficit_trigger = current_trigger
                 break
 
-    if days_until_deficit is None:
-        severity = "SAFE"
-        has_deficit = False
-    elif days_until_deficit <= 30:
-        severity = "CRITICAL"
-        has_deficit = True
-    elif days_until_deficit <= 60:
-        severity = "WARNING"
-        has_deficit = True
-    else:
-        severity = "WATCH"
-        has_deficit = True
+    # Evaluate deficit severity horizon by reference (zero hardcoding)
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.DEFICIT_SEVERITY,
+        input_state={
+            "days_until_deficit": days_until_deficit,
+            "has_deficit": days_until_deficit is not None,
+        },
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    severity = decision_res.output_payload.get("severity", decision_res.selected_choice)
+    has_deficit = bool(decision_res.output_payload.get("has_projected_deficit", severity != "SAFE"))
 
     # Calculate recommended buffer bridge (shortfall + 20% safety margin, rounded to hundreds)
     if has_deficit:

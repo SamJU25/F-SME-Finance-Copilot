@@ -339,9 +339,20 @@ def classify_intent_dynamic(
         if llm_result:
             return llm_result
 
-    # On-Device Vector Semantic Classification via FastEmbed (Zero Keywords)
-    intent, _, _ = FastEmbedSemanticRouter.get_instance().classify(clean_msg, history=history, has_csv=has_csv)
-    return intent
+    # Evaluate intent by reference via DecisionEngineRegistry (zero hardcoded engine logic)
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.INTENT_ROUTING,
+        input_state={
+            "query": clean_msg,
+            "history": history,
+            "has_csv": has_csv,
+        },
+        execution_mode="AUTO",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    return decision_res.selected_choice
 
 
 def classify_sub_intent_dynamic(message: str, history: Optional[List[Any]] = None) -> str:

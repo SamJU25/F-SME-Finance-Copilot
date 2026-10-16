@@ -13,6 +13,7 @@ from typing import Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
 from services.ingestion.csv_parser import DemoTransaction
 
 
@@ -191,25 +192,26 @@ def underwrite_sme_transactions(
     dab = calculate_dab_from_transactions(transactions)
     cv, vol_tier = calculate_inflow_volatility(transactions)
 
-    if dab >= prime_dab_threshold and nsf_count == 0:
-        tier = RiskTier.PRIME
-        limit_multiplier = Decimal("3.0")
-        products = [
-            ProductType.WORKING_CAPITAL_LINE,
-            ProductType.INVOICE_FACTORING,
-            ProductType.REVENUE_BASED_FINANCING,
-        ]
-    elif dab >= near_prime_dab_threshold and nsf_count <= max_acceptable_nsf:
-        tier = RiskTier.NEAR_PRIME
-        limit_multiplier = Decimal("1.5")
-        products = [
-            ProductType.INVOICE_FACTORING,
-            ProductType.REVENUE_BASED_FINANCING,
-        ]
-    else:
-        tier = RiskTier.HIGH_RISK
-        limit_multiplier = Decimal("0.5")
-        products = [ProductType.INVOICE_FACTORING]
+    # Evaluate digital underwriting policy by reference (zero hardcoding)
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.UNDERWRITING,
+        input_state={
+            "dab": dab,
+            "nsf_count": nsf_count,
+            "prime_dab_threshold": prime_dab_threshold,
+            "near_prime_dab_threshold": near_prime_dab_threshold,
+            "max_acceptable_nsf": max_acceptable_nsf,
+        },
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    tier_str = decision_res.output_payload.get("risk_tier", decision_res.selected_choice)
+    tier = RiskTier(tier_str)
+    limit_multiplier = Decimal(str(decision_res.output_payload.get("limit_multiplier", "0.5")))
+    products = [
+        ProductType(p)
+        for p in decision_res.output_payload.get("recommended_product_types", ["INVOICE_FACTORING"])
+    ]
 
     max_limit = max(Decimal("0.00"), (dab * limit_multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
