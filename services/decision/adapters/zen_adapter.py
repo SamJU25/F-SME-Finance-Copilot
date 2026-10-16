@@ -39,6 +39,9 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.SECURITY_GATE,
             DecisionDomain.DEFICIT_SEVERITY,
             DecisionDomain.WORKING_CAPITAL_RISK,
+            DecisionDomain.DEBT_AFFORDABILITY,
+            DecisionDomain.USURY_COMPLIANCE,
+            DecisionDomain.CONCENTRATION_RISK,
         ]
 
     def _get_domain_file_map(self) -> Dict[DecisionDomain, str]:
@@ -47,6 +50,9 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.SECURITY_GATE: "security_gate_policy.json",
             DecisionDomain.DEFICIT_SEVERITY: "deficit_severity_policy.json",
             DecisionDomain.WORKING_CAPITAL_RISK: "working_capital_policy.json",
+            DecisionDomain.DEBT_AFFORDABILITY: "debt_covenant_policy.json",
+            DecisionDomain.USURY_COMPLIANCE: "usury_policy.json",
+            DecisionDomain.CONCENTRATION_RISK: "concentration_policy.json",
         }
 
     def _load_decision_tables(self, force: bool = False) -> Dict[str, str]:
@@ -161,6 +167,25 @@ class ZenRulesAdapter(AbstractDecisionEngine):
         elif request.domain == DecisionDomain.WORKING_CAPITAL_RISK:
             selected_choice = result_dict.get("status", "BALANCED")
             rationale = f"Evaluated in {perf} via JDM working_capital_policy.json (Rule={matched_rule_id}, Metric={ctx.get('metric')}, Value={ctx.get('value')})."
+        elif request.domain == DecisionDomain.DEBT_AFFORDABILITY:
+            selected_choice = result_dict.get("status", "STANDARD")
+            raw_rat = result_dict.get("rationale", "")
+            if "{ratio}" in raw_rat:
+                raw_rat = raw_rat.replace("{ratio}", str(ctx.get("ratio", 0)))
+            rationale = raw_rat or f"Evaluated in {perf} via JDM debt_covenant_policy.json (Rule={matched_rule_id}, Metric={ctx.get('metric')}, Ratio={ctx.get('ratio')})."
+        elif request.domain == DecisionDomain.USURY_COMPLIANCE:
+            is_pred = result_dict.get("is_predatory", False)
+            selected_choice = "PREDATORY" if is_pred else "COMPLIANT"
+            rationale = result_dict.get("rationale") or f"Evaluated in {perf} via JDM usury_policy.json (Rule={matched_rule_id}, APR={ctx.get('apr')}%)."
+        elif request.domain == DecisionDomain.CONCENTRATION_RISK:
+            selected_choice = result_dict.get("tier", "DIVERSIFIED")
+            raw_assess = result_dict.get("assessment", "")
+            if "{top_1}" in raw_assess or "{hhi}" in raw_assess or "{top_3}" in raw_assess:
+                top_1_val = request.input_state.get("top_1_pct", ctx.get("top_1_pct", 0))
+                top_3_val = request.input_state.get("top_3_pct", "")
+                hhi_val = request.input_state.get("hhi", ctx.get("hhi", 0))
+                raw_assess = raw_assess.replace("{top_1}", str(top_1_val)).replace("{top_3}", str(top_3_val)).replace("{hhi}", str(hhi_val))
+            rationale = raw_assess or f"Evaluated in {perf} via JDM concentration_policy.json (Rule={matched_rule_id}, Top1={ctx.get('top_1_pct')}%, HHI={ctx.get('hhi')})."
         else:
             selected_choice = str(result_dict)
             rationale = f"Evaluated in {perf} via GoRules ZEN Engine."
@@ -210,5 +235,20 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             metric = str(state.get("metric", "")).upper()
             val = float(Decimal(str(state.get("value", 0))))
             return {"metric": metric, "value": val}
+
+        elif request.domain == DecisionDomain.DEBT_AFFORDABILITY:
+            metric = str(state.get("metric", "DSCR")).upper()
+            ratio = float(Decimal(str(state.get("ratio", 0))))
+            return {"metric": metric, "ratio": ratio}
+
+        elif request.domain == DecisionDomain.USURY_COMPLIANCE:
+            apr = float(Decimal(str(state.get("apr", 0))))
+            product = str(state.get("product_type", ""))
+            return {"apr": apr, "product_type": product}
+
+        elif request.domain == DecisionDomain.CONCENTRATION_RISK:
+            top1 = float(Decimal(str(state.get("top_1_pct", 0))))
+            hhi = float(Decimal(str(state.get("hhi", 0))))
+            return {"top_1_pct": top1, "hhi": hhi}
 
         return state

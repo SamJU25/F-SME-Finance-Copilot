@@ -96,3 +96,54 @@ def test_reload_decision_tables_api():
     zen_status = data["reload_summary"]["zen-engine@2.1.3"]
     assert zen_status["UNDERWRITING"] == "COMPILED"
     assert zen_status["WORKING_CAPITAL_RISK"] == "COMPILED"
+    assert zen_status["DEBT_AFFORDABILITY"] == "COMPILED"
+    assert zen_status["USURY_COMPLIANCE"] == "COMPILED"
+    assert zen_status["CONCENTRATION_RISK"] == "COMPILED"
+
+
+def test_evaluate_debt_affordability_api():
+    response = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "DEBT_AFFORDABILITY",
+            "input_state": {"metric": "DSCR", "ratio": 1.45},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_choice"] == "PRIME"
+    assert data["output_payload"]["is_approved"] is True
+    assert "zen-engine" in data["engine_id"]
+
+
+def test_evaluate_usury_compliance_api():
+    response = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "USURY_COMPLIANCE",
+            "input_state": {"apr": 42.50, "product_type": "INVOICE_FACTORING"},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_choice"] == "PREDATORY"
+    assert data["output_payload"]["is_predatory"] is True
+    assert data["output_payload"]["compliance_status"] == "PREDATORY_FLAGGED"
+
+
+def test_evaluate_concentration_risk_api():
+    response = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "CONCENTRATION_RISK",
+            "input_state": {"top_1_pct": 58.0, "hhi": 3400.0},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_choice"] == "CRITICAL_DEPENDENCY"
+    assert data["output_payload"]["is_risk"] is True
+

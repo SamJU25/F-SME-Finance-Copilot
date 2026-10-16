@@ -10,6 +10,9 @@ class DecisionDomain(str, Enum):
     EXPENSE_TRIAGE = "EXPENSE_TRIAGE"      # Bank memo expense categorization (Payroll/Rent/Debt)
     DEFICIT_SEVERITY = "DEFICIT_SEVERITY"  # Runway crunch horizon classification
     WORKING_CAPITAL_RISK = "WORKING_CAPITAL_RISK"  # CCC, WCR, and operational lag benchmarks
+    DEBT_AFFORDABILITY = "DEBT_AFFORDABILITY"      # DSCR / FCCR commercial debt covenant tiers
+    USURY_COMPLIANCE = "USURY_COMPLIANCE"          # Truth-in-lending APR predatory ceiling
+    CONCENTRATION_RISK = "CONCENTRATION_RISK"      # Client revenue concentration & HHI tiers
 
 
 class DecisionRequest(BaseModel):

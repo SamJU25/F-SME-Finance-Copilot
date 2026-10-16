@@ -60,24 +60,28 @@ def calculate_client_concentration(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
 
-    if top_1_pct > Decimal("50.00") or hhi > Decimal("2500.00"):
-        tier = "CRITICAL_DEPENDENCY"
-        assessment = (
-            f"Severe concentration: Single largest customer accounts for {top_1_pct}% of inflows "
-            f"(HHI: {hhi}). Departure of top client creates immediate insolvency risk."
-        )
-    elif top_1_pct > Decimal("25.00") or hhi > Decimal("1500.00"):
-        tier = "MODERATE_CONCENTRATION"
-        assessment = (
-            f"Elevated concentration: Top customer accounts for {top_1_pct}% and top 3 account for "
-            f"{top_3_pct}% (HHI: {hhi}). Commercial underwriting covenants typically flag >25%."
-        )
-    else:
-        tier = "DIVERSIFIED"
-        assessment = (
-            f"Healthy customer diversification: Top customer accounts for {top_1_pct}% "
-            f"(HHI: {hhi} < 1,500 threshold). Low single-client exposure."
-        )
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.CONCENTRATION_RISK,
+        input_state={
+            "top_1_pct": float(top_1_pct),
+            "top_3_pct": str(top_3_pct),
+            "hhi": float(hhi),
+        },
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    tier = decision_res.selected_choice
+    assessment = decision_res.output_payload.get("assessment") or decision_res.rationale or (
+        f"Concentration risk evaluated: Top customer = {top_1_pct}%, HHI = {hhi}."
+    )
+    if "{top_1}" in assessment:
+        assessment = assessment.replace("{top_1}", str(top_1_pct))
+    if "{top_3}" in assessment:
+        assessment = assessment.replace("{top_3}", str(top_3_pct))
+    if "{hhi}" in assessment:
+        assessment = assessment.replace("{hhi}", str(hhi))
 
     return top_1_pct, top_3_pct, hhi, tier, assessment
 

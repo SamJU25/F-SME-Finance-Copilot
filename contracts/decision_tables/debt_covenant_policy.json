@@ -1,0 +1,155 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "DebtCovenantRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "DebtCovenantPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_metric",
+            "field": "metric",
+            "name": "Financial Coverage Metric"
+          },
+          {
+            "id": "in_ratio",
+            "field": "ratio",
+            "name": "Coverage Ratio Value"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_status",
+            "field": "status",
+            "name": "Underwriting Covenant Status"
+          },
+          {
+            "id": "out_approved",
+            "field": "is_approved",
+            "name": "Covenant Compliance Approved"
+          },
+          {
+            "id": "out_rationale",
+            "field": "rationale",
+            "name": "Underwriting Assessment Rationale"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_dscr_free",
+            "_description": "Zero debt service obligations",
+            "in_metric": "'DSCR'",
+            "in_ratio": ">= 999.0",
+            "out_status": "'DEBT_FREE'",
+            "out_approved": "true",
+            "out_rationale": "'Company has zero scheduled debt service obligations.'"
+          },
+          {
+            "_id": "rule_dscr_prime",
+            "_description": "Prime DSCR tier >= 1.35x",
+            "in_metric": "'DSCR'",
+            "in_ratio": ">= 1.35",
+            "out_status": "'PRIME'",
+            "out_approved": "true",
+            "out_rationale": "'Strong coverage ({ratio}x). Operating cash flow provides substantial buffer for principal and interest payments at institutional prime rates.'"
+          },
+          {
+            "_id": "rule_dscr_standard",
+            "_description": "Standard commercial and SBA minimum >= 1.25x",
+            "in_metric": "'DSCR'",
+            "in_ratio": ">= 1.25",
+            "out_status": "'STANDARD'",
+            "out_approved": "true",
+            "out_rationale": "'Adequate coverage ({ratio}x). Meets standard commercial bank and SBA 7(a) underwriting threshold (minimum 1.25x).'"
+          },
+          {
+            "_id": "rule_dscr_near_prime",
+            "_description": "Near-prime marginal coverage >= 1.00x",
+            "in_metric": "'DSCR'",
+            "in_ratio": ">= 1.0",
+            "out_status": "'NEAR_PRIME'",
+            "out_approved": "true",
+            "out_rationale": "'Marginal coverage ({ratio}x). Operating cash flow covers existing debt but leaves minimal cushion for revenue volatility. Personal guarantee or collateral required.'"
+          },
+          {
+            "_id": "rule_dscr_distressed",
+            "_description": "Distressed deficit coverage < 1.00x",
+            "in_metric": "'DSCR'",
+            "in_ratio": "< 1.0",
+            "out_status": "'DISTRESSED'",
+            "out_approved": "false",
+            "out_rationale": "'Deficit coverage ({ratio}x). Operating cash flow is insufficient to service current debt obligations without external capital or refinancing.'"
+          },
+          {
+            "_id": "rule_fccr_free",
+            "_description": "Zero debt and zero lease obligations",
+            "in_metric": "'FCCR'",
+            "in_ratio": ">= 999.0",
+            "out_status": "'CHARGE_FREE'",
+            "out_approved": "true",
+            "out_rationale": "'Company has zero debt service and zero operating lease obligations.'"
+          },
+          {
+            "_id": "rule_fccr_approved",
+            "_description": "Healthy FCCR coverage >= 1.25x",
+            "in_metric": "'FCCR'",
+            "in_ratio": ">= 1.25",
+            "out_status": "'APPROVED'",
+            "out_approved": "true",
+            "out_rationale": "'Healthy coverage ({ratio}x). Sufficient cash flow to cover leases and debt.'"
+          },
+          {
+            "_id": "rule_fccr_borderline",
+            "_description": "Borderline FCCR coverage >= 1.15x",
+            "in_metric": "'FCCR'",
+            "in_ratio": ">= 1.15",
+            "out_status": "'BORDERLINE'",
+            "out_approved": "true",
+            "out_rationale": "'Borderline coverage ({ratio}x). Sensitive to facility rent or rate increases.'"
+          },
+          {
+            "_id": "rule_fccr_high_risk",
+            "_description": "High risk FCCR coverage < 1.15x",
+            "in_metric": "'FCCR'",
+            "in_ratio": "< 1.15",
+            "out_status": "'HIGH_RISK'",
+            "out_approved": "false",
+            "out_rationale": "'Inadequate fixed-charge coverage ({ratio}x). High risk of lease or debt default.'"
+          },
+          {
+            "_id": "rule_default",
+            "_description": "Default baseline",
+            "in_metric": "",
+            "in_ratio": "",
+            "out_status": "'STANDARD'",
+            "out_approved": "true",
+            "out_rationale": "'Standard debt coverage baseline.'"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "DebtCovenantResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

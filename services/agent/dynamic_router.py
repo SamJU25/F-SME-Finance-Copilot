@@ -356,5 +356,20 @@ def classify_intent_dynamic(
 
 
 def classify_sub_intent_dynamic(message: str, history: Optional[List[Any]] = None) -> str:
-    """Classifies cash diagnostic sub-intent dynamically using vector semantic similarity."""
-    return FastEmbedSemanticRouter.get_instance().classify_sub_intent(message, history=history)
+    """Classifies cash diagnostic sub-intent dynamically by reference via DecisionEngineRegistry."""
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.INTENT_ROUTING,
+        input_state={
+            "query": message.strip(),
+            "history": history,
+            "classify_sub_intent_only": True,
+        },
+        execution_mode="AUTO",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    sub = decision_res.output_payload.get("sub_intent")
+    if sub:
+        return sub
+    return decision_res.selected_choice

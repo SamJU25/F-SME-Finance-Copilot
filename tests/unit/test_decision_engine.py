@@ -456,3 +456,137 @@ def test_zen_adapter_working_capital_policy():
     ))
     assert res_gen.selected_choice == "CASH_GENERATIVE"
     assert res_gen.output_payload["is_risk"] is False
+
+
+def test_zen_adapter_debt_covenant_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # DSCR Prime
+    res_prime = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "DSCR", "ratio": 1.50},
+    ))
+    assert res_prime.selected_choice == "PRIME"
+    assert res_prime.output_payload["is_approved"] is True
+    assert res_prime.matched_rule_id == "rule_dscr_prime"
+
+    # DSCR Standard
+    res_std = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "DSCR", "ratio": 1.30},
+    ))
+    assert res_std.selected_choice == "STANDARD"
+    assert res_std.output_payload["is_approved"] is True
+
+    # DSCR Near Prime
+    res_near = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "DSCR", "ratio": 1.10},
+    ))
+    assert res_near.selected_choice == "NEAR_PRIME"
+    assert res_near.output_payload["is_approved"] is True
+
+    # DSCR Distressed
+    res_dist = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "DSCR", "ratio": 0.85},
+    ))
+    assert res_dist.selected_choice == "DISTRESSED"
+    assert res_dist.output_payload["is_approved"] is False
+
+    # DSCR Zero Debt Free
+    res_free = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "DSCR", "ratio": 999.00},
+    ))
+    assert res_free.selected_choice == "DEBT_FREE"
+    assert res_free.output_payload["is_approved"] is True
+
+    # FCCR Approved
+    res_fccr = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "FCCR", "ratio": 1.53},
+    ))
+    assert res_fccr.selected_choice == "APPROVED"
+    assert res_fccr.output_payload["is_approved"] is True
+
+    # FCCR Borderline
+    res_fccr_b = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "FCCR", "ratio": 1.18},
+    ))
+    assert res_fccr_b.selected_choice == "BORDERLINE"
+
+    # FCCR High Risk
+    res_fccr_hr = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "FCCR", "ratio": 0.90},
+    ))
+    assert res_fccr_hr.selected_choice == "HIGH_RISK"
+    assert res_fccr_hr.output_payload["is_approved"] is False
+
+
+def test_zen_adapter_usury_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # Predatory rate > 36%
+    res_pred = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.USURY_COMPLIANCE,
+        input_state={"apr": 45.00, "product_type": "INVOICE_FACTORING"},
+    ))
+    assert res_pred.selected_choice == "PREDATORY"
+    assert res_pred.output_payload["is_predatory"] is True
+    assert res_pred.output_payload["compliance_status"] == "PREDATORY_FLAGGED"
+    assert res_pred.matched_rule_id == "rule_usury_predatory"
+
+    # Non-predatory rate <= 36%
+    res_ok = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.USURY_COMPLIANCE,
+        input_state={"apr": 12.50, "product_type": "WORKING_CAPITAL_LINE"},
+    ))
+    assert res_ok.selected_choice == "COMPLIANT"
+    assert res_ok.output_payload["is_predatory"] is False
+    assert res_ok.output_payload["compliance_status"] == "COMPLIANT"
+    assert res_ok.matched_rule_id == "rule_usury_compliant"
+
+
+def test_zen_adapter_concentration_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # Critical Dependency
+    res_crit = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.CONCENTRATION_RISK,
+        input_state={"top_1_pct": 55.0, "hhi": 3200.0},
+    ))
+    assert res_crit.selected_choice == "CRITICAL_DEPENDENCY"
+    assert res_crit.output_payload["is_risk"] is True
+
+    # Moderate Concentration
+    res_mod = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.CONCENTRATION_RISK,
+        input_state={"top_1_pct": 30.0, "hhi": 1800.0},
+    ))
+    assert res_mod.selected_choice == "MODERATE_CONCENTRATION"
+    assert res_mod.output_payload["is_risk"] is True
+
+    # Diversified
+    res_div = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.CONCENTRATION_RISK,
+        input_state={"top_1_pct": 15.0, "hhi": 800.0},
+    ))
+    assert res_div.selected_choice == "DIVERSIFIED"
+    assert res_div.output_payload["is_risk"] is False
+
+
+def test_sub_intent_classification_via_decision_engine():
+    from services.agent.dynamic_router import classify_sub_intent_dynamic
+
+    sub_dscr = classify_sub_intent_dynamic("What is our debt service coverage ratio and DSCR covenant?")
+    assert sub_dscr == "DSCR"
+
+    sub_fccr = classify_sub_intent_dynamic("Calculate our fixed charge coverage ratio FCCR with lease expenses")
+    assert sub_fccr == "FCCR"
+

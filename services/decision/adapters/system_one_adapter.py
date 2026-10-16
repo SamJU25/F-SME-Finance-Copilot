@@ -64,6 +64,17 @@ class SystemOneModelAdapter(AbstractDecisionEngine):
         history = request.input_state.get("history")
         has_csv = bool(request.input_state.get("has_csv", False))
 
+        if request.input_state.get("classify_sub_intent_only"):
+            sub_intent = self._router.classify_sub_intent(query, history=history)
+            return DecisionResult(
+                domain=DecisionDomain.INTENT_ROUTING,
+                selected_choice=sub_intent,
+                confidence_score=0.90,
+                engine_id=self.engine_id,
+                rationale=f"Single-pass ONNX embedding classified sub-intent as '{sub_intent}'.",
+                output_payload={"sub_intent": sub_intent},
+            )
+
         intent, sub_intent, is_aligned = self._router.classify(
             query=query,
             history=history,

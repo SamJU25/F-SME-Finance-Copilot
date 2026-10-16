@@ -29,30 +29,20 @@ def calculate_dscr(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
 
-    if dscr >= Decimal("1.35"):
-        status = "PRIME"
-        rationale = (
-            f"Strong coverage ({dscr}x). Operating cash flow provides substantial buffer "
-            "for principal and interest payments at institutional prime rates."
-        )
-    elif dscr >= Decimal("1.25"):
-        status = "STANDARD"
-        rationale = (
-            f"Adequate coverage ({dscr}x). Meets standard commercial bank and SBA 7(a) "
-            "underwriting threshold (minimum 1.25x)."
-        )
-    elif dscr >= Decimal("1.00"):
-        status = "NEAR_PRIME"
-        rationale = (
-            f"Marginal coverage ({dscr}x). Operating cash flow covers existing debt but leaves "
-            "minimal cushion for revenue volatility. Personal guarantee or collateral required."
-        )
-    else:
-        status = "DISTRESSED"
-        rationale = (
-            f"Deficit coverage ({dscr}x). Operating cash flow is insufficient to service current "
-            "debt obligations without external capital or refinancing."
-        )
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "DSCR", "ratio": float(dscr)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    status = decision_res.selected_choice
+    rationale = decision_res.output_payload.get("rationale") or decision_res.rationale or (
+        f"Coverage ratio of {dscr}x evaluated under debt covenant policy."
+    )
+    if "{ratio}" in rationale:
+        rationale = rationale.replace("{ratio}", str(dscr))
 
     return dscr, status, rationale
 
@@ -77,15 +67,20 @@ def calculate_fccr(
     available = adjusted_ebitda + operating_lease_expense
     fccr = (available / charges).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    if fccr >= Decimal("1.25"):
-        status = "APPROVED"
-        rationale = f"Healthy coverage ({fccr}x). Sufficient cash flow to cover leases and debt."
-    elif fccr >= Decimal("1.15"):
-        status = "BORDERLINE"
-        rationale = f"Borderline coverage ({fccr}x). Sensitive to facility rent or rate increases."
-    else:
-        status = "HIGH_RISK"
-        rationale = f"Inadequate fixed-charge coverage ({fccr}x). High risk of lease or debt default."
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.DEBT_AFFORDABILITY,
+        input_state={"metric": "FCCR", "ratio": float(fccr)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    status = decision_res.selected_choice
+    rationale = decision_res.output_payload.get("rationale") or decision_res.rationale or (
+        f"Fixed charge coverage ratio of {fccr}x evaluated under debt covenant policy."
+    )
+    if "{ratio}" in rationale:
+        rationale = rationale.replace("{ratio}", str(fccr))
 
     return fccr, status, rationale
 
@@ -188,7 +183,15 @@ def calculate_factoring_proceeds(
         * Decimal("100")
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    is_predatory = apr > Decimal("36.00")
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.USURY_COMPLIANCE,
+        input_state={"apr": float(apr), "product_type": "INVOICE_FACTORING"},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    is_predatory = bool(decision_res.output_payload.get("is_predatory", apr > Decimal("36.00")))
 
     return advance_amount, rebate_amount, net_proceeds, apr, is_predatory
 

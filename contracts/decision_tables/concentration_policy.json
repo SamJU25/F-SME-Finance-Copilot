@@ -1,0 +1,110 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "ConcentrationRiskRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "ConcentrationRiskPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_top_1_pct",
+            "field": "top_1_pct",
+            "name": "Top 1 Client Share Percentage"
+          },
+          {
+            "id": "in_hhi",
+            "field": "hhi",
+            "name": "Herfindahl-Hirschman Index"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_tier",
+            "field": "tier",
+            "name": "Concentration Risk Tier"
+          },
+          {
+            "id": "out_risk",
+            "field": "is_risk",
+            "name": "Is Material Concentration Risk"
+          },
+          {
+            "id": "out_assessment",
+            "field": "assessment",
+            "name": "Concentration Risk Assessment"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_concentration_critical_top1",
+            "_description": "Top client > 50% revenue creates critical dependency",
+            "in_top_1_pct": "> 50.0",
+            "in_hhi": "",
+            "out_tier": "'CRITICAL_DEPENDENCY'",
+            "out_risk": "true",
+            "out_assessment": "'Severe concentration: Single largest customer accounts for {top_1}% of inflows (HHI: {hhi}). Departure of top client creates immediate insolvency risk.'"
+          },
+          {
+            "_id": "rule_concentration_critical_hhi",
+            "_description": "HHI > 2500 indicates severe concentration",
+            "in_top_1_pct": "",
+            "in_hhi": "> 2500.0",
+            "out_tier": "'CRITICAL_DEPENDENCY'",
+            "out_risk": "true",
+            "out_assessment": "'Severe concentration: Single largest customer accounts for {top_1}% of inflows (HHI: {hhi}). Departure of top client creates immediate insolvency risk.'"
+          },
+          {
+            "_id": "rule_concentration_moderate_top1",
+            "_description": "Top client > 25% revenue indicates moderate concentration",
+            "in_top_1_pct": "> 25.0",
+            "in_hhi": "",
+            "out_tier": "'MODERATE_CONCENTRATION'",
+            "out_risk": "true",
+            "out_assessment": "'Elevated concentration: Top customer accounts for {top_1}% and top 3 account for {top_3}% (HHI: {hhi}). Commercial underwriting covenants typically flag >25%.'"
+          },
+          {
+            "_id": "rule_concentration_moderate_hhi",
+            "_description": "HHI > 1500 indicates moderate concentration",
+            "in_top_1_pct": "",
+            "in_hhi": "> 1500.0",
+            "out_tier": "'MODERATE_CONCENTRATION'",
+            "out_risk": "true",
+            "out_assessment": "'Elevated concentration: Top customer accounts for {top_1}% and top 3 account for {top_3}% (HHI: {hhi}). Commercial underwriting covenants typically flag >25%.'"
+          },
+          {
+            "_id": "rule_concentration_diversified",
+            "_description": "Diversified revenue portfolio",
+            "in_top_1_pct": "",
+            "in_hhi": "",
+            "out_tier": "'DIVERSIFIED'",
+            "out_risk": "false",
+            "out_assessment": "'Healthy customer diversification: Top customer accounts for {top_1}% (HHI: {hhi} < 1,500 threshold). Low single-client exposure.'"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "ConcentrationRiskResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

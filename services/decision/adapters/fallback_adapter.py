@@ -30,6 +30,9 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             DecisionDomain.EXPENSE_TRIAGE,
             DecisionDomain.INTENT_ROUTING,
             DecisionDomain.WORKING_CAPITAL_RISK,
+            DecisionDomain.DEBT_AFFORDABILITY,
+            DecisionDomain.USURY_COMPLIANCE,
+            DecisionDomain.CONCENTRATION_RISK,
         ]
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
@@ -47,6 +50,12 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             return self._evaluate_intent_routing(state, request.candidate_options)
         elif request.domain == DecisionDomain.WORKING_CAPITAL_RISK:
             return self._evaluate_working_capital_risk(state)
+        elif request.domain == DecisionDomain.DEBT_AFFORDABILITY:
+            return self._evaluate_debt_affordability(state)
+        elif request.domain == DecisionDomain.USURY_COMPLIANCE:
+            return self._evaluate_usury_compliance(state)
+        elif request.domain == DecisionDomain.CONCENTRATION_RISK:
+            return self._evaluate_concentration_risk(state)
         else:
             raise ValueError(f"Domain {request.domain} not supported by {self.engine_id}")
 
@@ -194,7 +203,32 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
     def _evaluate_intent_routing(
         self, state: Dict[str, Any], candidate_options: List[str]
     ) -> DecisionResult:
-        prompt = str(state.get("prompt", state.get("message", ""))).lower()
+        prompt = str(state.get("prompt", state.get("message", state.get("query", "")))).lower()
+
+        if state.get("classify_sub_intent_only"):
+            sub = "GENERAL"
+            if any(w in prompt for w in ("dscr", "debt service coverage")):
+                sub = "DSCR"
+            elif any(w in prompt for w in ("fccr", "fixed charge")):
+                sub = "FCCR"
+            elif any(w in prompt for w in ("runway", "burn")):
+                sub = "RUNWAY"
+            elif any(w in prompt for w in ("factoring", "invoice advance")):
+                sub = "FACTORING"
+            elif any(w in prompt for w in ("ccc", "working capital", "cash conversion")):
+                sub = "WORKING_CAPITAL"
+            elif any(w in prompt for w in ("concentration", "top customer")):
+                sub = "ATTRITION"
+
+            return DecisionResult(
+                domain=DecisionDomain.INTENT_ROUTING,
+                selected_choice=sub,
+                confidence_score=0.75,
+                engine_id=self.engine_id,
+                rationale=f"Fallback heuristic classified sub-intent as '{sub}'.",
+                output_payload={"sub_intent": sub},
+            )
+
         if any(w in prompt for w in ("borrow", "loan", "factoring", "apr", "credit line")):
             choice = "CREDIT_UNDERWRITING"
         elif any(w in prompt for w in ("stage", "transfer", "draw", "pledge", "execute")):
@@ -264,3 +298,150 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             matched_rule_id=rule_id,
             output_payload={"status": status, "is_risk": is_risk},
         )
+
+    def _evaluate_debt_affordability(self, state: Dict[str, Any]) -> DecisionResult:
+        metric = str(state.get("metric", "DSCR")).upper()
+        ratio = Decimal(str(state.get("ratio", 0)))
+
+        if metric == "DSCR":
+            if ratio >= Decimal("999.0"):
+                status = "DEBT_FREE"
+                is_approved = True
+                rule_id = "fallback_dscr_free"
+                rationale = "Company has zero scheduled debt service obligations."
+            elif ratio >= Decimal("1.35"):
+                status = "PRIME"
+                is_approved = True
+                rule_id = "fallback_dscr_prime"
+                rationale = (
+                    f"Strong coverage ({ratio}x). Operating cash flow provides substantial buffer "
+                    "for principal and interest payments at institutional prime rates."
+                )
+            elif ratio >= Decimal("1.25"):
+                status = "STANDARD"
+                is_approved = True
+                rule_id = "fallback_dscr_standard"
+                rationale = (
+                    f"Adequate coverage ({ratio}x). Meets standard commercial bank and SBA 7(a) "
+                    "underwriting threshold (minimum 1.25x)."
+                )
+            elif ratio >= Decimal("1.00"):
+                status = "NEAR_PRIME"
+                is_approved = True
+                rule_id = "fallback_dscr_near_prime"
+                rationale = (
+                    f"Marginal coverage ({ratio}x). Operating cash flow covers existing debt but leaves "
+                    "minimal cushion for revenue volatility. Personal guarantee or collateral required."
+                )
+            else:
+                status = "DISTRESSED"
+                is_approved = False
+                rule_id = "fallback_dscr_distressed"
+                rationale = (
+                    f"Deficit coverage ({ratio}x). Operating cash flow is insufficient to service current "
+                    "debt obligations without external capital or refinancing."
+                )
+        elif metric == "FCCR":
+            if ratio >= Decimal("999.0"):
+                status = "CHARGE_FREE"
+                is_approved = True
+                rule_id = "fallback_fccr_free"
+                rationale = "Company has zero debt service and zero operating lease obligations."
+            elif ratio >= Decimal("1.25"):
+                status = "APPROVED"
+                is_approved = True
+                rule_id = "fallback_fccr_approved"
+                rationale = f"Healthy coverage ({ratio}x). Sufficient cash flow to cover leases and debt."
+            elif ratio >= Decimal("1.15"):
+                status = "BORDERLINE"
+                is_approved = True
+                rule_id = "fallback_fccr_borderline"
+                rationale = f"Borderline coverage ({ratio}x). Sensitive to facility rent or rate increases."
+            else:
+                status = "HIGH_RISK"
+                is_approved = False
+                rule_id = "fallback_fccr_high_risk"
+                rationale = f"Inadequate fixed-charge coverage ({ratio}x). High risk of lease or debt default."
+        else:
+            status = "STANDARD"
+            is_approved = True
+            rule_id = "fallback_debt_default"
+            rationale = "Standard debt coverage baseline."
+
+        return DecisionResult(
+            domain=DecisionDomain.DEBT_AFFORDABILITY,
+            selected_choice=status,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=rule_id,
+            rationale=rationale,
+            output_payload={"status": status, "is_approved": is_approved, "rationale": rationale},
+        )
+
+    def _evaluate_usury_compliance(self, state: Dict[str, Any]) -> DecisionResult:
+        apr = Decimal(str(state.get("apr", 0)))
+        ceiling = Decimal(str(state.get("ceiling", "36.00")))
+        is_predatory = apr > ceiling
+
+        status = "PREDATORY_FLAGGED" if is_predatory else "COMPLIANT"
+        rationale = (
+            f"APR exceeds statutory truth-in-lending and predatory lending ceiling of {ceiling}%."
+            if is_predatory
+            else "APR is within legal non-predatory commercial thresholds."
+        )
+
+        return DecisionResult(
+            domain=DecisionDomain.USURY_COMPLIANCE,
+            selected_choice="PREDATORY" if is_predatory else "COMPLIANT",
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id="fallback_usury_predatory" if is_predatory else "fallback_usury_compliant",
+            rationale=rationale,
+            output_payload={
+                "is_predatory": is_predatory,
+                "compliance_status": status,
+                "max_allowed_apr": str(ceiling),
+                "rationale": rationale,
+            },
+        )
+
+    def _evaluate_concentration_risk(self, state: Dict[str, Any]) -> DecisionResult:
+        top_1_pct = Decimal(str(state.get("top_1_pct", 0)))
+        hhi = Decimal(str(state.get("hhi", 0)))
+        top_3_pct = state.get("top_3_pct", "")
+
+        if top_1_pct > Decimal("50.00") or hhi > Decimal("2500.00"):
+            tier = "CRITICAL_DEPENDENCY"
+            is_risk = True
+            rule_id = "fallback_concentration_critical"
+            assessment = (
+                f"Severe concentration: Single largest customer accounts for {top_1_pct}% of inflows "
+                f"(HHI: {hhi}). Departure of top client creates immediate insolvency risk."
+            )
+        elif top_1_pct > Decimal("25.00") or hhi > Decimal("1500.00"):
+            tier = "MODERATE_CONCENTRATION"
+            is_risk = True
+            rule_id = "fallback_concentration_moderate"
+            assessment = (
+                f"Elevated concentration: Top customer accounts for {top_1_pct}% and top 3 account for "
+                f"{top_3_pct}% (HHI: {hhi}). Commercial underwriting covenants typically flag >25%."
+            )
+        else:
+            tier = "DIVERSIFIED"
+            is_risk = False
+            rule_id = "fallback_concentration_diversified"
+            assessment = (
+                f"Healthy customer diversification: Top customer accounts for {top_1_pct}% "
+                f"(HHI: {hhi} < 1,500 threshold). Low single-client exposure."
+            )
+
+        return DecisionResult(
+            domain=DecisionDomain.CONCENTRATION_RISK,
+            selected_choice=tier,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=rule_id,
+            rationale=assessment,
+            output_payload={"tier": tier, "is_risk": is_risk, "assessment": assessment},
+        )
+

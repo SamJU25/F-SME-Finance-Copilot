@@ -232,6 +232,20 @@ def underwrite_sme_transactions(
     )
 
 
+def _evaluate_is_predatory(apr_percent: Decimal, product_type: ProductType, default_threshold: Decimal) -> bool:
+    try:
+        from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+        req = DecisionRequest(
+            domain=DecisionDomain.USURY_COMPLIANCE,
+            input_state={"apr": float(apr_percent), "product_type": product_type.value, "ceiling": str(default_threshold)},
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        res = DecisionEngineRegistry.get_instance().evaluate(req)
+        return bool(res.output_payload.get("is_predatory", apr_percent > default_threshold))
+    except Exception:
+        return apr_percent > default_threshold
+
+
 def match_financing_options(
     dossier: UnderwritingDossier,
     predatory_threshold: Decimal = PREDATORY_APR_THRESHOLD,
@@ -244,6 +258,7 @@ def match_financing_options(
     max_amount = dossier.max_qualified_limit
 
     if ProductType.WORKING_CAPITAL_LINE in dossier.recommended_product_types and max_amount > 0:
+        line_apr = Decimal("12.50")
         options.append(
             FinancingOption(
                 provider="Commercial Banking Partner",
@@ -252,8 +267,8 @@ def match_financing_options(
                 max_amount=max_amount,
                 term_days=365,
                 factor_rate=None,
-                apr_percent=Decimal("12.50"),
-                is_predatory=False,
+                apr_percent=line_apr,
+                is_predatory=_evaluate_is_predatory(line_apr, ProductType.WORKING_CAPITAL_LINE, predatory_threshold),
                 suitability_score=95 if dossier.risk_tier == RiskTier.PRIME else 75,
                 requires_tier_3_hitl=True,
             )
@@ -262,7 +277,6 @@ def match_financing_options(
     if ProductType.INVOICE_FACTORING in dossier.recommended_product_types and max_amount > 0:
         factor_rate = Decimal("1.025")  # 2.5% fee for 30 days
         factoring_apr = convert_factor_rate_to_apr(factor_rate, 30)
-        is_predatory = factoring_apr > predatory_threshold
         options.append(
             FinancingOption(
                 provider="Receivables Factoring Partner",
@@ -272,7 +286,7 @@ def match_financing_options(
                 term_days=30,
                 factor_rate=factor_rate,
                 apr_percent=factoring_apr,
-                is_predatory=is_predatory,
+                is_predatory=_evaluate_is_predatory(factoring_apr, ProductType.INVOICE_FACTORING, predatory_threshold),
                 suitability_score=85,
                 requires_tier_3_hitl=True,
             )
@@ -290,7 +304,7 @@ def match_financing_options(
                 term_days=90,
                 factor_rate=rbf_factor,
                 apr_percent=rbf_apr,
-                is_predatory=rbf_apr > predatory_threshold,
+                is_predatory=_evaluate_is_predatory(rbf_apr, ProductType.REVENUE_BASED_FINANCING, predatory_threshold),
                 suitability_score=78,
                 requires_tier_3_hitl=True,
             )

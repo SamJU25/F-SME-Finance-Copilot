@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "UsuryComplianceRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "UsuryComplianceTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_apr",
+            "field": "apr",
+            "name": "Annualized Percentage Rate"
+          },
+          {
+            "id": "in_product",
+            "field": "product_type",
+            "name": "Financing Product Type"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_is_predatory",
+            "field": "is_predatory",
+            "name": "Is Predatory Financing Facility"
+          },
+          {
+            "id": "out_status",
+            "field": "compliance_status",
+            "name": "Truth-in-Lending Compliance Status"
+          },
+          {
+            "id": "out_max_apr",
+            "field": "max_allowed_apr",
+            "name": "Statutory APR Usury Ceiling"
+          },
+          {
+            "id": "out_rationale",
+            "field": "rationale",
+            "name": "Compliance Assessment Rationale"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_usury_predatory",
+            "_description": "APR exceeds statutory truth-in-lending ceiling of 36%",
+            "in_apr": "> 36.0",
+            "in_product": "",
+            "out_is_predatory": "true",
+            "out_status": "'PREDATORY_FLAGGED'",
+            "out_max_apr": "'36.00'",
+            "out_rationale": "'APR exceeds statutory truth-in-lending and predatory lending ceiling of 36.00%.'"
+          },
+          {
+            "_id": "rule_usury_compliant",
+            "_description": "APR satisfies non-predatory threshold <= 36%",
+            "in_apr": "<= 36.0",
+            "in_product": "",
+            "out_is_predatory": "false",
+            "out_status": "'COMPLIANT'",
+            "out_max_apr": "'36.00'",
+            "out_rationale": "'APR is within legal non-predatory commercial thresholds.'"
+          },
+          {
+            "_id": "rule_default",
+            "_description": "Default compliance baseline",
+            "in_apr": "",
+            "in_product": "",
+            "out_is_predatory": "false",
+            "out_status": "'COMPLIANT'",
+            "out_max_apr": "'36.00'",
+            "out_rationale": "'Standard non-predatory compliance baseline.'"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "UsuryComplianceResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}
