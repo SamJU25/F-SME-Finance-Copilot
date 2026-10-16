@@ -1092,6 +1092,26 @@ input[type='number'].threshold-custom-input {
   user-select: none;
 }
 
+.chat-numbered-point {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 3px 0;
+  line-height: 1.5;
+}
+
+.chat-number-badge {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--green);
+  font-variant-numeric: tabular-nums lining-nums;
+  flex-shrink: 0;
+}
+
+.chat-number-content {
+  flex: 1;
+}
+
 .chat-inline-code {
   font-family: var(--mono);
   background: rgba(20, 107, 85, 0.08);
@@ -1103,8 +1123,13 @@ input[type='number'].threshold-custom-input {
 }
 
 .chat-bubble strong {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.chat-msg.user .chat-bubble strong {
+  color: white;
 }
 
 

@@ -453,12 +453,12 @@ function FormattedChatBubble({ text }: { text: string }) {
       return;
     }
 
-    if (trimmed.startsWith('### ') || trimmed.startsWith('## ')) {
+    if (trimmed.startsWith('#### ') || trimmed.startsWith('### ') || trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
       flushList();
       const heading = trimmed.replace(/^#+\s*/, '');
       elements.push(
         <h4 key={`h-${idx}`} className="chat-heading">
-          {heading}
+          {renderInline(heading)}
         </h4>
       );
       return;
@@ -471,6 +471,18 @@ function FormattedChatBubble({ text }: { text: string }) {
           <span className="chat-bullet-dot">•</span>
           <span>{renderInline(content)}</span>
         </li>
+      );
+      return;
+    }
+
+    const numMatch = trimmed.match(/^(\d+)[.)]\s+(.*)$/);
+    if (numMatch) {
+      flushList();
+      elements.push(
+        <div key={`num-${idx}`} className="chat-numbered-point">
+          <span className="chat-number-badge">{numMatch[1]}.</span>
+          <span className="chat-number-content">{renderInline(numMatch[2])}</span>
+        </div>
       );
       return;
     }
