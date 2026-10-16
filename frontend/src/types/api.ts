@@ -217,5 +217,54 @@ export interface FetchModelsResponse {
   message?: string;
 }
 
+// Decision Engine Types
+export type DecisionDomain =
+  | 'UNDERWRITING'
+  | 'SECURITY_GATE'
+  | 'DEFICIT_SEVERITY'
+  | 'EXPENSE_TRIAGE'
+  | 'INTENT_ROUTING'
+  | 'WORKING_CAPITAL_RISK'
+  | 'DEBT_AFFORDABILITY'
+  | 'USURY_COMPLIANCE'
+  | 'CONCENTRATION_RISK'
+  | 'UNIT_ECONOMICS'
+  | 'REVENUE_VOLATILITY'
+  | 'FACILITY_MATCHING';
+
+export interface DecisionEngineInfo {
+  engine_id: string;
+  supported_domains: DecisionDomain[];
+  is_available: boolean;
+}
+
+export interface DecisionEnginesResponse {
+  status: string;
+  total_engines: number;
+  engines: DecisionEngineInfo[];
+}
+
+export interface DecisionApiRequest {
+  domain: DecisionDomain;
+  input_state: Record<string, unknown>;
+  candidate_options?: string[];
+  execution_mode?: 'DETERMINISTIC_ONLY' | 'HYBRID' | 'PROBABILISTIC_ALLOWED';
+  confidence_threshold?: number;
+  fallback_on_low_confidence?: boolean;
+}
+
+export interface DecisionApiResponse {
+  domain: DecisionDomain;
+  selected_choice: string;
+  confidence_score: number;
+  engine_id: string;
+  matched_rule_id?: string | null;
+  matched_rule_description?: string | null;
+  adverse_factors?: string[];
+  evaluation_duration_us?: number | null;
+  rationale?: string | null;
+  output_payload: Record<string, unknown>;
+}
+
 
 

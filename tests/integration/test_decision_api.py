@@ -101,6 +101,7 @@ def test_reload_decision_tables_api():
     assert zen_status["CONCENTRATION_RISK"] == "COMPILED"
     assert zen_status["UNIT_ECONOMICS"] == "COMPILED"
     assert zen_status["REVENUE_VOLATILITY"] == "COMPILED"
+    assert zen_status["FACILITY_MATCHING"] == "COMPILED"
 
 
 def test_evaluate_debt_affordability_api():
@@ -194,6 +195,25 @@ def test_evaluate_revenue_volatility_api():
     assert data["selected_choice"] == "LOW"
     assert data["output_payload"]["volatility_tier"] == "LOW"
     assert data["matched_rule_id"] == "rule_volatility_low"
+
+
+def test_evaluate_facility_matching_api():
+    response = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "FACILITY_MATCHING",
+            "input_state": {"product_type": "WORKING_CAPITAL_LINE", "risk_tier": "PRIME"},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_choice"] == "Revolving Working Capital Line"
+    assert data["output_payload"]["provider"] == "Commercial Banking Partner"
+    assert data["output_payload"]["suitability_score"] == 95
+    assert data["output_payload"]["limit_multiplier"] == 1.00
+    assert data["output_payload"]["requires_tier_3_hitl"] is True
+
 
 
 

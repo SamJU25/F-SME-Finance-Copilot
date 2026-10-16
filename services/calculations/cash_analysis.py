@@ -51,7 +51,6 @@ def calculate_cash_analysis(
     current_date = as_of_date or date.today()
     raw_age_days = (current_date - last_date).days
     statement_age_days = max(0, raw_age_days)
-    analysis_mode = "LIVE_OPERATING" if raw_age_days <= 35 else "HISTORICAL_AUDIT"
     current_balance = ordered[-1].closing_balance
     net_period_change = sum((row.amount for row in ordered), Decimal("0"))
     gross_inflows = sum((r.amount for r in ordered if r.amount > 0), Decimal("0.00")).quantize(
@@ -86,10 +85,13 @@ def calculate_cash_analysis(
             "average_daily_burn": float(average_daily_burn),
             "runway_days": runway_days,
             "alert_threshold_days": alert_threshold_days,
+            "statement_age_days": statement_age_days,
         },
         execution_mode="DETERMINISTIC_ONLY",
     )
-    cash_status = DecisionEngineRegistry.get_instance().evaluate(decision_req).selected_choice
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    cash_status = decision_res.selected_choice
+    analysis_mode = str(decision_res.output_payload.get("analysis_mode", "LIVE_OPERATING" if raw_age_days <= 35 else "HISTORICAL_AUDIT"))
 
     return CashAnalysisResult(
         currency=ordered[0].currency,

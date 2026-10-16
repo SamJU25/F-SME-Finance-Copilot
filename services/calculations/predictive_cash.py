@@ -232,25 +232,10 @@ def calculate_predictive_cash(
                 primary_deficit_trigger = current_trigger
                 break
 
-    # Evaluate deficit severity horizon by reference (zero hardcoding)
-    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
-
-    decision_req = DecisionRequest(
-        domain=DecisionDomain.DEFICIT_SEVERITY,
-        input_state={
-            "days_until_deficit": days_until_deficit,
-            "has_deficit": days_until_deficit is not None,
-        },
-        execution_mode="DETERMINISTIC_ONLY",
-    )
-    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
-    severity = decision_res.output_payload.get("severity", decision_res.selected_choice)
-    has_deficit = bool(decision_res.output_payload.get("has_projected_deficit", severity != "SAFE"))
-
     # Calculate recommended buffer bridge (shortfall + 20% safety margin, rounded to hundreds)
-    if has_deficit:
+    has_prelim_deficit = days_until_deficit is not None or current_balance <= 0
+    if has_prelim_deficit:
         raw_bridge = shortfall * Decimal("1.20")
-        # Round up to nearest $500
         remainder = raw_bridge % Decimal("500")
         if remainder > 0:
             recommended_bridge = raw_bridge + (Decimal("500") - remainder)
@@ -260,30 +245,26 @@ def calculate_predictive_cash(
     else:
         recommended_bridge = Decimal("0.00")
 
-    # Generate explanatory narrative
-    trigger_suffix = f" (Triggered by {primary_deficit_trigger})" if primary_deficit_trigger and primary_deficit_trigger != "OPERATING_BURN" else ""
+    # Evaluate deficit severity horizon and explanatory narrative by reference (zero hardcoding)
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
 
-    if severity == "CRITICAL":
-        explanation = (
-            f"CRITICAL EARLY WARNING: Projected cash deficit in {days_until_deficit} days ({projected_date}){trigger_suffix}. "
-            f"Estimated shortfall is ${shortfall:,.2f}. Pre-emptive working capital draw of ${recommended_bridge:,.2f} "
-            "is recommended to prevent operational stoppage."
-        )
-    elif severity == "WARNING":
-        explanation = (
-            f"ELEVATED DEFICIT RISK: Cash burn trajectory indicates a shortfall in {days_until_deficit} days ({projected_date}){trigger_suffix}. "
-            f"Projected deficit of ${shortfall:,.2f} requires liquidity action within 30 days."
-        )
-    elif severity == "WATCH":
-        explanation = (
-            f"EXTENDED WATCH: Operations remain solvent for 60+ days, with projected deficit in {days_until_deficit} days{trigger_suffix}. "
-            "Monitor incoming receivables and accounts payable timing."
-        )
-    else:
-        explanation = (
-            f"HEALTHY LIQUIDITY: Operations solvent across all 90-day forecast windows. "
-            f"Projected 90-day reserve: ${d90:,.2f}."
-        )
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.DEFICIT_SEVERITY,
+        input_state={
+            "days_until_deficit": days_until_deficit,
+            "has_deficit": has_prelim_deficit,
+            "projected_date": projected_date,
+            "primary_deficit_trigger": primary_deficit_trigger,
+            "shortfall": f"{shortfall:,.2f}",
+            "recommended_bridge": f"{recommended_bridge:,.2f}",
+            "d90": f"{d90:,.2f}",
+        },
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    severity = decision_res.output_payload.get("severity", decision_res.selected_choice)
+    has_deficit = bool(decision_res.output_payload.get("has_projected_deficit", severity != "SAFE"))
+    explanation = decision_res.output_payload.get("explanation") or decision_res.rationale or ""
 
     if effective_target_days is not None and target_balance is not None:
         explanation += f" Target {effective_target_days}-day forecast ({target_date}) [{confidence_tier} CONFIDENCE]: projected balance ${target_balance:,.2f}."

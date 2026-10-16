@@ -1,0 +1,160 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "FacilityMatchingRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "FacilityMatchingPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_product",
+            "field": "product_type",
+            "name": "Financial Product Type"
+          },
+          {
+            "id": "in_tier",
+            "field": "risk_tier",
+            "name": "Applicant Risk Tier"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_provider",
+            "field": "provider",
+            "name": "Lending Institution Provider"
+          },
+          {
+            "id": "out_name",
+            "field": "facility_name",
+            "name": "Commercial Facility Name"
+          },
+          {
+            "id": "out_term",
+            "field": "term_days",
+            "name": "Facility Tenor in Days"
+          },
+          {
+            "id": "out_factor",
+            "field": "factor_rate",
+            "name": "Quoted Factor Rate"
+          },
+          {
+            "id": "out_apr",
+            "field": "apr_percent",
+            "name": "Base Quoted APR"
+          },
+          {
+            "id": "out_mult",
+            "field": "limit_multiplier",
+            "name": "Facility Maximum Limit Multiplier"
+          },
+          {
+            "id": "out_score",
+            "field": "suitability_score",
+            "name": "Product Suitability Score"
+          },
+          {
+            "id": "out_hitl",
+            "field": "requires_tier_3_hitl",
+            "name": "Requires Tier 3 HITL Confirmation"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_facility_wcl_prime",
+            "_description": "Prime revolving line with commercial banking partner at 12.50% APR",
+            "in_product": "'WORKING_CAPITAL_LINE'",
+            "in_tier": "'PRIME'",
+            "out_provider": "'Commercial Banking Partner'",
+            "out_name": "'Revolving Working Capital Line'",
+            "out_term": "365",
+            "out_factor": "null",
+            "out_apr": "12.50",
+            "out_mult": "1.00",
+            "out_score": "95",
+            "out_hitl": "true"
+          },
+          {
+            "_id": "rule_facility_wcl_near_prime",
+            "_description": "Near Prime revolving line with commercial banking partner at 12.50% APR",
+            "in_product": "'WORKING_CAPITAL_LINE'",
+            "in_tier": "'NEAR_PRIME'",
+            "out_provider": "'Commercial Banking Partner'",
+            "out_name": "'Revolving Working Capital Line'",
+            "out_term": "365",
+            "out_factor": "null",
+            "out_apr": "12.50",
+            "out_mult": "1.00",
+            "out_score": "75",
+            "out_hitl": "true"
+          },
+          {
+            "_id": "rule_facility_factoring",
+            "_description": "Accelerated receivables factoring advance with 2.50% fee for 30-day term",
+            "in_product": "'INVOICE_FACTORING'",
+            "in_tier": "",
+            "out_provider": "'Receivables Factoring Partner'",
+            "out_name": "'Accelerated Receivables Advance'",
+            "out_term": "30",
+            "out_factor": "1.025",
+            "out_apr": "null",
+            "out_mult": "0.90",
+            "out_score": "85",
+            "out_hitl": "true"
+          },
+          {
+            "_id": "rule_facility_rbf",
+            "_description": "Merchant revenue cash advance with 8.00% fee over 90-day term",
+            "in_product": "'REVENUE_BASED_FINANCING'",
+            "in_tier": "",
+            "out_provider": "'Revenue Capital Partner'",
+            "out_name": "'Merchant Cash & Revenue Advance'",
+            "out_term": "90",
+            "out_factor": "1.080",
+            "out_apr": "null",
+            "out_mult": "1.20",
+            "out_score": "78",
+            "out_hitl": "true"
+          },
+          {
+            "_id": "rule_facility_default",
+            "_description": "Default alternative credit facility fallback",
+            "in_product": "",
+            "in_tier": "",
+            "out_provider": "'Alternative Credit Partner'",
+            "out_name": "'General Working Capital Facility'",
+            "out_term": "30",
+            "out_factor": "1.050",
+            "out_apr": "18.00",
+            "out_mult": "0.50",
+            "out_score": "60",
+            "out_hitl": "true"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "FacilityMatchingResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

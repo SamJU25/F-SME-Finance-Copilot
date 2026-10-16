@@ -2,6 +2,7 @@ from decimal import Decimal
 import json
 import logging
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional
 
 import zen
@@ -12,6 +13,22 @@ from services.decision.types import DecisionDomain, DecisionRequest, DecisionRes
 logger = logging.getLogger(__name__)
 
 DECISION_TABLES_DIR = Path(__file__).resolve().parent.parent.parent.parent / "contracts" / "decision_tables"
+
+INJECTION_PATTERN = re.compile(
+    r"(ignore|disregard|forget|override)\s+(all\s+)?(?:previous\s+)?(?:instructions|prompts|rules|guidelines|security)"
+    r"|system\s+override"
+    r"|you\s+are\s+now\s+(?:an?\s+)?unrestricted"
+    r"|bypass\s+(?:2fa|biometric|security|hitl|tier)"
+    r"|admin\s+mode\s+enabled",
+    re.IGNORECASE,
+)
+
+API_KEY_PATTERN = re.compile(
+    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
+    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{4,})['\"]?",
+    re.IGNORECASE,
+)
+
 
 
 class ZenRulesAdapter(AbstractDecisionEngine):
@@ -44,6 +61,7 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.CONCENTRATION_RISK,
             DecisionDomain.UNIT_ECONOMICS,
             DecisionDomain.REVENUE_VOLATILITY,
+            DecisionDomain.FACILITY_MATCHING,
         ]
 
     def _get_domain_file_map(self) -> Dict[DecisionDomain, str]:
@@ -57,7 +75,9 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.CONCENTRATION_RISK: "concentration_policy.json",
             DecisionDomain.UNIT_ECONOMICS: "unit_economics_policy.json",
             DecisionDomain.REVENUE_VOLATILITY: "revenue_volatility_policy.json",
+            DecisionDomain.FACILITY_MATCHING: "facility_matching_policy.json",
         }
+
 
     def _load_decision_tables(self, force: bool = False) -> Dict[str, str]:
         """Pre-compile JDM policy tables into in-memory ZenDecision graphs with mtime cache."""
@@ -163,8 +183,37 @@ class ZenRulesAdapter(AbstractDecisionEngine):
                     adverse_factors.append("NSF_INCIDENTS_RECORDED")
             rationale = f"Evaluated in {perf} via JDM underwriting_policy.json (Rule={matched_rule_id}, DAB={dab_val}, NSF={nsf_val})."
         elif request.domain == DecisionDomain.SECURITY_GATE:
-            selected_choice = result_dict.get("security_tier", "TIER_1_OBSERVATION")
-            rationale = f"Evaluated in {perf} via JDM security_gate_policy.json (Rule={matched_rule_id}, Action={ctx.get('action_type')})."
+            if request.input_state.get("check_prompt_security"):
+                msg = str(request.input_state.get("text", request.input_state.get("message", "")))
+                is_inj = bool(INJECTION_PATTERN.search(msg))
+                is_key = bool(API_KEY_PATTERN.search(msg))
+                if is_inj:
+                    choice = "PROMPT_INJECTION_DETECTED"
+                    is_safe = False
+                    viol = "PROMPT_INJECTION"
+                    rat = "Adversarial prompt injection attempt intercepted by security gate."
+                elif is_key:
+                    choice = "CREDENTIAL_LEAK_DETECTED"
+                    is_safe = False
+                    viol = "CREDENTIAL_LEAK"
+                    rat = "Sensitive credential or API key pattern intercepted by security gate."
+                else:
+                    choice = "SAFE"
+                    is_safe = True
+                    viol = None
+                    rat = "Prompt passed security gate without adversarial violations."
+                result_dict = {
+                    "is_safe": is_safe,
+                    "is_prompt_injection": is_inj,
+                    "is_credential_leak": is_key,
+                    "violation_type": viol,
+                    "requires_biometric_execution": False,
+                }
+                selected_choice = choice
+                rationale = rat
+            else:
+                selected_choice = result_dict.get("security_tier", "TIER_1_OBSERVATION")
+                rationale = f"Evaluated in {perf} via JDM security_gate_policy.json (Rule={matched_rule_id}, Action={ctx.get('action_type')})."
         elif request.domain == DecisionDomain.DEFICIT_SEVERITY:
             if request.input_state.get("eval_horizon_confidence"):
                 target_days = int(ctx.get("target_horizon_days", 30))
@@ -202,6 +251,8 @@ class ZenRulesAdapter(AbstractDecisionEngine):
                 burn = float(ctx.get("average_daily_burn", 0))
                 runway = ctx.get("runway_days")
                 thresh = int(ctx.get("alert_threshold_days", 30))
+                age_days = int(request.input_state.get("statement_age_days", 0))
+                analysis_mode = "LIVE_OPERATING" if age_days <= 35 else "HISTORICAL_AUDIT"
                 if bal <= 0:
                     selected_choice = "CASH_NONPOSITIVE"
                 elif burn == 0:
@@ -210,13 +261,71 @@ class ZenRulesAdapter(AbstractDecisionEngine):
                     selected_choice = "LOW_RUNWAY"
                 else:
                     selected_choice = "WATCH"
-                rationale = f"Evaluated cash status as {selected_choice} (Balance={bal}, Burn={burn}, Runway={runway}, Threshold={thresh})."
+                result_dict = {
+                    "cash_status": selected_choice,
+                    "analysis_mode": analysis_mode,
+                    "statement_age_days": age_days,
+                }
+                rationale = f"Evaluated cash status as {selected_choice} (Balance={bal}, Burn={burn}, Runway={runway}, Threshold={thresh}, Mode={analysis_mode})."
             else:
                 selected_choice = result_dict.get("severity", "SAFE")
-                rationale = f"Evaluated in {perf} via JDM deficit_severity_policy.json (Rule={matched_rule_id}, Days={ctx.get('days_until_deficit')})."
+                tpl = result_dict.get("explanation_template", "")
+                days_val = request.input_state.get("days_until_deficit")
+                date_val = str(request.input_state.get("projected_date", ""))
+                trig = request.input_state.get("primary_deficit_trigger", "")
+                trig_suffix = f" (Triggered by {trig})" if trig and trig != "OPERATING_BURN" else ""
+                shortfall_val = str(request.input_state.get("shortfall", "0.00"))
+                bridge_val = str(request.input_state.get("recommended_bridge", "0.00"))
+                d90_val = str(request.input_state.get("d90", "0.00"))
+
+                if tpl:
+                    explanation = (
+                        tpl.replace("{days}", str(days_val or ""))
+                        .replace("{date}", date_val)
+                        .replace("{trigger}", trig_suffix)
+                        .replace("{shortfall}", shortfall_val)
+                        .replace("{bridge}", bridge_val)
+                        .replace("{d90}", d90_val)
+                    )
+                else:
+                    explanation = f"Evaluated in {perf} via JDM deficit_severity_policy.json (Rule={matched_rule_id}, Days={ctx.get('days_until_deficit')})."
+
+                result_dict["explanation"] = explanation
+                rationale = explanation
         elif request.domain == DecisionDomain.WORKING_CAPITAL_RISK:
             selected_choice = result_dict.get("status", "BALANCED")
-            rationale = f"Evaluated in {perf} via JDM working_capital_policy.json (Rule={matched_rule_id}, Metric={ctx.get('metric')}, Value={ctx.get('value')})."
+            raw_rat = result_dict.get("rationale", "")
+            if "{ccc_days}" in raw_rat or "{dso_days}" in raw_rat or "{dpo_days}" in raw_rat or "{value}" in raw_rat:
+                raw_val = request.input_state.get("value", ctx.get("value", ""))
+                try:
+                    c_val = str(int(raw_val)) if float(raw_val) == int(float(raw_val)) else str(raw_val)
+                except Exception:
+                    c_val = str(raw_val)
+                dso_val = str(request.input_state.get("dso_days", 0))
+                dpo_val = str(request.input_state.get("dpo_days", 0))
+                raw_rat = raw_rat.replace("{ccc_days}", c_val).replace("{dso_days}", dso_val).replace("{dpo_days}", dpo_val).replace("{value}", c_val)
+            rationale = raw_rat or f"Evaluated in {perf} via JDM working_capital_policy.json (Rule={matched_rule_id}, Metric={ctx.get('metric')}, Value={ctx.get('value')})."
+        elif request.domain == DecisionDomain.FACILITY_MATCHING:
+            selected_choice = result_dict.get("facility_name", "General Working Capital Facility")
+            provider = result_dict.get("provider", "Commercial Banking Partner")
+            score = int(result_dict.get("suitability_score", 75))
+            term = int(result_dict.get("term_days", 365))
+            factor = float(result_dict.get("factor_rate")) if result_dict.get("factor_rate") is not None else None
+            apr = float(result_dict.get("apr_percent")) if result_dict.get("apr_percent") is not None else None
+            mult = float(result_dict.get("limit_multiplier", 1.0))
+            requires_hitl = bool(result_dict.get("requires_tier_3_hitl", True))
+            result_dict = {
+                "provider": provider,
+                "facility_name": selected_choice,
+                "term_days": term,
+                "factor_rate": factor,
+                "apr_percent": apr,
+                "limit_multiplier": mult,
+                "suitability_score": score,
+                "requires_tier_3_hitl": requires_hitl,
+            }
+            rationale = f"Matched {selected_choice} from {provider} (Score={score}, Term={term}d, Multiplier={mult}x)."
+
         elif request.domain == DecisionDomain.DEBT_AFFORDABILITY:
             selected_choice = result_dict.get("status", "STANDARD")
             raw_rat = result_dict.get("rationale", "")
@@ -302,6 +411,8 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             }
 
         elif request.domain == DecisionDomain.SECURITY_GATE:
+            if state.get("check_prompt_security"):
+                return {"check_prompt_security": True, "text": str(state.get("text", state.get("message", "")))}
             action_type = str(state.get("action_type", "")).upper()
             return {"action_type": action_type}
 
@@ -355,7 +466,6 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             hhi = float(Decimal(str(state.get("hhi", 0))))
             return {"top_1_pct": top1, "hhi": hhi}
 
-
         elif request.domain == DecisionDomain.UNIT_ECONOMICS:
             metric = str(state.get("metric", "")).upper()
             if metric in ("MARGIN_OF_SAFETY", "MOS"):
@@ -367,9 +477,13 @@ class ZenRulesAdapter(AbstractDecisionEngine):
                 val = val * 100.0
             return {"metric": metric, "value": val}
 
-
         elif request.domain == DecisionDomain.REVENUE_VOLATILITY:
             cv = float(Decimal(str(state.get("cv", 0))))
             return {"cv": cv}
+
+        elif request.domain == DecisionDomain.FACILITY_MATCHING:
+            product_type = str(state.get("product_type", "")).upper()
+            risk_tier = str(state.get("risk_tier", "STANDARD")).upper()
+            return {"product_type": product_type, "risk_tier": risk_tier}
 
         return state

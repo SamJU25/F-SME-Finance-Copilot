@@ -89,13 +89,33 @@ API_KEY_PATTERN = re.compile(
 
 
 def inspect_for_prompt_injection(text: str) -> bool:
-    """Detects adversarial prompt injection and jailbreak override attempts."""
-    return bool(INJECTION_PATTERN.search(text))
+    """Detects adversarial prompt injection and jailbreak override attempts via DecisionDomain.SECURITY_GATE."""
+    try:
+        from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+        req = DecisionRequest(
+            domain=DecisionDomain.SECURITY_GATE,
+            input_state={"check_prompt_security": True, "text": text},
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        res = DecisionEngineRegistry.get_instance().evaluate(req)
+        return bool(res.output_payload.get("is_prompt_injection", False))
+    except Exception:
+        return bool(INJECTION_PATTERN.search(text))
 
 
 def inspect_for_api_key(text: str) -> bool:
-    """Detects raw API keys, passwords, PINs, or credential secrets pasted into chat messages."""
-    return bool(API_KEY_PATTERN.search(text))
+    """Detects raw API keys, passwords, PINs, or credential secrets pasted into chat messages via DecisionDomain.SECURITY_GATE."""
+    try:
+        from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+        req = DecisionRequest(
+            domain=DecisionDomain.SECURITY_GATE,
+            input_state={"check_prompt_security": True, "text": text},
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        res = DecisionEngineRegistry.get_instance().evaluate(req)
+        return bool(res.output_payload.get("is_credential_leak", False))
+    except Exception:
+        return bool(API_KEY_PATTERN.search(text))
 
 
 from services.agent.dynamic_router import (

@@ -3,6 +3,11 @@ from services.decision.base import AbstractDecisionEngine
 from services.decision.registry import DecisionEngineRegistry
 from services.decision.adapters.fallback_adapter import FallbackRuleAdapter
 
+try:
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+except ImportError:
+    ZenRulesAdapter = None  # type: ignore
+
 __all__ = [
     "DecisionDomain",
     "DecisionRequest",
@@ -10,4 +15,5 @@ __all__ = [
     "AbstractDecisionEngine",
     "DecisionEngineRegistry",
     "FallbackRuleAdapter",
+    "ZenRulesAdapter",
 ]

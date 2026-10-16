@@ -33,6 +33,11 @@
             "id": "out_has_proj",
             "field": "has_projected_deficit",
             "name": "Has Projected Deficit"
+          },
+          {
+            "id": "out_template",
+            "field": "explanation_template",
+            "name": "Deficit Explanation Narrative Template"
           }
         ],
         "rules": [
@@ -42,7 +47,8 @@
             "in_has": "false",
             "in_days": "",
             "out_sev": "'SAFE'",
-            "out_has_proj": "false"
+            "out_has_proj": "false",
+            "out_template": "'HEALTHY LIQUIDITY: Operations solvent across all 90-day forecast windows. Projected 90-day reserve: ${d90}.'"
           },
           {
             "_id": "rule_critical",
@@ -50,7 +56,8 @@
             "in_has": "true",
             "in_days": "<= 30",
             "out_sev": "'CRITICAL'",
-            "out_has_proj": "true"
+            "out_has_proj": "true",
+            "out_template": "'CRITICAL EARLY WARNING: Projected cash deficit in {days} days ({date}){trigger}. Estimated shortfall is ${shortfall}. Pre-emptive working capital draw of ${bridge} is recommended to prevent operational stoppage.'"
           },
           {
             "_id": "rule_warning",
@@ -58,7 +65,8 @@
             "in_has": "true",
             "in_days": "<= 60",
             "out_sev": "'WARNING'",
-            "out_has_proj": "true"
+            "out_has_proj": "true",
+            "out_template": "'ELEVATED DEFICIT RISK: Cash burn trajectory indicates a shortfall in {days} days ({date}){trigger}. Projected deficit of ${shortfall} requires liquidity action within 30 days.'"
           },
           {
             "_id": "rule_watch",
@@ -66,7 +74,8 @@
             "in_has": "true",
             "in_days": "> 60",
             "out_sev": "'WATCH'",
-            "out_has_proj": "true"
+            "out_has_proj": "true",
+            "out_template": "'EXTENDED WATCH: Operations remain solvent for 60+ days, with projected deficit in {days} days{trigger}. Monitor incoming receivables and accounts payable timing.'"
           },
           {
             "_id": "rule_fallback",
@@ -74,7 +83,8 @@
             "in_has": "",
             "in_days": "",
             "out_sev": "'SAFE'",
-            "out_has_proj": "false"
+            "out_has_proj": "false",
+            "out_template": "'HEALTHY LIQUIDITY: Operations solvent across all 90-day forecast windows.'"
           }
         ]
       }

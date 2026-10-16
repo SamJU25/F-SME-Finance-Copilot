@@ -9,6 +9,21 @@ PAYROLL_REGEX = re.compile(r"(payroll|salary|wages|stipend|direct\s*dep|gusto|ad
 RENT_REGEX = re.compile(r"(rent|lease|property|landlord|realty|storage)", re.IGNORECASE)
 DEBT_REGEX = re.compile(r"(loan|principal|debt\s*service|amortization|equipment\s*lease|note\s*pay)", re.IGNORECASE)
 
+INJECTION_PATTERN = re.compile(
+    r"(ignore|disregard|forget|override)\s+(all\s+)?(?:previous\s+)?(?:instructions|prompts|rules|guidelines|security)"
+    r"|system\s+override"
+    r"|you\s+are\s+now\s+(?:an?\s+)?unrestricted"
+    r"|bypass\s+(?:2fa|biometric|security|hitl|tier)"
+    r"|admin\s+mode\s+enabled",
+    re.IGNORECASE,
+)
+
+API_KEY_PATTERN = re.compile(
+    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
+    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{4,})['\"]?",
+    re.IGNORECASE,
+)
+
 
 class FallbackRuleAdapter(AbstractDecisionEngine):
     """
@@ -35,6 +50,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             DecisionDomain.CONCENTRATION_RISK,
             DecisionDomain.UNIT_ECONOMICS,
             DecisionDomain.REVENUE_VOLATILITY,
+            DecisionDomain.FACILITY_MATCHING,
         ]
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
@@ -62,6 +78,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             return self._evaluate_unit_economics(state)
         elif request.domain == DecisionDomain.REVENUE_VOLATILITY:
             return self._evaluate_revenue_volatility(state)
+        elif request.domain == DecisionDomain.FACILITY_MATCHING:
+            return self._evaluate_facility_matching(state)
         else:
             raise ValueError(f"Domain {request.domain} not supported by {self.engine_id}")
 
@@ -126,6 +144,42 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         )
 
     def _evaluate_security_gate(self, state: Dict[str, Any]) -> DecisionResult:
+        if state.get("check_prompt_security"):
+            msg = str(state.get("text", state.get("message", "")))
+            is_inj = bool(INJECTION_PATTERN.search(msg))
+            is_key = bool(API_KEY_PATTERN.search(msg))
+            if is_inj:
+                choice = "PROMPT_INJECTION_DETECTED"
+                is_safe = False
+                viol = "PROMPT_INJECTION"
+                rat = "Adversarial prompt injection attempt intercepted by security gate."
+            elif is_key:
+                choice = "CREDENTIAL_LEAK_DETECTED"
+                is_safe = False
+                viol = "CREDENTIAL_LEAK"
+                rat = "Sensitive credential or API key pattern intercepted by security gate."
+            else:
+                choice = "SAFE"
+                is_safe = True
+                viol = None
+                rat = "Prompt passed security gate without adversarial violations."
+
+            return DecisionResult(
+                domain=DecisionDomain.SECURITY_GATE,
+                selected_choice=choice,
+                confidence_score=1.0,
+                engine_id=self.engine_id,
+                matched_rule_id=f"fallback_security_{choice.lower()}",
+                rationale=rat,
+                output_payload={
+                    "is_safe": is_safe,
+                    "is_prompt_injection": is_inj,
+                    "is_credential_leak": is_key,
+                    "violation_type": viol,
+                    "requires_biometric_execution": False,
+                },
+            )
+
         action_type = str(state.get("action_type", "")).upper()
         tier_3_actions = {"TRANSFER", "DRAW_CREDIT_LINE", "PLEDGE_INVOICE"}
         tier_2_actions = {"STAGE_TRANSFER", "FACTOR_INVOICE", "PREPARE_APPLICATION"}
@@ -200,6 +254,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             burn = Decimal(str(state.get("average_daily_burn", 0)))
             runway = state.get("runway_days")
             thresh = int(state.get("alert_threshold_days", 30))
+            age_days = int(state.get("statement_age_days", 0))
+            analysis_mode = "LIVE_OPERATING" if age_days <= 35 else "HISTORICAL_AUDIT"
             if bal <= 0:
                 status = "CASH_NONPOSITIVE"
             elif burn == 0:
@@ -214,8 +270,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 confidence_score=1.0,
                 engine_id=self.engine_id,
                 matched_rule_id=f"fallback_cash_{status.lower()}",
-                rationale=f"Evaluated cash status as {status} (Balance={bal}, Burn={burn}, Runway={runway}, Threshold={thresh}).",
-                output_payload={"cash_status": status},
+                rationale=f"Evaluated cash status as {status} (Balance={bal}, Burn={burn}, Runway={runway}, Threshold={thresh}, Mode={analysis_mode}).",
+                output_payload={"cash_status": status, "analysis_mode": analysis_mode, "statement_age_days": age_days},
             )
 
 
@@ -226,26 +282,48 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         if days is None:
             severity = "SAFE"
             has_deficit = False
+            tpl = "HEALTHY LIQUIDITY: Operations solvent across all 90-day forecast windows. Projected 90-day reserve: ${d90}."
         elif days <= 30:
             severity = "CRITICAL"
             has_deficit = True
+            tpl = "CRITICAL EARLY WARNING: Projected cash deficit in {days} days ({date}){trigger}. Estimated shortfall is ${shortfall}. Pre-emptive working capital draw of ${bridge} is recommended to prevent operational stoppage."
         elif days <= 60:
             severity = "WARNING"
             has_deficit = True
+            tpl = "ELEVATED DEFICIT RISK: Cash burn trajectory indicates a shortfall in {days} days ({date}){trigger}. Projected deficit of ${shortfall} requires liquidity action within 30 days."
         else:
             severity = "WATCH"
             has_deficit = True
+            tpl = "EXTENDED WATCH: Operations remain solvent for 60+ days, with projected deficit in {days} days{trigger}. Monitor incoming receivables and accounts payable timing."
+
+        date_val = str(state.get("projected_date", ""))
+        trig = state.get("primary_deficit_trigger", "")
+        trig_suffix = f" (Triggered by {trig})" if trig and trig != "OPERATING_BURN" else ""
+        shortfall_val = str(state.get("shortfall", "0.00"))
+        bridge_val = str(state.get("recommended_bridge", "0.00"))
+        d90_val = str(state.get("d90", "0.00"))
+
+        explanation = (
+            tpl.replace("{days}", str(days or ""))
+            .replace("{date}", date_val)
+            .replace("{trigger}", trig_suffix)
+            .replace("{shortfall}", shortfall_val)
+            .replace("{bridge}", bridge_val)
+            .replace("{d90}", d90_val)
+        )
 
         return DecisionResult(
             domain=DecisionDomain.DEFICIT_SEVERITY,
             selected_choice=severity,
             confidence_score=1.0,
             engine_id=self.engine_id,
-            rationale=f"Deficit projected in {days} days maps to {severity} severity horizon.",
+            matched_rule_id=f"fallback_sev_{severity.lower()}",
+            rationale=explanation,
             output_payload={
                 "severity": severity,
                 "has_projected_deficit": has_deficit,
                 "days_until_deficit": days,
+                "explanation": explanation,
             },
         )
 
@@ -322,110 +400,139 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
     def _evaluate_working_capital_risk(self, state: Dict[str, Any]) -> DecisionResult:
         metric = str(state.get("metric", "")).upper()
         val = Decimal(str(state.get("value", 0)))
+        dso_days = state.get("dso_days", 0)
+        dpo_days = state.get("dpo_days", 0)
 
         if metric == "CCC":
             if val > Decimal("30"):
                 status = "WORKING_CAPITAL_TRAP"
                 is_risk = True
                 rule_id = "fallback_ccc_trap"
+                rationale = (
+                    f"Cash is trapped in working capital for {val} days. Customer payment collection (DSO: {dso_days}d) "
+                    f"lags vendor payment terms (DPO: {dpo_days}d). Invoice factoring or a working capital facility is recommended."
+                )
             elif val >= Decimal("0"):
                 status = "BALANCED"
                 is_risk = False
                 rule_id = "fallback_ccc_balanced"
+                rationale = f"Working capital cycle is balanced at {val} days. Customer collection and vendor payment schedules align."
             else:
                 status = "CASH_GENERATIVE"
                 is_risk = False
                 rule_id = "fallback_ccc_generative"
+                rationale = f"Negative working capital cycle ({val} days). Vendor credit terms finance receivables before client collections."
         elif metric == "WCR_DAYS":
             if val > Decimal("60"):
                 status = "WORKING_CAPITAL_TRAP"
                 is_risk = True
                 rule_id = "fallback_wcr_trap"
+                rationale = "Working capital requirement exceeds 60 days of operations."
             else:
                 status = "BALANCED"
                 is_risk = False
                 rule_id = "fallback_wcr_balanced"
+                rationale = "Working capital requirement is within sustainable operational thresholds."
         elif metric == "WCR_DOLLARS":
             if val <= Decimal("0"):
                 status = "CASH_GENERATIVE"
                 is_risk = False
                 rule_id = "fallback_wcr_generative"
+                rationale = "Negative working capital requirement creates cash generative float."
             else:
                 status = "BALANCED"
                 is_risk = False
                 rule_id = "fallback_wcr_balanced"
+                rationale = "Working capital requirement is funded through operating cash flow."
         elif metric == "DSO":
             if val <= Decimal("0"):
                 status = "INSTANT_COLLECTION"
                 is_risk = False
                 rule_id = "fallback_dso_instant"
+                rationale = "Instant customer payment collection creates zero receivable float."
             elif val >= Decimal("999"):
                 status = "FROZEN_RECEIVABLES"
                 is_risk = True
                 rule_id = "fallback_dso_frozen"
+                rationale = "Receivables collections are frozen or uncollectible."
             elif val <= Decimal("30"):
                 status = "EFFICIENT"
                 is_risk = False
                 rule_id = "fallback_dso_efficient"
+                rationale = "Customer collection turnaround within 30 days is highly efficient."
             elif val <= Decimal("60"):
                 status = "COMMERCIAL_STANDARD"
                 is_risk = False
                 rule_id = "fallback_dso_standard"
+                rationale = "Customer collection turnaround within 60 days aligns with commercial terms."
             else:
                 status = "COLLECTION_DELAY"
                 is_risk = True
                 rule_id = "fallback_dso_delay"
+                rationale = "Customer collection delay exceeds commercial tolerance."
         elif metric == "DPO":
             if val > Decimal("90"):
                 status = "TRADE_DISTRESS"
                 is_risk = True
                 rule_id = "fallback_dpo_distress"
+                rationale = "Extended vendor payable stretch indicates operational trade distress."
             elif val >= Decimal("30"):
                 status = "BALANCED"
                 is_risk = False
                 rule_id = "fallback_dpo_balanced"
+                rationale = "Vendor payable terms are balanced within commercial standards."
             else:
                 status = "SHORT_FLOAT"
                 is_risk = False
                 rule_id = "fallback_dpo_short_float"
+                rationale = "Vendor payables settled rapidly, shortening supplier financing float."
         elif metric == "DIR":
             if val >= Decimal("90"):
                 status = "PRIME"
                 is_risk = False
                 rule_id = "fallback_dir_prime"
+                rationale = "Defensive interval reserves provide over 90 days of operational buffer."
             elif val >= Decimal("30"):
                 status = "MODERATE"
                 is_risk = False
                 rule_id = "fallback_dir_moderate"
+                rationale = "Defensive interval reserves provide 30 to 90 days of operating coverage."
             elif val >= Decimal("15"):
                 status = "WARNING"
                 is_risk = True
                 rule_id = "fallback_dir_warning"
+                rationale = "Defensive interval reserves below 30 days require liquidity preservation."
             else:
                 status = "CRITICAL"
                 is_risk = True
                 rule_id = "fallback_dir_critical"
+                rationale = "Defensive interval reserves under 15 days risk immediate insolvency."
         elif metric == "OCF_RATIO":
             if val >= Decimal("1.0"):
                 status = "STRONG"
                 is_risk = False
                 rule_id = "fallback_ocf_strong"
+                rationale = "Operating cash flow comfortably covers current short-term liabilities."
             elif val >= Decimal("0.5"):
                 status = "ADEQUATE"
                 is_risk = False
                 rule_id = "fallback_ocf_adequate"
+                rationale = "Operating cash flow covers current liabilities with minimal cushion."
             elif val >= Decimal("0.0"):
                 status = "WEAK"
                 is_risk = True
                 rule_id = "fallback_ocf_weak"
+                rationale = "Operating cash flow is insufficient to cover maturing liabilities."
             else:
                 status = "DISTRESSED"
                 is_risk = True
                 rule_id = "fallback_ocf_distressed"
+                rationale = "Negative operating cash flow indicates severe operational burn."
         else:
             status = "BALANCED"
             is_risk = False
             rule_id = "fallback_wc_default"
+            rationale = "Working capital metric within baseline tolerance."
 
         return DecisionResult(
             domain=DecisionDomain.WORKING_CAPITAL_RISK,
@@ -433,7 +540,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             confidence_score=1.0,
             engine_id=self.engine_id,
             matched_rule_id=rule_id,
-            output_payload={"status": status, "is_risk": is_risk},
+            rationale=rationale,
+            output_payload={"status": status, "is_risk": is_risk, "rationale": rationale},
         )
 
     def _evaluate_debt_affordability(self, state: Dict[str, Any]) -> DecisionResult:
@@ -700,6 +808,76 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             matched_rule_id=f"fallback_vol_{tier.lower()}",
             rationale=desc,
             output_payload={"tier": tier, "volatility_tier": tier, "volatility_status": status, "is_stable": stable, "description": desc},
+        )
+
+    def _evaluate_facility_matching(self, state: Dict[str, Any]) -> DecisionResult:
+        product_type = str(state.get("product_type", "")).upper()
+        risk_tier = str(state.get("risk_tier", "STANDARD")).upper()
+
+        if product_type == "WORKING_CAPITAL_LINE":
+            score = 95 if risk_tier == "PRIME" else 75
+            rule_id = "fallback_facility_wcl_prime" if risk_tier == "PRIME" else "fallback_facility_wcl_near_prime"
+            payload = {
+                "provider": "Commercial Banking Partner",
+                "facility_name": "Revolving Working Capital Line",
+                "term_days": 365,
+                "factor_rate": None,
+                "apr_percent": 12.50,
+                "limit_multiplier": 1.00,
+                "suitability_score": score,
+                "requires_tier_3_hitl": True,
+            }
+        elif product_type == "INVOICE_FACTORING":
+            rule_id = "fallback_facility_factoring"
+            payload = {
+                "provider": "Receivables Factoring Partner",
+                "facility_name": "Accelerated Receivables Advance",
+                "term_days": 30,
+                "factor_rate": 1.025,
+                "apr_percent": None,
+                "limit_multiplier": 0.90,
+                "suitability_score": 85,
+                "requires_tier_3_hitl": True,
+            }
+        elif product_type == "REVENUE_BASED_FINANCING":
+            rule_id = "fallback_facility_rbf"
+            payload = {
+                "provider": "Revenue Capital Partner",
+                "facility_name": "Merchant Cash & Revenue Advance",
+                "term_days": 90,
+                "factor_rate": 1.080,
+                "apr_percent": None,
+                "limit_multiplier": 1.20,
+                "suitability_score": 78,
+                "requires_tier_3_hitl": True,
+            }
+        else:
+            rule_id = "fallback_facility_default"
+            payload = {
+                "provider": "Alternative Credit Partner",
+                "facility_name": "General Working Capital Facility",
+                "term_days": 30,
+                "factor_rate": 1.050,
+                "apr_percent": 18.00,
+                "limit_multiplier": 0.50,
+                "suitability_score": 60,
+                "requires_tier_3_hitl": True,
+            }
+
+        facility_name = payload["facility_name"]
+        provider = payload["provider"]
+        score = payload["suitability_score"]
+        mult = payload["limit_multiplier"]
+        term = payload["term_days"]
+
+        return DecisionResult(
+            domain=DecisionDomain.FACILITY_MATCHING,
+            selected_choice=facility_name,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=rule_id,
+            output_payload=payload,
+            rationale=f"Matched {facility_name} from {provider} (Score={score}, Term={term}d, Multiplier={mult}x).",
         )
 
 

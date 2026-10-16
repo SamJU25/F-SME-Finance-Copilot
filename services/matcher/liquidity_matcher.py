@@ -260,56 +260,49 @@ def match_financing_options(
     options: list[FinancingOption] = []
     max_amount = dossier.max_qualified_limit
 
-    if ProductType.WORKING_CAPITAL_LINE in dossier.recommended_product_types and max_amount > 0:
-        line_apr = Decimal("12.50")
-        options.append(
-            FinancingOption(
-                provider="Commercial Banking Partner",
-                product_type=ProductType.WORKING_CAPITAL_LINE,
-                facility_name="Revolving Working Capital Line",
-                max_amount=max_amount,
-                term_days=365,
-                factor_rate=None,
-                apr_percent=line_apr,
-                is_predatory=_evaluate_is_predatory(line_apr, ProductType.WORKING_CAPITAL_LINE, predatory_threshold),
-                suitability_score=95 if dossier.risk_tier == RiskTier.PRIME else 75,
-                requires_tier_3_hitl=True,
-            )
-        )
+    if max_amount <= 0:
+        return options
 
-    if ProductType.INVOICE_FACTORING in dossier.recommended_product_types and max_amount > 0:
-        factor_rate = Decimal("1.025")  # 2.5% fee for 30 days
-        factoring_apr = convert_factor_rate_to_apr(factor_rate, 30)
+    for product_type in dossier.recommended_product_types:
+        req = DecisionRequest(
+            domain=DecisionDomain.FACILITY_MATCHING,
+            input_state={
+                "product_type": product_type.value,
+                "risk_tier": dossier.risk_tier.value,
+            },
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        res = DecisionEngineRegistry.get_instance().evaluate(req)
+        p_data = res.output_payload
+
+        provider = str(p_data.get("provider", "Commercial Banking Partner"))
+        facility_name = str(p_data.get("facility_name", res.selected_choice))
+        term_days = int(p_data.get("term_days", 365))
+        factor_rate_val = p_data.get("factor_rate")
+        factor_rate = Decimal(str(factor_rate_val)) if factor_rate_val is not None else None
+
+        if factor_rate is not None:
+            apr_percent = convert_factor_rate_to_apr(factor_rate, term_days)
+        else:
+            apr_percent = Decimal(str(p_data.get("apr_percent", "12.50")))
+
+        multiplier = Decimal(str(p_data.get("limit_multiplier", "1.00")))
+        facility_limit = (max_amount * multiplier).quantize(Decimal("0.01"))
+        suitability_score = int(p_data.get("suitability_score", 75))
+        requires_hitl = bool(p_data.get("requires_tier_3_hitl", True))
+
         options.append(
             FinancingOption(
-                provider="Receivables Factoring Partner",
-                product_type=ProductType.INVOICE_FACTORING,
-                facility_name="Accelerated Receivables Advance",
-                max_amount=(max_amount * Decimal("0.90")).quantize(Decimal("0.01")),
-                term_days=30,
+                provider=provider,
+                product_type=product_type,
+                facility_name=facility_name,
+                max_amount=facility_limit,
+                term_days=term_days,
                 factor_rate=factor_rate,
-                apr_percent=factoring_apr,
-                is_predatory=_evaluate_is_predatory(factoring_apr, ProductType.INVOICE_FACTORING, predatory_threshold),
-                suitability_score=85,
-                requires_tier_3_hitl=True,
-            )
-        )
-
-    if ProductType.REVENUE_BASED_FINANCING in dossier.recommended_product_types and max_amount > 0:
-        rbf_factor = Decimal("1.08")  # 8% fee over 90 days = 32.44% APR
-        rbf_apr = convert_factor_rate_to_apr(rbf_factor, 90)
-        options.append(
-            FinancingOption(
-                provider="Revenue Capital Partner",
-                product_type=ProductType.REVENUE_BASED_FINANCING,
-                facility_name="Merchant Cash & Revenue Advance",
-                max_amount=(max_amount * Decimal("1.20")).quantize(Decimal("0.01")),
-                term_days=90,
-                factor_rate=rbf_factor,
-                apr_percent=rbf_apr,
-                is_predatory=_evaluate_is_predatory(rbf_apr, ProductType.REVENUE_BASED_FINANCING, predatory_threshold),
-                suitability_score=78,
-                requires_tier_3_hitl=True,
+                apr_percent=apr_percent,
+                is_predatory=_evaluate_is_predatory(apr_percent, product_type, predatory_threshold),
+                suitability_score=suitability_score,
+                requires_tier_3_hitl=requires_hitl,
             )
         )
 

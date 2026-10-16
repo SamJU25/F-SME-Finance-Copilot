@@ -33,6 +33,11 @@
             "id": "out_risk",
             "field": "is_risk",
             "name": "Is Operational Working Capital Risk"
+          },
+          {
+            "id": "out_rationale",
+            "field": "rationale",
+            "name": "Working Capital Assessment Rationale"
           }
         ],
         "rules": [
@@ -42,7 +47,8 @@
             "in_metric": "'CCC'",
             "in_value": "> 30",
             "out_status": "'WORKING_CAPITAL_TRAP'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Cash is trapped in working capital for {ccc_days} days. Customer payment collection (DSO: {dso_days}d) lags vendor payment terms (DPO: {dpo_days}d). Invoice factoring or a working capital facility is recommended.'"
           },
           {
             "_id": "rule_ccc_balanced",
@@ -50,7 +56,8 @@
             "in_metric": "'CCC'",
             "in_value": ">= 0",
             "out_status": "'BALANCED'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Working capital cycle is balanced at {ccc_days} days. Customer collection and vendor payment schedules align.'"
           },
           {
             "_id": "rule_ccc_generative",
@@ -58,7 +65,8 @@
             "in_metric": "'CCC'",
             "in_value": "< 0",
             "out_status": "'CASH_GENERATIVE'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Negative working capital cycle ({ccc_days} days). Vendor credit terms finance receivables before client collections.'"
           },
           {
             "_id": "rule_wcr_trap",
@@ -66,7 +74,8 @@
             "in_metric": "'WCR_DAYS'",
             "in_value": "> 60",
             "out_status": "'WORKING_CAPITAL_TRAP'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Working capital requirement exceeds 60 days of operations.'"
           },
           {
             "_id": "rule_wcr_generative",
@@ -74,7 +83,8 @@
             "in_metric": "'WCR_DOLLARS'",
             "in_value": "<= 0",
             "out_status": "'CASH_GENERATIVE'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Negative working capital requirement: operations generate net float.'"
           },
           {
             "_id": "rule_dso_instant",
@@ -82,7 +92,8 @@
             "in_metric": "'DSO'",
             "in_value": "<= 0",
             "out_status": "'INSTANT_COLLECTION'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Instant payment on fulfillment. Zero customer credit risk.'"
           },
           {
             "_id": "rule_dso_frozen",
@@ -90,7 +101,8 @@
             "in_metric": "'DSO'",
             "in_value": ">= 999",
             "out_status": "'FROZEN_RECEIVABLES'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Outstanding receivables with zero recent credit sales. High default likelihood.'"
           },
           {
             "_id": "rule_dso_efficient",
@@ -98,7 +110,8 @@
             "in_metric": "'DSO'",
             "in_value": "<= 30",
             "out_status": "'EFFICIENT'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Disciplined customer receivables turnover under 30 days.'"
           },
           {
             "_id": "rule_dso_standard",
@@ -106,7 +119,8 @@
             "in_metric": "'DSO'",
             "in_value": "<= 60",
             "out_status": "'COMMERCIAL_STANDARD'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Commercial standard 30 to 60 day payment terms.'"
           },
           {
             "_id": "rule_dso_delay",
@@ -114,7 +128,8 @@
             "in_metric": "'DSO'",
             "in_value": "> 60",
             "out_status": "'COLLECTION_DELAY'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Collection delay exceeding 60 days. Risk of cash flow constriction.'"
           },
           {
             "_id": "rule_dpo_distress",
@@ -122,7 +137,8 @@
             "in_metric": "'DPO'",
             "in_value": "> 90",
             "out_status": "'TRADE_DISTRESS'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Payables stretched beyond 90 days. Indicates supplier strain or liquidity conservation.'"
           },
           {
             "_id": "rule_dpo_balanced",
@@ -130,7 +146,8 @@
             "in_metric": "'DPO'",
             "in_value": ">= 30",
             "out_status": "'BALANCED'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Standard commercial trade payable float (30 to 90 days).'"
           },
           {
             "_id": "rule_dpo_short_float",
@@ -138,7 +155,8 @@
             "in_metric": "'DPO'",
             "in_value": "< 30",
             "out_status": "'SHORT_FLOAT'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Early vendor payment cycle under 30 days. Minimal trade credit captured.'"
           },
           {
             "_id": "rule_dir_prime",
@@ -146,7 +164,8 @@
             "in_metric": "'DIR'",
             "in_value": ">= 90",
             "out_status": "'PRIME'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Robust liquidity buffer ({value} days). Operations secure without new receipts.'"
           },
           {
             "_id": "rule_dir_moderate",
@@ -154,7 +173,8 @@
             "in_metric": "'DIR'",
             "in_value": ">= 30",
             "out_status": "'MODERATE'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Standard commercial buffer ({value} days). Normal operational cushion.'"
           },
           {
             "_id": "rule_dir_warning",
@@ -162,7 +182,8 @@
             "in_metric": "'DIR'",
             "in_value": ">= 15",
             "out_status": "'WARNING'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Tight liquidity reserve ({value} days). Vulnerable to customer payment delays.'"
           },
           {
             "_id": "rule_dir_critical",
@@ -170,7 +191,8 @@
             "in_metric": "'DIR'",
             "in_value": "< 15",
             "out_status": "'CRITICAL'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Acute insolvency danger ({value} days). Liquid assets depleted in under 15 days.'"
           },
           {
             "_id": "rule_ocf_strong",
@@ -178,7 +200,8 @@
             "in_metric": "'OCF_RATIO'",
             "in_value": ">= 1.0",
             "out_status": "'STRONG'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Strong short-term solvency ({value}x). Operating cash flow covers current liabilities.'"
           },
           {
             "_id": "rule_ocf_adequate",
@@ -186,7 +209,8 @@
             "in_metric": "'OCF_RATIO'",
             "in_value": ">= 0.5",
             "out_status": "'ADEQUATE'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Moderate coverage ({value}x). Dependent on rolling credit facilities or vendor float.'"
           },
           {
             "_id": "rule_ocf_weak",
@@ -194,7 +218,8 @@
             "in_metric": "'OCF_RATIO'",
             "in_value": ">= 0.0",
             "out_status": "'WEAK'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Weak liquidity ({value}x). High debt rollover and refinancing risk.'"
           },
           {
             "_id": "rule_ocf_distressed",
@@ -202,7 +227,8 @@
             "in_metric": "'OCF_RATIO'",
             "in_value": "< 0.0",
             "out_status": "'DISTRESSED'",
-            "out_risk": "true"
+            "out_risk": "true",
+            "out_rationale": "'Negative operating cash flow ({value}x). Core operations deplete liquidity.'"
           },
           {
             "_id": "rule_default_balanced",
@@ -210,7 +236,8 @@
             "in_metric": "",
             "in_value": "",
             "out_status": "'BALANCED'",
-            "out_risk": "false"
+            "out_risk": "false",
+            "out_rationale": "'Balanced operating working capital position.'"
           }
         ]
       }
