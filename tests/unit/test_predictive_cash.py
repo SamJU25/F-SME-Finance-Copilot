@@ -205,4 +205,14 @@ def test_predictive_lumpy_expense_overdraft_pinpointing():
     assert "Triggered by RENT" in result.explanation
 
 
+def test_predictive_decision_engine_expense_triage():
+    # Test transactions with non-standard memos evaluated via DecisionDomain.EXPENSE_TRIAGE
+    txs = [
+        make_tx(1, date(2026, 1, 15), "-4500.00", desc="BIWEEKLY STIPEND DISTRIBUTION TO STAFF"),
+        make_tx(2, date(2026, 1, 30), "-4500.00", desc="BIWEEKLY STIPEND DISTRIBUTION TO STAFF"),
+    ]
+    payroll = detect_recurring_payroll(txs)
+    assert payroll == Decimal("4500.00")
+
+
 

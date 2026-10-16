@@ -11,6 +11,7 @@ from api.routes.analyze import router as analyze_router
 from api.routes.actions import router as actions_router
 from api.routes.underwrite import router as underwrite_router
 from api.routes.agent import router as agent_router
+from api.routes.decision import router as decision_router
 
 app = FastAPI(
     title="SME Finance Copilot API",
@@ -44,6 +45,7 @@ app.include_router(analyze_router)
 app.include_router(actions_router)
 app.include_router(underwrite_router)
 app.include_router(agent_router)
+app.include_router(decision_router)
 
 
 @app.get("/")

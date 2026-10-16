@@ -9,10 +9,11 @@ class DecisionDomain(str, Enum):
     INTENT_ROUTING = "INTENT_ROUTING"      # Conversational query classification
     EXPENSE_TRIAGE = "EXPENSE_TRIAGE"      # Bank memo expense categorization (Payroll/Rent/Debt)
     DEFICIT_SEVERITY = "DEFICIT_SEVERITY"  # Runway crunch horizon classification
+    WORKING_CAPITAL_RISK = "WORKING_CAPITAL_RISK"  # CCC, WCR, and operational lag benchmarks
 
 
 class DecisionRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="forbid")
 
     domain: DecisionDomain
     input_state: Dict[str, Any]
@@ -24,11 +25,15 @@ class DecisionRequest(BaseModel):
 
 
 class DecisionResult(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
+    model_config = ConfigDict(extra="forbid")
 
     domain: DecisionDomain
     selected_choice: str
     confidence_score: float                # 1.0 for deterministic JDM tables; 0.0-1.0 calibrated for models
     engine_id: str                         # e.g., "zen-engine@2.1.3", "system-one@kev-0.8b", "fallback-rules"
+    matched_rule_id: Optional[str] = None  # Exact rule ID from JDM table (e.g. "rule_prime", "rule_high_risk")
+    matched_rule_description: Optional[str] = None
+    adverse_factors: List[str] = Field(default_factory=list)  # ECOA/FCRA adverse action reason codes
+    evaluation_duration_us: Optional[int] = None              # Execution latency in microseconds
     rationale: Optional[str] = None
     output_payload: Dict[str, Any] = Field(default_factory=dict)

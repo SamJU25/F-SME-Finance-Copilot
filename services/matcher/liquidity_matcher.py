@@ -41,6 +41,8 @@ class UnderwritingDossier(BaseModel):
     recommended_product_types: list[ProductType]
     revenue_volatility_cv: Optional[Decimal] = None
     volatility_tier: Optional[str] = None
+    decision_rule_id: Optional[str] = None
+    adverse_factors: list[str] = Field(default_factory=list)
 
 
 class FinancingOption(BaseModel):
@@ -225,6 +227,8 @@ def underwrite_sme_transactions(
         recommended_product_types=products,
         revenue_volatility_cv=cv,
         volatility_tier=vol_tier,
+        decision_rule_id=decision_res.matched_rule_id,
+        adverse_factors=decision_res.adverse_factors,
     )
 
 

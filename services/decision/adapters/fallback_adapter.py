@@ -29,6 +29,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             DecisionDomain.DEFICIT_SEVERITY,
             DecisionDomain.EXPENSE_TRIAGE,
             DecisionDomain.INTENT_ROUTING,
+            DecisionDomain.WORKING_CAPITAL_RISK,
         ]
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
@@ -44,6 +45,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             return self._evaluate_expense_triage(state)
         elif request.domain == DecisionDomain.INTENT_ROUTING:
             return self._evaluate_intent_routing(state, request.candidate_options)
+        elif request.domain == DecisionDomain.WORKING_CAPITAL_RISK:
+            return self._evaluate_working_capital_risk(state)
         else:
             raise ValueError(f"Domain {request.domain} not supported by {self.engine_id}")
 
@@ -55,6 +58,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         near_prime_dab = Decimal(str(state.get("near_prime_dab_threshold", "3000.00")))
         max_acceptable_nsf = int(state.get("max_acceptable_nsf", 1))
 
+        adverse_factors: List[str] = []
         if dab >= prime_dab and nsf_count == 0:
             tier = "PRIME"
             limit_multiplier = "3.0"
@@ -63,6 +67,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 "INVOICE_FACTORING",
                 "REVENUE_BASED_FINANCING",
             ]
+            rule_id = "fallback_rule_prime"
             rationale = "High average daily balance with 0 NSF incidents qualifies for Prime tier."
         elif dab >= near_prime_dab and nsf_count <= max_acceptable_nsf:
             tier = "NEAR_PRIME"
@@ -71,11 +76,21 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 "INVOICE_FACTORING",
                 "REVENUE_BASED_FINANCING",
             ]
+            rule_id = "fallback_rule_near_prime"
+            if dab < prime_dab:
+                adverse_factors.append("DAB_BELOW_PRIME_THRESHOLD")
+            if nsf_count > 0:
+                adverse_factors.append("NSF_INCIDENTS_RECORDED")
             rationale = "Moderate average daily balance and acceptable NSF threshold qualifies for Near-Prime tier."
         else:
             tier = "HIGH_RISK"
             limit_multiplier = "0.5"
             products = ["INVOICE_FACTORING"]
+            rule_id = "fallback_rule_high_risk"
+            if dab < near_prime_dab:
+                adverse_factors.append("DAB_BELOW_MINIMUM_THRESHOLD")
+            if nsf_count > max_acceptable_nsf:
+                adverse_factors.append("EXCESSIVE_NSF_COUNT")
             rationale = "Low daily balance or elevated NSF count mandates High-Risk tier with restricted products."
 
         return DecisionResult(
@@ -83,6 +98,10 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             selected_choice=tier,
             confidence_score=1.0,
             engine_id=self.engine_id,
+            matched_rule_id=rule_id,
+            matched_rule_description=rationale,
+            adverse_factors=adverse_factors,
+            evaluation_duration_us=10,
             rationale=rationale,
             output_payload={
                 "risk_tier": tier,
@@ -195,4 +214,53 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             engine_id=self.engine_id,
             rationale=f"Keyword heuristic classified intent as {choice}.",
             output_payload={"intent": choice},
+        )
+
+    def _evaluate_working_capital_risk(self, state: Dict[str, Any]) -> DecisionResult:
+        metric = str(state.get("metric", "")).upper()
+        val = Decimal(str(state.get("value", 0)))
+
+        if metric == "CCC":
+            if val > Decimal("30"):
+                status = "WORKING_CAPITAL_TRAP"
+                is_risk = True
+                rule_id = "fallback_ccc_trap"
+            elif val >= Decimal("0"):
+                status = "BALANCED"
+                is_risk = False
+                rule_id = "fallback_ccc_balanced"
+            else:
+                status = "CASH_GENERATIVE"
+                is_risk = False
+                rule_id = "fallback_ccc_generative"
+        elif metric == "WCR_DAYS":
+            if val > Decimal("60"):
+                status = "WORKING_CAPITAL_TRAP"
+                is_risk = True
+                rule_id = "fallback_wcr_trap"
+            else:
+                status = "BALANCED"
+                is_risk = False
+                rule_id = "fallback_wcr_balanced"
+        elif metric == "WCR_DOLLARS":
+            if val <= Decimal("0"):
+                status = "CASH_GENERATIVE"
+                is_risk = False
+                rule_id = "fallback_wcr_generative"
+            else:
+                status = "BALANCED"
+                is_risk = False
+                rule_id = "fallback_wcr_balanced"
+        else:
+            status = "BALANCED"
+            is_risk = False
+            rule_id = "fallback_wc_default"
+
+        return DecisionResult(
+            domain=DecisionDomain.WORKING_CAPITAL_RISK,
+            selected_choice=status,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=rule_id,
+            output_payload={"status": status, "is_risk": is_risk},
         )

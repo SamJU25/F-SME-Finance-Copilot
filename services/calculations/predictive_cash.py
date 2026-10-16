@@ -61,13 +61,30 @@ class DetectedObligation:
 def _detect_obligation(
     rows: Sequence[DemoTransaction], pattern: re.Pattern, category: str
 ) -> Optional[DetectedObligation]:
-    """Identifies recurring obligation amount and primary day-of-month."""
+    """Identifies recurring obligation amount and primary day-of-month via pattern matching and decision engine triage."""
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
     matching_amounts: list[Decimal] = []
     days_of_month: list[int] = []
+    registry = DecisionEngineRegistry.get_instance()
+
     for r in rows:
-        if r.amount < 0 and pattern.search(r.description):
-            matching_amounts.append(abs(r.amount))
-            days_of_month.append(r.posted_on.day)
+        if r.amount < 0:
+            is_match = bool(pattern.search(r.description))
+            if not is_match:
+                # Delegate non-standard descriptions to DecisionDomain.EXPENSE_TRIAGE
+                triage_res = registry.evaluate(
+                    DecisionRequest(
+                        domain=DecisionDomain.EXPENSE_TRIAGE,
+                        input_state={"description": r.description},
+                    )
+                )
+                if triage_res.selected_choice == category and triage_res.confidence_score >= 0.85:
+                    is_match = True
+
+            if is_match:
+                matching_amounts.append(abs(r.amount))
+                days_of_month.append(r.posted_on.day)
 
     if not matching_amounts:
         return None

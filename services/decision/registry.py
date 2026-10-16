@@ -69,6 +69,15 @@ class DecisionEngineRegistry:
         """Clear an explicit domain routing override."""
         self._domain_overrides.pop(domain, None)
 
+    def reload_all(self) -> Dict[str, Any]:
+        """Triggers hot-reloading across all registered adapters that support dynamic policies."""
+        reload_summary: Dict[str, Any] = {}
+        for _, adapter in self._adapters:
+            if hasattr(adapter, "reload_tables") and callable(getattr(adapter, "reload_tables")):
+                res = getattr(adapter, "reload_tables")(force=True)
+                reload_summary[adapter.engine_id] = res
+        return reload_summary
+
     def resolve_adapter(self, request: DecisionRequest) -> AbstractDecisionEngine:
         """Resolve the most qualified adapter for the request."""
         # 1. Check explicit domain override

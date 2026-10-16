@@ -80,19 +80,25 @@ def test_underwrite_prime_tier():
     # Prime gets 3.0x DAB limit
     assert dossier.max_qualified_limit == Decimal("39000.00")
     assert ProductType.WORKING_CAPITAL_LINE in dossier.recommended_product_types
+    assert dossier.decision_rule_id in ("rule_prime", "fallback_rule_prime")
+    assert dossier.adverse_factors == []
 
 
 def test_underwrite_near_prime_and_high_risk():
-    # Near prime: DAB >= 3000 and NSF <= 2
+    # Near prime: DAB >= 3000 and NSF <= 1
     txs_near = [make_tx(1, "5000.00"), make_tx(2, "5000.00")]
     dossier_near = underwrite_sme_transactions(txs_near, nsf_count=1)
     assert dossier_near.risk_tier == RiskTier.NEAR_PRIME
     assert dossier_near.max_qualified_limit == Decimal("7500.00")
+    assert dossier_near.decision_rule_id in ("rule_near_prime", "fallback_rule_near_prime")
+    assert "DAB_BELOW_PRIME_THRESHOLD" in dossier_near.adverse_factors
 
-    # High risk: NSF > 2
+    # High risk: NSF > 1
     dossier_high = underwrite_sme_transactions(txs_near, nsf_count=3)
     assert dossier_high.risk_tier == RiskTier.HIGH_RISK
     assert dossier_high.max_qualified_limit == Decimal("2500.00")
+    assert dossier_high.decision_rule_id in ("rule_high_risk", "fallback_rule_high_risk")
+    assert "EXCESSIVE_NSF_COUNT" in dossier_high.adverse_factors
 
 
 def test_match_financing_options_and_predatory_flag():

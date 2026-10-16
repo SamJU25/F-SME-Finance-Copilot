@@ -85,19 +85,28 @@ def calculate_cash_conversion_cycle(dso_days: int, dpo_days: int, dio_days: int 
         raise ValueError("dso_days, dpo_days, and dio_days must be non-negative integers.")
 
     ccc_days = dso_days + dio_days - dpo_days
-    if ccc_days > 30:
-        status = "WORKING_CAPITAL_TRAP"
+
+    # Evaluate CCC status by reference via DecisionEngineRegistry (zero hardcoding)
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "CCC", "value": ccc_days},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    status = decision_res.output_payload.get("status", decision_res.selected_choice)
+
+    if status == "WORKING_CAPITAL_TRAP":
         rationale = (
             f"Cash is trapped in working capital for {ccc_days} days. Customer payment collection (DSO: {dso_days}d) "
             f"lags vendor payment terms (DPO: {dpo_days}d). Invoice factoring or a working capital facility is recommended."
         )
-    elif ccc_days >= 0:
-        status = "BALANCED"
+    elif status == "BALANCED":
         rationale = (
             f"Working capital cycle is balanced at {ccc_days} days. Customer collection and vendor payment schedules align."
         )
     else:
-        status = "CASH_GENERATIVE"
         rationale = (
             f"Negative working capital cycle ({ccc_days} days). Vendor credit terms finance receivables before client collections."
         )

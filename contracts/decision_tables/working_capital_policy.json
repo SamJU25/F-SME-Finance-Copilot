@@ -1,0 +1,108 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "WorkingCapitalRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "WorkingCapitalPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_metric",
+            "field": "metric",
+            "name": "Financial Metric Name"
+          },
+          {
+            "id": "in_value",
+            "field": "value",
+            "name": "Metric Value (Days or Ratio)"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_status",
+            "field": "status",
+            "name": "Health Classification Status"
+          },
+          {
+            "id": "out_risk",
+            "field": "is_risk",
+            "name": "Is Operational Working Capital Risk"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_ccc_trap",
+            "_description": "CCC > 30 days indicates liquidity trapped in trade cycle lag",
+            "in_metric": "'CCC'",
+            "in_value": "> 30",
+            "out_status": "'WORKING_CAPITAL_TRAP'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_ccc_balanced",
+            "_description": "CCC between 0 and 30 days reflects balanced trade terms",
+            "in_metric": "'CCC'",
+            "in_value": ">= 0",
+            "out_status": "'BALANCED'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_ccc_generative",
+            "_description": "Negative CCC means suppliers fund operations before customer collections",
+            "in_metric": "'CCC'",
+            "in_value": "< 0",
+            "out_status": "'CASH_GENERATIVE'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_wcr_trap",
+            "_description": "WCR days > 60 flags severe working capital trap",
+            "in_metric": "'WCR_DAYS'",
+            "in_value": "> 60",
+            "out_status": "'WORKING_CAPITAL_TRAP'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_wcr_generative",
+            "_description": "WCR <= 0 dollars means cash generative float",
+            "in_metric": "'WCR_DOLLARS'",
+            "in_value": "<= 0",
+            "out_status": "'CASH_GENERATIVE'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_default_balanced",
+            "_description": "Default balanced baseline",
+            "in_metric": "",
+            "in_value": "",
+            "out_status": "'BALANCED'",
+            "out_risk": "false"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "WorkingCapitalResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

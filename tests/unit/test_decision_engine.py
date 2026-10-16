@@ -387,3 +387,72 @@ def test_registry_routes_intent_to_system_one_by_default():
     assert res.engine_id == "system-one@onnx-fastembed"
     assert res.selected_choice == "CREDIT_UNDERWRITING"
     assert res.confidence_score >= 0.80
+
+
+def test_zen_adapter_captures_matched_rule_id_and_adverse_factors():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # Prime rule firing
+    res_prime = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNDERWRITING,
+        input_state={"dab": Decimal("15000.00"), "nsf_count": 0},
+    ))
+    assert res_prime.matched_rule_id == "rule_prime"
+    assert "DAB >= 10,000" in (res_prime.matched_rule_description or "")
+    assert res_prime.adverse_factors == []
+    assert res_prime.evaluation_duration_us is not None
+    assert res_prime.evaluation_duration_us > 0
+
+    # High-Risk rule firing with adverse factors
+    res_high = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNDERWRITING,
+        input_state={"dab": Decimal("1200.00"), "nsf_count": 3},
+    ))
+    assert res_high.matched_rule_id == "rule_high_risk"
+    assert "DAB_BELOW_MINIMUM_THRESHOLD" in res_high.adverse_factors
+    assert "EXCESSIVE_NSF_COUNT" in res_high.adverse_factors
+
+    # Security Gate rule firing
+    res_sec = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.SECURITY_GATE,
+        input_state={"action_type": "TRANSFER"},
+    ))
+    assert res_sec.matched_rule_id == "rule_tier_3"
+    assert "biometric" in (res_sec.matched_rule_description or "").lower()
+
+
+def test_zen_adapter_and_registry_hot_reloading():
+    registry = DecisionEngineRegistry.get_instance()
+    summary = registry.reload_all()
+    assert "zen-engine@2.1.3" in summary
+    assert summary["zen-engine@2.1.3"]["UNDERWRITING"] == "COMPILED"
+    assert summary["zen-engine@2.1.3"]["SECURITY_GATE"] == "COMPILED"
+    assert summary["zen-engine@2.1.3"]["DEFICIT_SEVERITY"] == "COMPILED"
+
+
+def test_zen_adapter_working_capital_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    res_trap = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "CCC", "value": 45},
+    ))
+    assert res_trap.selected_choice == "WORKING_CAPITAL_TRAP"
+    assert res_trap.output_payload["is_risk"] is True
+    assert res_trap.matched_rule_id == "rule_ccc_trap"
+
+    res_bal = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "CCC", "value": 15},
+    ))
+    assert res_bal.selected_choice == "BALANCED"
+    assert res_bal.output_payload["is_risk"] is False
+
+    res_gen = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "CCC", "value": -20},
+    ))
+    assert res_gen.selected_choice == "CASH_GENERATIVE"
+    assert res_gen.output_payload["is_risk"] is False
