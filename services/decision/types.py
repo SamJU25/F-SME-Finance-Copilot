@@ -16,6 +16,7 @@ class DecisionDomain(str, Enum):
     UNIT_ECONOMICS = "UNIT_ECONOMICS"              # Margin of safety & operating margin tiers
     REVENUE_VOLATILITY = "REVENUE_VOLATILITY"      # Weekly inflow coefficient of variation tiers
     FACILITY_MATCHING = "FACILITY_MATCHING"        # Pre-qualified financing catalog, pricing & suitability
+    AGENT_PERSONA = "AGENT_PERSONA"                # Agent personality directives, system prompts & subagent routing
 
 
 

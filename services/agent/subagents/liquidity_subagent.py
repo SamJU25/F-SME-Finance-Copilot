@@ -30,11 +30,17 @@ from services.agent.tools import (
     tool_calculate_operating_cash_flow_ratio,
     tool_calculate_wcr,
 )
+from services.agent.prompts import (
+    get_missing_param_guidance,
+    get_missing_statement_guidance,
+    resolve_subagent_routing,
+)
 
 LIQUIDITY_SUB_INTENTS = {
     "WCR",
     "OCF_RATIO",
     "DEFENSIVE_INTERVAL",
+    "WORKING_CAPITAL",
 }
 
 
@@ -43,7 +49,12 @@ class LiquiditySubagent:
 
     @staticmethod
     def can_handle(sub_intent: Optional[str]) -> bool:
-        return sub_intent in LIQUIDITY_SUB_INTENTS
+        if not sub_intent:
+            return False
+        try:
+            return resolve_subagent_routing(sub_intent) == "LiquiditySubagent"
+        except Exception:
+            return sub_intent in LIQUIDITY_SUB_INTENTS
 
     @classmethod
     def handle_sub_intent(
@@ -79,12 +90,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your Working Capital Requirement (WCR), please provide your current "
-                    "accounts receivable, inventory value, and accounts payable.\n\n"
-                    "Example format: 'What is our working capital requirement if receivables are $50,000, inventory $30,000, and payables $20,000?'\n\n"
-                    "Formula: WCR = Accounts Receivable + Inventory - Accounts Payable."
-                ),
+                reply=get_missing_param_guidance("WCR"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -112,12 +118,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your Operating Cash Flow Ratio, please specify your annual operating cash flow "
-                    "and total current liabilities.\n\n"
-                    "Example format: 'Calculate our operating cash flow ratio for OCF $90,000 and current liabilities $60,000'.\n\n"
-                    "Benchmark: Ratio >= 1.00x indicates operating earnings cover short-term debts."
-                ),
+                reply=get_missing_param_guidance("OCF_RATIO"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -168,17 +169,15 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your Defensive Interval Ratio (DIR), please provide your liquid quick assets "
-                    "(cash + marketable securities + receivables) and daily operating expenses, or upload your bank statement CSV.\n\n"
-                    "Formula: DIR = Quick Assets / Daily Operating Expenses."
-                ),
+                reply=get_missing_param_guidance("DEFENSIVE_INTERVAL"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
 
         # 4. Cash Conversion Cycle (CCC)
         if sub_intent == "WORKING_CAPITAL":
+            if effective_csv:
+                return None
             ccc_metrics = tool_calculate_ccc(request.message)
             ccc_summary = (
                 f"- **Days Sales Outstanding (DSO)**: {ccc_metrics['dso_days']} days\n"
@@ -209,10 +208,7 @@ class LiquiditySubagent:
         """Processes transactional bank statements into liquidity metrics and runway reserves."""
         if not effective_csv:
             return CopilotResponse(
-                reply=(
-                    "To diagnose your cash runway, burn rate, and liquidity reserves, "
-                    "please provide your transactional bank statement CSV."
-                ),
+                reply=get_missing_statement_guidance("diagnostic"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )

@@ -31,6 +31,11 @@ from services.agent.tools import (
     tool_calculate_predictive_cash,
     tool_calculate_revenue_attrition_impact,
 )
+from services.agent.prompts import (
+    get_missing_param_guidance,
+    get_missing_statement_guidance,
+    resolve_subagent_routing,
+)
 
 RISK_SUB_INTENTS = {
     "BREAK_EVEN",
@@ -45,7 +50,12 @@ class RiskManagerSubagent:
 
     @staticmethod
     def can_handle(sub_intent: Optional[str]) -> bool:
-        return sub_intent in RISK_SUB_INTENTS
+        if not sub_intent:
+            return False
+        try:
+            return resolve_subagent_routing(sub_intent) == "RiskManagerSubagent"
+        except Exception:
+            return sub_intent in RISK_SUB_INTENTS
 
     @classmethod
     def handle_sub_intent(
@@ -103,11 +113,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your Break-Even Revenue, please provide your fixed operating costs and contribution margin ratio.\n\n"
-                    "Example format: 'What is our break-even if fixed costs are $25,000 and margin is 40%?'\n"
-                    "Or: 'Calculate break-even for fixed costs $30,000 with revenue $100,000 and variable costs $60,000'."
-                ),
+                reply=get_missing_param_guidance("BREAK_EVEN"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -137,11 +143,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your break-even sales volume in physical units, please specify your fixed overhead, "
-                    "unit selling price, and unit variable cost.\n\n"
-                    "Example format: 'How many units must we sell to break even if fixed costs are $40,000, price $100, and variable cost $60?'"
-                ),
+                reply=get_missing_param_guidance("BREAK_EVEN_UNITS"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -150,10 +152,7 @@ class RiskManagerSubagent:
         if sub_intent == "CONCENTRATION":
             if not effective_csv:
                 return CopilotResponse(
-                    reply=(
-                        "To audit your client revenue concentration and Herfindahl-Hirschman Index (HHI), "
-                        "please provide your transactional bank statement CSV."
-                    ),
+                    reply=get_missing_param_guidance("CONCENTRATION"),
                     intent_detected="CASH_DIAGNOSTIC",
                     requires_biometric_hitl=False,
                 )
@@ -232,11 +231,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To simulate client churn impact on your cash flow, please specify your current annual revenue, "
-                    "annual operating burn, and the revenue contributed by the client at risk.\n\n"
-                    "Example format: 'What is the cash flow impact if we lose our largest client who pays $80,000 out of $300,000 revenue with $250,000 annual expenses?'"
-                ),
+                reply=get_missing_param_guidance("ATTRITION"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -254,10 +249,7 @@ class RiskManagerSubagent:
         """Runs multi-horizon conformal predictive cash forecasting and deficit pinpointing."""
         if not effective_csv:
             return CopilotResponse(
-                reply=(
-                    "To run a predictive cash crunch and deficit early warning analysis, "
-                    "please provide your transactional bank statement CSV."
-                ),
+                reply=get_missing_statement_guidance("diagnostic"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )

@@ -51,6 +51,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             DecisionDomain.UNIT_ECONOMICS,
             DecisionDomain.REVENUE_VOLATILITY,
             DecisionDomain.FACILITY_MATCHING,
+            DecisionDomain.AGENT_PERSONA,
         ]
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
@@ -80,6 +81,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             return self._evaluate_revenue_volatility(state)
         elif request.domain == DecisionDomain.FACILITY_MATCHING:
             return self._evaluate_facility_matching(state)
+        elif request.domain == DecisionDomain.AGENT_PERSONA:
+            return self._evaluate_agent_persona(state)
         else:
             raise ValueError(f"Domain {request.domain} not supported by {self.engine_id}")
 
@@ -878,6 +881,248 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             matched_rule_id=rule_id,
             output_payload=payload,
             rationale=f"Matched {facility_name} from {provider} (Score={score}, Term={term}d, Multiplier={mult}x).",
+        )
+
+    def _evaluate_agent_persona(self, state: Dict[str, Any]) -> DecisionResult:
+        pt = str(state.get("prompt_type", "BASE")).upper()
+        sub = str(state.get("sub_intent", "")).upper()
+        base_reply = str(state.get("base_reply", ""))
+        base_persona = str(state.get("base_persona", ""))
+
+        base_persona_text = (
+            "You are the Autonomous SME Finance Copilot, an institutional AI Chief Financial Officer (CFO) "
+            "and trusted financial partner dedicated to small and medium enterprise (SME) owners, founders, and finance operators.\n\n"
+            "Executive Persona & Tone Standards:\n"
+            "- Role: Pragmatic, commercially astute fractional CFO dedicated to safeguarding cash runway, auditing working capital, and structuring non-predatory financing.\n"
+            "- Communication Style: Direct, boardroom-level, numbers-grounded, and concise. Speak like a trusted financial partner, not a generic customer service chatbot.\n"
+            "- 3-Part CFO Cadence: 1. Financial Reality: State the exact metric or underwriting fact directly. 2. Operational Impact: Explain the burn rate, working capital, or debt-service implication. 3. Next Action: Name the single concrete decision or instruction needed.\n"
+            "- Formatting & Typography Standards: When presenting key financial figures, metrics, or title points, format them in bold Markdown (e.g., **1. Cash Reserve:** **$45,000** over **60 days**) to ensure instant executive readability at a glance.\n"
+            "- Strict Anti-Fluff Protocol: Never use conversational throat-clearing (never say 'I would be happy to', 'I would like to', 'Sure!', 'Certainly!', or 'As an AI'). Never use hollow corporate buzzwords (delve, leverage, foster, streamline, robust, supercharge, embark).\n"
+            "- Zero Numerical Hallucinations: Never guess or invent dollar amounts. If a bank statement CSV is not yet uploaded, state the underwriting requirements clearly and instruct the owner to upload their statement."
+        )
+
+        conversational_guidelines = (
+            f"{base_persona_text}\n\n"
+            "Executive Response Guidelines:\n"
+            "1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\n"
+            "2. If the user inquires about off-topic subjects (sports, recipes, entertainment, coding, creative writing), politely clarify in one sentence that as an AI CFO you specialize exclusively in SME business liquidity and working capital, and invite them back to their business finances.\n"
+            "3. For new users asking how to start or how this works, clearly outline the process: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Action Review (proposals are staged for review and explicit owner approval before execution).\n"
+            "4. Always conclude by inviting the business owner to upload a transactional bank statement CSV to run a live financial diagnosis or ask any strategic cash flow question."
+        )
+
+        cash_diag_guidelines = (
+            f"{base_persona_text}\n\n"
+            f"Verified Financial Engine Outputs:\n{base_reply}\n\n"
+            "Executive Advisory Guidelines:\n"
+            "1. Deliver strictly 2 concise sentences of strategic CFO advisory directly for the business owner.\n"
+            "2. Sentence 1: Risk assessment of the current burn rate and runway reserve.\n"
+            "3. Sentence 2: Concrete next action on working-capital preservation (e.g. invoice collections or credit facility).\n"
+            "4. Strictly cite verified metrics if referencing numbers; never contradict or approximate verified figures.\n\n"
+            "STRICT PROHIBITIONS:\n"
+            "- DO NOT say 'Your bank statement CSV has been uploaded', 'Now let's dive into the numbers', or 'Here are the results'.\n"
+            "- DO NOT repeat metrics in bullet points (they are already displayed).\n"
+            "- DO NOT wrap text in quotation marks.\n"
+            "- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions')."
+        )
+
+        credit_uw_guidelines = (
+            f"{base_persona_text}\n\n"
+            f"Verified Underwriting Dossier:\n{base_reply}\n\n"
+            "Underwriting Advisory Guidelines:\n"
+            "1. Deliver strictly 2 concise sentences of executive credit guidance.\n"
+            "2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\n"
+            "3. Sentence 2: State the concrete staging step (reminding that proposals are staged for review and explicit owner approval before execution).\n\n"
+            "STRICT PROHIBITIONS:\n"
+            "- DO NOT repeat facilities in bullet points.\n"
+            "- DO NOT wrap text in quotation marks.\n"
+            "- DO NOT use conversational throat-clearing."
+        )
+
+        missing_stmt_diag = (
+            f"{base_persona_text}\n\n"
+            "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
+            "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
+        )
+
+        missing_stmt_uw = (
+            f"{base_persona_text}\n\n"
+            "The business owner is inquiring about financing or credit underwriting, but NO bank statement CSV is currently loaded in session.\n"
+            "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded. Instruct the user to upload their 90-day bank statement CSV so you can evaluate their Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity with true APR disclosures."
+        )
+
+        off_topic_text = (
+            "As the Autonomous SME Finance Copilot, I specialize exclusively in SME business liquidity, "
+            "working capital auditing, and transactional credit underwriting.\n\n"
+            "I am unable to assist with non-financial topics. How can I assist you with your business "
+            "cash runway, burn rate, overdraft forecast, or financing options today?"
+        )
+
+        missing_params = {
+            "FCCR": "To calculate your Fixed Charge Coverage Ratio (FCCR), please provide your annual EBITDA, fixed charges (e.g. equipment/property leases), and annual debt service.\n\nExample format: 'Calculate FCCR for EBITDA $200,000, fixed charges $40,000, and debt service $60,000'.\n\nInstitutional Threshold: FCCR >= 1.25x signifies adequate coverage of fixed operational debt covenants.",
+            "DEBT_CAPACITY": "To evaluate your maximum prudent debt capacity, please upload your bank statement CSV or specify your annual Net Operating Income (NOI).\n\nExample format: 'What is our maximum prudent borrowing capacity with $120,000 NOI at 1.25x DSCR?'",
+            "DSCR": "To calculate your Debt Service Coverage Ratio (DSCR), please provide your annual Net Operating Income (NOI) and total annual debt service.\n\nExample format: 'What is our DSCR if annual NOI is $150,000 and debt payments are $100,000?'\n\nBenchmark: DSCR >= 1.25x represents institutional prime underwriting threshold.",
+            "AMORTIZATION": "To calculate your commercial loan amortization schedule, please specify the loan principal amount, annual interest rate, and term in months.\n\nExample format: 'Calculate monthly payment for a $50,000 commercial loan at 8% interest over 24 months'.",
+            "LOAN_AMORTIZATION": "To calculate your commercial loan amortization schedule, please specify the loan principal amount, annual interest rate, and term in months.\n\nExample format: 'Calculate monthly payment for a $50,000 commercial loan at 8% interest over 24 months'.",
+            "FACTORING": "To calculate invoice factoring net proceeds and true APR, please specify your invoice face value and advance rate.\n\nExample format: 'Factor a $50,000 invoice with 85% advance, 3% discount fee, and 45 days collection'.",
+            "WCR": "To calculate your Working Capital Requirement (WCR), please provide your current accounts receivable, inventory value, and accounts payable.\n\nExample format: 'What is our working capital requirement if receivables are $50,000, inventory $30,000, and payables $20,000?'\n\nFormula: WCR = Accounts Receivable + Inventory - Accounts Payable.",
+            "OCF_RATIO": "To calculate your Operating Cash Flow Ratio, please specify your annual operating cash flow and total current liabilities.\n\nExample format: 'Calculate our operating cash flow ratio for OCF $90,000 and current liabilities $60,000'.\n\nBenchmark: Ratio >= 1.00x indicates operating earnings cover short-term debts.",
+            "DEFENSIVE_INTERVAL": "To calculate your Defensive Interval Ratio (DIR), please provide your liquid quick assets (cash + marketable securities + receivables) and daily operating expenses, or upload your bank statement CSV.\n\nFormula: DIR = Quick Assets / Daily Operating Expenses.",
+            "BREAK_EVEN": "To calculate your Break-Even Revenue, please provide your fixed operating costs and contribution margin ratio.\n\nExample format: 'What is our break-even if fixed costs are $25,000 and margin is 40%?'\nOr: 'Calculate break-even for fixed costs $30,000 with revenue $100,000 and variable costs $60,000'.",
+            "BREAK_EVEN_UNITS": "To calculate your break-even sales volume in physical units, please specify your fixed overhead, unit selling price, and unit variable cost.\n\nExample format: 'How many units must we sell to break even if fixed costs are $40,000, price $100, and variable cost $60?'",
+            "CONCENTRATION": "To audit your client revenue concentration and Herfindahl-Hirschman Index (HHI), please provide your transactional bank statement CSV.",
+            "ATTRITION": "To simulate client churn impact on your cash flow, please specify your current annual revenue, annual operating burn, and the revenue contributed by the client at risk.\n\nExample format: 'What is the cash flow impact if we lose our largest client who pays $80,000 out of $300,000 revenue with $250,000 annual expenses?'",
+        }
+
+        credit_intents = {"DSCR", "FCCR", "AMORTIZATION", "LOAN_AMORTIZATION", "FACTORING", "DEBT_CAPACITY", "INVOICE_HASH"}
+        liquidity_intents = {"WCR", "OCF_RATIO", "DEFENSIVE_INTERVAL", "WORKING_CAPITAL"}
+        risk_intents = {"BREAK_EVEN", "BREAK_EVEN_UNITS", "CONCENTRATION", "ATTRITION"}
+
+        rule_id = "fallback_persona"
+        role = "AUTONOMOUS_CFO"
+        target_subagent = "Supervisor"
+        tone = "BOARDROOM_DIRECT"
+        template = ""
+        guidance = ""
+
+        if pt == "SUBAGENT_ROUTING":
+            if sub in credit_intents:
+                rule_id = "rule_route_credit_subagent"
+                role = "CREDIT_SPECIALIST"
+                target_subagent = "CreditSubagent"
+                tone = "INSTITUTIONAL_CREDIT"
+            elif sub in liquidity_intents:
+                rule_id = "rule_route_liquidity_subagent"
+                role = "LIQUIDITY_SPECIALIST"
+                target_subagent = "LiquiditySubagent"
+                tone = "OPERATIONAL_LIQUIDITY"
+            elif sub in risk_intents:
+                rule_id = "rule_route_risk_subagent"
+                role = "RISK_SPECIALIST"
+                target_subagent = "RiskManagerSubagent"
+                tone = "RISK_MANAGEMENT"
+            else:
+                rule_id = "rule_route_default"
+                role = "AUTONOMOUS_CFO"
+                target_subagent = "Supervisor"
+            selected_choice = target_subagent
+
+        elif pt == "MISSING_PARAM":
+            rule_id = f"rule_missing_param_{sub.lower()}"
+            guidance = missing_params.get(sub, "")
+            if sub in credit_intents:
+                role = "CREDIT_SPECIALIST"
+                target_subagent = "CreditSubagent"
+                tone = "INSTITUTIONAL_CREDIT"
+            elif sub in liquidity_intents:
+                role = "LIQUIDITY_SPECIALIST"
+                target_subagent = "LiquiditySubagent"
+                tone = "OPERATIONAL_LIQUIDITY"
+            else:
+                role = "RISK_SPECIALIST"
+                target_subagent = "RiskManagerSubagent"
+                tone = "RISK_MANAGEMENT"
+            selected_choice = role
+
+        elif pt == "BASE":
+            rule_id = "rule_persona_base"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "BOARDROOM_DIRECT"
+            template = base_persona_text
+            selected_choice = role
+
+        elif pt == "CONVERSATIONAL":
+            rule_id = "rule_prompt_conversational"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "BOARDROOM_DIRECT"
+            bp = str(state.get("base_persona", "")).strip() or base_persona_text
+            template = f"{bp}\n\n{conversational_guidelines}"
+            selected_choice = role
+
+        elif pt == "CASH_DIAGNOSTIC":
+            rule_id = "rule_prompt_cash_diagnostic"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "LiquiditySubagent"
+            tone = "EXECUTIVE_ADVISORY"
+            bp = str(state.get("base_persona", "")).strip() or base_persona_text
+            br = str(state.get("base_reply", ""))
+            template = f"{bp}\n\nVerified Financial Engine Outputs:\n{br}\n\n{cash_diag_guidelines}"
+            selected_choice = role
+
+        elif pt == "CREDIT_UNDERWRITING":
+            rule_id = "rule_prompt_credit_underwriting"
+            role = "INSTITUTIONAL_UNDERWRITER"
+            target_subagent = "CreditSubagent"
+            tone = "CREDIT_ASSESSMENT"
+            bp = str(state.get("base_persona", "")).strip() or base_persona_text
+            br = str(state.get("base_reply", ""))
+            template = f"{bp}\n\nVerified Underwriting Dossier:\n{br}\n\n{credit_uw_guidelines}"
+            selected_choice = role
+
+        elif pt == "MISSING_STATEMENT_DIAGNOSTIC":
+            rule_id = "rule_missing_statement_diagnostic"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "EXECUTIVE_INSTRUCTION"
+            template = missing_stmt_diag
+            guidance = "To diagnose your cash runway, burn rate, and overdraft risks, please provide your transactional bank statement CSV."
+            selected_choice = role
+
+        elif pt == "MISSING_STATEMENT_UNDERWRITING":
+            rule_id = "rule_missing_statement_underwriting"
+            role = "INSTITUTIONAL_UNDERWRITER"
+            target_subagent = "Supervisor"
+            tone = "EXECUTIVE_INSTRUCTION"
+            template = missing_stmt_uw
+            guidance = "To evaluate credit underwriting and match financing options, please provide your transactional bank statement CSV."
+            selected_choice = role
+
+        elif pt == "OFF_TOPIC":
+            rule_id = "rule_off_topic_deflection"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "BOARDROOM_DEFLECTION"
+            guidance = off_topic_text
+            selected_choice = role
+
+        elif pt == "GENERAL_STATEMENT_LOADED":
+            rule_id = "rule_general_statement_loaded"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "BOARDROOM_DIRECT"
+            guidance = "Statement loaded. You can ask about cash runway, daily burn rate, projected deficits, or credit qualification."
+            selected_choice = role
+
+        elif pt == "GENERAL_NO_STATEMENT":
+            rule_id = "rule_general_no_statement"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "BOARDROOM_DIRECT"
+            guidance = "I am the Autonomous SME Finance Copilot. Upload your bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity."
+            selected_choice = role
+
+        else:
+            rule_id = "rule_persona_default"
+            template = base_persona_text
+            selected_choice = role
+
+        output_payload = {
+            "selected_role": role,
+            "target_subagent": target_subagent,
+            "tone_standard": tone,
+            "prompt_template": template,
+            "guidance_text": guidance,
+        }
+
+        return DecisionResult(
+            domain=DecisionDomain.AGENT_PERSONA,
+            selected_choice=selected_choice,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=rule_id,
+            output_payload=output_payload,
+            rationale=f"Evaluated via fallback persona policy (Rule={rule_id}, PromptType={pt}, SubIntent={sub}).",
         )
 
 

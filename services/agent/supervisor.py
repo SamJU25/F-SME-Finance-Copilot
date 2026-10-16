@@ -37,9 +37,13 @@ from services.agent.param_extractor import (
 )
 from services.agent.prompts import (
     COPILOT_PERSONA_BASE,
+    evaluate_persona_policy,
     get_cash_diagnostic_prompt,
     get_conversational_system_prompt,
     get_credit_underwriting_prompt,
+    get_missing_statement_guidance,
+    get_missing_statement_prompt,
+    get_off_topic_reply,
     sanitize_cfo_reply,
 )
 from services.agent.schema import (
@@ -431,12 +435,8 @@ def run_copilot_supervisor(
     # 2. Credit Underwriting Flow
     if intent == "CREDIT_UNDERWRITING":
         if not effective_csv:
+            sys_directive = get_missing_statement_prompt("underwriting")
             if is_local:
-                sys_directive = (
-                    f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about financing or credit underwriting, but NO bank statement CSV is currently loaded in session.\n"
-                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded. Instruct the user to upload their 90-day bank statement CSV so you can evaluate their Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity with true APR disclosures."
-                )
                 local_reply = generate_local_reply(
                     prompt=request.message,
                     system_instruction=sys_directive,
@@ -451,11 +451,6 @@ def run_copilot_supervisor(
                     ))
 
             if effective_config and (effective_config.provider or "").lower() != "offline":
-                sys_directive = (
-                    f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about financing or credit underwriting, but NO bank statement CSV is currently loaded in session.\n"
-                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded. Instruct the user to upload their 90-day bank statement CSV so you can evaluate their Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity with true APR disclosures."
-                )
                 ai_reply = query_external_llm(
                     prompt=request.message,
                     system_instruction=sys_directive,
@@ -470,10 +465,7 @@ def run_copilot_supervisor(
                     ))
 
             return _finalize(CopilotResponse(
-                reply=(
-                    "To evaluate credit underwriting and match financing options, "
-                    "please provide your transactional bank statement CSV."
-                ),
+                reply=get_missing_statement_guidance("underwriting"),
                 intent_detected=intent,
             ))
 
@@ -530,12 +522,8 @@ def run_copilot_supervisor(
     # 3. Cash Flow Diagnostic Flow
     if intent == "CASH_DIAGNOSTIC":
         if not effective_csv:
+            sys_directive = get_missing_statement_prompt("diagnostic")
             if is_local:
-                sys_directive = (
-                    f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
-                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
-                )
                 local_reply = generate_local_reply(
                     prompt=request.message,
                     system_instruction=sys_directive,
@@ -550,11 +538,6 @@ def run_copilot_supervisor(
                     ))
 
             if effective_config and (effective_config.provider or "").lower() != "offline":
-                sys_directive = (
-                    f"{COPILOT_PERSONA_BASE}\n\n"
-                    "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
-                    "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
-                )
                 ai_reply = query_external_llm(
                     prompt=request.message,
                     system_instruction=sys_directive,
@@ -569,10 +552,7 @@ def run_copilot_supervisor(
                     ))
 
             return _finalize(CopilotResponse(
-                reply=(
-                    "To diagnose your cash runway, burn rate, and overdraft risks, "
-                    "please provide your transactional bank statement CSV."
-                ),
+                reply=get_missing_statement_guidance("diagnostic"),
                 intent_detected=intent,
             ))
 
@@ -739,12 +719,7 @@ def run_copilot_supervisor(
     # 4. General Financial Dialogue & Off-Topic Handling
     if is_off_topic_query(request.message, history=request.history):
         return _finalize(CopilotResponse(
-            reply=(
-                "As the Autonomous SME Finance Copilot, I specialize exclusively in SME business liquidity, "
-                "working capital auditing, and transactional credit underwriting.\n\n"
-                "I am unable to assist with non-financial topics. How can I assist you with your business "
-                "cash runway, burn rate, overdraft forecast, or financing options today?"
-            ),
+            reply=get_off_topic_reply(),
             intent_detected="GENERAL_ASSISTANCE",
             requires_biometric_hitl=False,
         ))
@@ -795,11 +770,11 @@ def run_copilot_supervisor(
             ))
 
     if effective_csv:
-        general_reply = (
+        general_reply = evaluate_persona_policy(prompt_type="GENERAL_STATEMENT_LOADED").get("guidance_text") or (
             "Statement loaded. You can ask about cash runway, daily burn rate, projected deficits, or credit qualification."
         )
     else:
-        general_reply = (
+        general_reply = evaluate_persona_policy(prompt_type="GENERAL_NO_STATEMENT").get("guidance_text") or (
             "I am the Autonomous SME Finance Copilot. "
             "Upload your bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity."
         )

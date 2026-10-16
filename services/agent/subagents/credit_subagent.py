@@ -38,6 +38,12 @@ from services.agent.tools import (
     tool_verify_invoice_hash,
 )
 
+from services.agent.prompts import (
+    get_missing_param_guidance,
+    get_missing_statement_guidance,
+    resolve_subagent_routing,
+)
+
 CREDIT_SUB_INTENTS = {
     "DSCR",
     "FCCR",
@@ -54,7 +60,12 @@ class CreditSubagent:
 
     @staticmethod
     def can_handle(sub_intent: Optional[str]) -> bool:
-        return sub_intent in CREDIT_SUB_INTENTS
+        if not sub_intent:
+            return False
+        try:
+            return resolve_subagent_routing(sub_intent) == "CreditSubagent"
+        except Exception:
+            return sub_intent in CREDIT_SUB_INTENTS
 
     @classmethod
     def handle_sub_intent(
@@ -104,12 +115,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your Fixed Charge Coverage Ratio (FCCR), please provide your annual EBITDA, "
-                    "fixed charges (e.g. equipment/property leases), and annual debt service.\n\n"
-                    "Example format: 'Calculate FCCR for EBITDA $200,000, fixed charges $40,000, and debt service $60,000'.\n\n"
-                    "Institutional Threshold: FCCR >= 1.25x signifies adequate coverage of fixed operational debt covenants."
-                ),
+                reply=get_missing_param_guidance("FCCR"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -155,11 +161,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To evaluate your maximum prudent debt capacity, please upload your bank statement CSV "
-                    "or specify your annual Net Operating Income (NOI).\n\n"
-                    "Example format: 'What is our maximum prudent borrowing capacity with $120,000 NOI at 1.25x DSCR?'"
-                ),
+                reply=get_missing_param_guidance("DEBT_CAPACITY"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -199,12 +201,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=(
-                    "To calculate your Debt Service Coverage Ratio (DSCR), please provide your annual Net Operating Income (NOI) "
-                    "and total annual debt service.\n\n"
-                    "Example format: 'What is our DSCR if annual NOI is $150,000 and debt payments are $100,000?'\n\n"
-                    "Benchmark: DSCR >= 1.25x represents institutional prime underwriting threshold."
-                ),
+                reply=get_missing_param_guidance("DSCR"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -236,11 +233,7 @@ class CreditSubagent:
                     requires_biometric_hitl=False,
                 )
             return CopilotResponse(
-                reply=(
-                    "To calculate your commercial loan amortization schedule, please specify the loan principal amount, "
-                    "annual interest rate, and term in months.\n\n"
-                    "Example format: 'Calculate monthly payment for a $50,000 commercial loan at 8% interest over 24 months'."
-                ),
+                reply=get_missing_param_guidance("AMORTIZATION"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -278,11 +271,7 @@ class CreditSubagent:
                     requires_biometric_hitl=False,
                 )
             return CopilotResponse(
-                reply=(
-                    "To calculate invoice factoring net proceeds and true APR, please specify your invoice face value "
-                    "and advance rate.\n\n"
-                    "Example format: 'Factor a $50,000 invoice with 85% advance, 3% discount fee, and 45 days collection'."
-                ),
+                reply=get_missing_param_guidance("FACTORING"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -330,10 +319,7 @@ class CreditSubagent:
         """Runs full digital underwriting dossier generation and financing options matching."""
         if not effective_csv:
             return CopilotResponse(
-                reply=(
-                    "To evaluate credit lines or working capital loans, please upload your "
-                    "transactional bank statement CSV."
-                ),
+                reply=get_missing_statement_guidance("underwriting"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )

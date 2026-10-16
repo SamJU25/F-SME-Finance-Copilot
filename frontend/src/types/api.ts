@@ -230,7 +230,8 @@ export type DecisionDomain =
   | 'CONCENTRATION_RISK'
   | 'UNIT_ECONOMICS'
   | 'REVENUE_VOLATILITY'
-  | 'FACILITY_MATCHING';
+  | 'FACILITY_MATCHING'
+  | 'AGENT_PERSONA';
 
 export interface DecisionEngineInfo {
   engine_id: string;

@@ -62,6 +62,7 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.UNIT_ECONOMICS,
             DecisionDomain.REVENUE_VOLATILITY,
             DecisionDomain.FACILITY_MATCHING,
+            DecisionDomain.AGENT_PERSONA,
         ]
 
     def _get_domain_file_map(self) -> Dict[DecisionDomain, str]:
@@ -76,6 +77,7 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.UNIT_ECONOMICS: "unit_economics_policy.json",
             DecisionDomain.REVENUE_VOLATILITY: "revenue_volatility_policy.json",
             DecisionDomain.FACILITY_MATCHING: "facility_matching_policy.json",
+            DecisionDomain.AGENT_PERSONA: "agent_persona_policy.json",
         }
 
 
@@ -380,6 +382,44 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             result_dict["volatility_tier"] = selected_choice
             rationale = result_dict.get("description") or f"Evaluated in {perf} via JDM revenue_volatility_policy.json (Rule={matched_rule_id}, CV={ctx.get('cv')})."
 
+        elif request.domain == DecisionDomain.AGENT_PERSONA:
+            prompt_tpl = result_dict.get("prompt_template", "")
+            if isinstance(prompt_tpl, str) and "\\n" in prompt_tpl:
+                prompt_tpl = prompt_tpl.replace("\\n", "\n")
+
+            guidance = result_dict.get("guidance_text", "")
+            if isinstance(guidance, str) and "\\n" in guidance:
+                guidance = guidance.replace("\\n", "\n")
+
+            base_reply = str(request.input_state.get("base_reply", ""))
+            base_persona = str(request.input_state.get("base_persona", ""))
+
+            if "{base_persona}" in prompt_tpl and not base_persona:
+                base_req = DecisionRequest(
+                    domain=DecisionDomain.AGENT_PERSONA,
+                    input_state={"prompt_type": "BASE"},
+                    execution_mode="DETERMINISTIC_ONLY",
+                )
+                base_res = self.evaluate(base_req)
+                base_persona = base_res.output_payload.get("prompt_template", "")
+
+            if "{base_persona}" in prompt_tpl and base_persona:
+                prompt_tpl = prompt_tpl.replace("{base_persona}", base_persona)
+            if "{base_reply}" in prompt_tpl:
+                prompt_tpl = prompt_tpl.replace("{base_reply}", base_reply)
+
+            result_dict["prompt_template"] = prompt_tpl
+            result_dict["guidance_text"] = guidance
+
+            pt = str(ctx.get("prompt_type", "")).upper()
+            if pt == "SUBAGENT_ROUTING":
+                selected_choice = result_dict.get("target_subagent", "Supervisor")
+                result_dict["target_subagent"] = selected_choice
+            else:
+                selected_choice = result_dict.get("selected_role", "AUTONOMOUS_CFO")
+
+            rationale = f"Evaluated in {perf} via JDM agent_persona_policy.json (Rule={matched_rule_id}, PromptType={pt}, SubIntent={ctx.get('sub_intent')})."
+
         else:
             selected_choice = str(result_dict)
             rationale = f"Evaluated in {perf} via GoRules ZEN Engine."
@@ -485,5 +525,10 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             product_type = str(state.get("product_type", "")).upper()
             risk_tier = str(state.get("risk_tier", "STANDARD")).upper()
             return {"product_type": product_type, "risk_tier": risk_tier}
+
+        elif request.domain == DecisionDomain.AGENT_PERSONA:
+            pt = str(state.get("prompt_type", "BASE")).upper()
+            sub = str(state.get("sub_intent", "")).upper()
+            return {"prompt_type": pt, "sub_intent": sub}
 
         return state

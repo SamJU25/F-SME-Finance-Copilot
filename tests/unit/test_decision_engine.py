@@ -873,4 +873,192 @@ def test_working_capital_rationale_string_interpolation():
         assert "Negative working capital cycle (-25 days)" in gen_res.rationale
 
 
+def test_agent_persona_base_parity():
+    zen = ZenRulesAdapter()
+    fb = FallbackRuleAdapter()
+
+    for adapter in (zen, fb):
+        res = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "BASE"},
+        ))
+        assert res.selected_choice == "AUTONOMOUS_CFO"
+        assert "Autonomous SME Finance Copilot" in res.output_payload["prompt_template"]
+        assert "Executive Persona & Tone Standards:" in res.output_payload["prompt_template"]
+
+
+def test_agent_persona_specialized_prompts_parity():
+    zen = ZenRulesAdapter()
+    fb = FallbackRuleAdapter()
+
+    for adapter in (zen, fb):
+        # Conversational
+        conv = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "CONVERSATIONAL", "base_persona": "BASE_HERE"},
+        ))
+        assert conv.selected_choice == "AUTONOMOUS_CFO"
+        assert "BASE_HERE" in conv.output_payload["prompt_template"]
+        assert "Executive Response Guidelines:" in conv.output_payload["prompt_template"]
+
+        # Cash Diagnostic
+        diag = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "CASH_DIAGNOSTIC", "base_persona": "BASE_HERE"},
+        ))
+        assert diag.selected_choice == "AUTONOMOUS_CFO"
+        assert "BASE_HERE" in diag.output_payload["prompt_template"]
+        assert "Executive Advisory Guidelines:" in diag.output_payload["prompt_template"]
+
+        # Credit Underwriting
+        und = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "CREDIT_UNDERWRITING", "base_persona": "BASE_HERE"},
+        ))
+        assert und.selected_choice == "INSTITUTIONAL_UNDERWRITER"
+        assert "BASE_HERE" in und.output_payload["prompt_template"]
+        assert "Underwriting Advisory Guidelines:" in und.output_payload["prompt_template"]
+
+
+def test_agent_persona_subagent_routing_parity():
+    zen = ZenRulesAdapter()
+    fb = FallbackRuleAdapter()
+
+    test_cases = [
+        ("DSCR", "CreditSubagent"),
+        ("FCCR", "CreditSubagent"),
+        ("AMORTIZATION", "CreditSubagent"),
+        ("FACTORING", "CreditSubagent"),
+        ("DEBT_CAPACITY", "CreditSubagent"),
+        ("INVOICE_HASH", "CreditSubagent"),
+        ("WCR", "LiquiditySubagent"),
+        ("OCF_RATIO", "LiquiditySubagent"),
+        ("DEFENSIVE_INTERVAL", "LiquiditySubagent"),
+        ("WORKING_CAPITAL", "LiquiditySubagent"),
+        ("BREAK_EVEN", "RiskManagerSubagent"),
+        ("BREAK_EVEN_UNITS", "RiskManagerSubagent"),
+        ("CONCENTRATION", "RiskManagerSubagent"),
+        ("ATTRITION", "RiskManagerSubagent"),
+        ("UNRECOGNIZED_QUERY", "Supervisor"),
+    ]
+
+    for adapter in (zen, fb):
+        for intent, expected_subagent in test_cases:
+            res = adapter.evaluate(DecisionRequest(
+                domain=DecisionDomain.AGENT_PERSONA,
+                input_state={"prompt_type": "SUBAGENT_ROUTING", "sub_intent": intent},
+            ))
+            assert res.selected_choice == expected_subagent, f"Failed for {adapter.__class__.__name__} on intent {intent}"
+            assert res.output_payload["target_subagent"] == expected_subagent
+
+
+def test_agent_persona_missing_param_guidance_parity():
+    zen = ZenRulesAdapter()
+    fb = FallbackRuleAdapter()
+
+    params_to_test = [
+        ("FCCR", "ebitda"),
+        ("DSCR", "net operating income"),
+        ("AMORTIZATION", "loan principal"),
+        ("FACTORING", "invoice face value"),
+        ("WCR", "accounts receivable"),
+        ("OCF_RATIO", "operating cash flow"),
+        ("DEFENSIVE_INTERVAL", "quick assets"),
+        ("BREAK_EVEN", "fixed operating costs"),
+        ("BREAK_EVEN_UNITS", "fixed costs"),
+        ("CONCENTRATION", "herfindahl"),
+        ("ATTRITION", "client churn"),
+    ]
+
+    for adapter in (zen, fb):
+        for intent, fragment in params_to_test:
+            res = adapter.evaluate(DecisionRequest(
+                domain=DecisionDomain.AGENT_PERSONA,
+                input_state={"prompt_type": "MISSING_PARAM", "sub_intent": intent},
+            ))
+            assert fragment.lower() in res.output_payload["guidance_text"].lower()
+
+
+def test_agent_persona_missing_statement_and_off_topic_parity():
+    zen = ZenRulesAdapter()
+    fb = FallbackRuleAdapter()
+
+    for adapter in (zen, fb):
+        # Missing statement diagnostic
+        ms_diag = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "MISSING_STATEMENT_DIAGNOSTIC"},
+        ))
+        assert "bank statement csv so you can compute their deterministic daily average balance (dab)" in ms_diag.output_payload["prompt_template"].lower()
+        assert "bank statement" in ms_diag.output_payload["guidance_text"].lower()
+
+        # Missing statement underwriting
+        ms_und = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "MISSING_STATEMENT_UNDERWRITING"},
+        ))
+        assert "borrowing capacity with true apr disclosures" in ms_und.output_payload["prompt_template"].lower()
+        assert "bank statement" in ms_und.output_payload["guidance_text"].lower()
+
+        # Off topic
+        off = adapter.evaluate(DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={"prompt_type": "OFF_TOPIC"},
+        ))
+        assert "financial" in off.output_payload["guidance_text"].lower()
+
+
+def test_prompts_module_dynamic_behavior():
+    from services.agent.prompts import (
+        COPILOT_PERSONA_BASE,
+        get_base_persona,
+        get_conversational_system_prompt,
+        get_cash_diagnostic_prompt,
+        get_credit_underwriting_prompt,
+        get_missing_statement_prompt,
+        get_missing_statement_guidance,
+        get_off_topic_reply,
+        get_missing_param_guidance,
+        resolve_subagent_routing,
+    )
+
+    # Dynamic base persona proxy
+    assert isinstance(COPILOT_PERSONA_BASE, str)
+    assert "Autonomous SME Finance Copilot" in COPILOT_PERSONA_BASE
+    assert len(str(COPILOT_PERSONA_BASE)) > 100
+
+    # Get prompts
+    base = get_base_persona()
+    assert "Executive Persona & Tone Standards:" in base
+
+    conv = get_conversational_system_prompt()
+    assert "Executive Response Guidelines:" in conv
+
+    diag = get_cash_diagnostic_prompt(base_reply="Verified cash runway: 45 days.")
+    assert "Executive Advisory Guidelines:" in diag
+
+    und = get_credit_underwriting_prompt(base_reply="Underwriting Dossier: Tier A.")
+    assert "Underwriting Advisory Guidelines:" in und
+
+    ms_diag_prompt = get_missing_statement_prompt("diagnostic")
+    assert "bank statement csv so you can compute their deterministic daily average balance (dab)" in ms_diag_prompt.lower()
+
+    ms_diag_reply = get_missing_statement_guidance("diagnostic")
+    assert "bank statement" in ms_diag_reply.lower()
+
+    off_reply = get_off_topic_reply()
+    assert "financial" in off_reply.lower()
+
+    # Routing
+    assert resolve_subagent_routing("DSCR") == "CreditSubagent"
+    assert resolve_subagent_routing("WCR") == "LiquiditySubagent"
+    assert resolve_subagent_routing("BREAK_EVEN") == "RiskManagerSubagent"
+    assert resolve_subagent_routing("NON_EXISTENT") == "Supervisor"
+
+    # Missing param guidance
+    fccr_msg = get_missing_param_guidance("FCCR")
+    assert "ebitda" in fccr_msg.lower()
+
+
+
 

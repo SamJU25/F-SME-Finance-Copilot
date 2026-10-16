@@ -10,63 +10,128 @@ import re
 from typing import Any, List, Optional
 
 
-COPILOT_PERSONA_BASE = (
-    "You are the Autonomous SME Finance Copilot, an institutional AI Chief Financial Officer (CFO) "
-    "and trusted financial partner dedicated to small and medium enterprise (SME) owners, founders, and finance operators.\n\n"
-    "Executive Persona & Tone Standards:\n"
-    "- Role: Pragmatic, commercially astute fractional CFO dedicated to safeguarding cash runway, auditing working capital, and structuring non-predatory financing.\n"
-    "- Communication Style: Direct, boardroom-level, numbers-grounded, and concise. Speak like a trusted financial partner, not a generic customer service chatbot.\n"
-    "- 3-Part CFO Cadence: 1. Financial Reality: State the exact metric or underwriting fact directly. 2. Operational Impact: Explain the burn rate, working capital, or debt-service implication. 3. Next Action: Name the single concrete decision or instruction needed.\n"
-    "- Formatting & Typography Standards: When presenting key financial figures, metrics, or title points, format them in bold Markdown (e.g., **1. Cash Reserve:** **$45,000** over **60 days**) to ensure instant executive readability at a glance.\n"
-    "- Strict Anti-Fluff Protocol: Never use conversational throat-clearing (never say 'I would be happy to', 'I would like to', 'Sure!', 'Certainly!', or 'As an AI'). Never use hollow corporate buzzwords (delve, leverage, foster, streamline, robust, supercharge, embark).\n"
-    "- Zero Numerical Hallucinations: Never guess or invent dollar amounts. If a bank statement CSV is not yet uploaded, state the underwriting requirements clearly and instruct the owner to upload their statement."
-)
+def evaluate_persona_policy(prompt_type: str = "BASE", sub_intent: str = "", base_reply: str = "") -> dict[str, Any]:
+    """Evaluates agent persona and prompt directives via GoRules ZEN JDM decision engine strictly by reference."""
+    try:
+        from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+        req = DecisionRequest(
+            domain=DecisionDomain.AGENT_PERSONA,
+            input_state={
+                "prompt_type": prompt_type,
+                "sub_intent": sub_intent,
+                "base_reply": base_reply,
+            },
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        res = DecisionEngineRegistry.get_instance().evaluate(req)
+        return res.output_payload
+    except Exception:
+        from services.decision.adapters.fallback_adapter import FallbackRuleAdapter
+        adapter = FallbackRuleAdapter()
+        res = adapter._evaluate_agent_persona({
+            "prompt_type": prompt_type,
+            "sub_intent": sub_intent,
+            "base_reply": base_reply,
+        })
+        return res.output_payload
+
+
+def get_base_persona() -> str:
+    """Retrieves base institutional CFO persona contract from decision engine."""
+    payload = evaluate_persona_policy(prompt_type="BASE")
+    return payload.get("prompt_template") or ""
+
+
+class _DynamicPersonaBase(str):
+    """Dynamic string proxy that evaluates COPILOT_PERSONA_BASE by reference via DecisionDomain.AGENT_PERSONA."""
+    _cached: Optional[str] = None
+
+    def __str__(self) -> str:
+        res = get_base_persona()
+        if res:
+            self._cached = res
+            return res
+        return self._cached or ""
+
+    def __repr__(self) -> str:
+        return repr(str(self))
+
+    def __contains__(self, item: object) -> bool:
+        return str(item) in str(self)
+
+    def __len__(self) -> int:
+        return len(str(self))
+
+    def __eq__(self, other: object) -> bool:
+        return str(self) == str(other)
+
+    def __hash__(self) -> int:
+        return hash(str(self))
+
+    def startswith(self, prefix: Any, *args: Any) -> bool:
+        return str(self).startswith(prefix, *args)
+
+    def endswith(self, suffix: Any, *args: Any) -> bool:
+        return str(self).endswith(suffix, *args)
+
+    def __add__(self, other: str) -> str:
+        return str(self) + other
+
+    def __radd__(self, other: str) -> str:
+        return other + str(self)
+
+
+COPILOT_PERSONA_BASE = _DynamicPersonaBase()
 
 
 def get_conversational_system_prompt() -> str:
-    """Prompt for general greetings, onboarding, and casual conversational dialogue."""
-    return (
-        f"{COPILOT_PERSONA_BASE}\n\n"
-        "Executive Response Guidelines:\n"
-        "1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\n"
-        "2. If the user inquires about off-topic subjects (sports, recipes, entertainment, coding, creative writing), politely clarify in one sentence that as an AI CFO you specialize exclusively in SME business liquidity and working capital, and invite them back to their business finances.\n"
-        "3. For new users asking how to start or how this works, clearly outline the process: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Action Review (proposals are staged for review and explicit owner approval before execution).\n"
-        "4. Always conclude by inviting the business owner to upload a transactional bank statement CSV to run a live financial diagnosis or ask any strategic cash flow question."
-    )
+    """Prompt for general greetings, onboarding, and casual conversational dialogue evaluated by reference."""
+    payload = evaluate_persona_policy(prompt_type="CONVERSATIONAL")
+    return payload.get("prompt_template") or ""
 
 
 def get_cash_diagnostic_prompt(base_reply: str) -> str:
-    """Prompt for contextualizing cash flow, burn rate, runway, and deficit early-warnings."""
-    return (
-        f"{COPILOT_PERSONA_BASE}\n\n"
-        f"Verified Financial Engine Outputs:\n{base_reply}\n\n"
-        "Executive Advisory Guidelines:\n"
-        "1. Deliver strictly 2 concise sentences of strategic CFO advisory directly for the business owner.\n"
-        "2. Sentence 1: Risk assessment of the current burn rate and runway reserve.\n"
-        "3. Sentence 2: Concrete next action on working-capital preservation (e.g. invoice collections or credit facility).\n"
-        "4. Strictly cite verified metrics if referencing numbers; never contradict or approximate verified figures.\n\n"
-        "STRICT PROHIBITIONS:\n"
-        "- DO NOT say 'Your bank statement CSV has been uploaded', 'Now let's dive into the numbers', or 'Here are the results'.\n"
-        "- DO NOT repeat metrics in bullet points (they are already displayed).\n"
-        "- DO NOT wrap text in quotation marks.\n"
-        "- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions')."
-    )
+    """Prompt for contextualizing cash flow, burn rate, runway, and deficit early-warnings evaluated by reference."""
+    payload = evaluate_persona_policy(prompt_type="CASH_DIAGNOSTIC", base_reply=base_reply)
+    return payload.get("prompt_template") or ""
 
 
 def get_credit_underwriting_prompt(base_reply: str) -> str:
-    """Prompt for explaining credit underwriting tiers and pre-qualified financing options."""
-    return (
-        f"{COPILOT_PERSONA_BASE}\n\n"
-        f"Verified Underwriting Dossier:\n{base_reply}\n\n"
-        "Underwriting Advisory Guidelines:\n"
-        "1. Deliver strictly 2 concise sentences of executive credit guidance.\n"
-        "2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\n"
-        "3. Sentence 2: State the concrete staging step (reminding that proposals are staged for review and explicit owner approval before execution).\n\n"
-        "STRICT PROHIBITIONS:\n"
-        "- DO NOT repeat facilities in bullet points.\n"
-        "- DO NOT wrap text in quotation marks.\n"
-        "- DO NOT use conversational throat-clearing."
-    )
+    """Prompt for explaining credit underwriting tiers and pre-qualified financing options evaluated by reference."""
+    payload = evaluate_persona_policy(prompt_type="CREDIT_UNDERWRITING", base_reply=base_reply)
+    return payload.get("prompt_template") or ""
+
+
+def get_missing_statement_prompt(context: str = "diagnostic") -> str:
+    """Prompt directive when no statement is loaded evaluated by reference."""
+    pt = "MISSING_STATEMENT_UNDERWRITING" if context == "underwriting" else "MISSING_STATEMENT_DIAGNOSTIC"
+    payload = evaluate_persona_policy(prompt_type=pt)
+    return payload.get("prompt_template") or payload.get("guidance_text") or ""
+
+
+def get_missing_statement_guidance(context: str = "diagnostic") -> str:
+    """Guidance reply when no statement is loaded evaluated by reference."""
+    pt = "MISSING_STATEMENT_UNDERWRITING" if context == "underwriting" else "MISSING_STATEMENT_DIAGNOSTIC"
+    payload = evaluate_persona_policy(prompt_type=pt)
+    return payload.get("guidance_text") or ""
+
+
+def get_off_topic_reply() -> str:
+    """Guidance reply when user asks off-topic queries evaluated by reference."""
+    payload = evaluate_persona_policy(prompt_type="OFF_TOPIC")
+    return payload.get("guidance_text") or ""
+
+
+def get_missing_param_guidance(sub_intent: str) -> str:
+    """Guidance reply when user inquires about a quantitative calculation without necessary inputs evaluated by reference."""
+    payload = evaluate_persona_policy(prompt_type="MISSING_PARAM", sub_intent=sub_intent)
+    return payload.get("guidance_text") or ""
+
+
+def resolve_subagent_routing(sub_intent: str) -> str:
+    """Resolves target specialist subagent for a financial sub-intent by reference via JDM decision table."""
+    payload = evaluate_persona_policy(prompt_type="SUBAGENT_ROUTING", sub_intent=sub_intent)
+    return payload.get("target_subagent") or "Supervisor"
 
 
 THROAT_CLEARING_PATTERNS = [
