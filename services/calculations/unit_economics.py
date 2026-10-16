@@ -92,14 +92,15 @@ def calculate_margin_of_safety(
             (mos_dollars / current_revenue) * Decimal("100")
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    if mos_percent >= Decimal("30.00"):
-        tier = "RESILIENT"
-    elif mos_percent >= Decimal("15.00"):
-        tier = "MODERATE"
-    elif mos_percent >= Decimal("0.00"):
-        tier = "THIN"
-    else:
-        tier = "DEFICIT"
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "MOS_PERCENT", "value": float(mos_percent)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    tier = decision_res.selected_choice
 
     return mos_dollars, mos_percent, tier
 
@@ -127,13 +128,14 @@ def calculate_operating_margins(
         (operating_income / net_revenue) * Decimal("100")
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    if operating_margin_pct >= Decimal("15.00"):
-        health = "PRIME"
-    elif operating_margin_pct >= Decimal("5.00"):
-        health = "HEALTHY"
-    elif operating_margin_pct >= Decimal("0.00"):
-        health = "MARGINAL"
-    else:
-        health = "LOSS_MAKING"
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "OPERATING_MARGIN_PERCENT", "value": float(operating_margin_pct)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    health = decision_res.selected_choice
 
     return gross_margin_pct, operating_margin_pct, health

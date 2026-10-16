@@ -590,3 +590,169 @@ def test_sub_intent_classification_via_decision_engine():
     sub_fccr = classify_sub_intent_dynamic("Calculate our fixed charge coverage ratio FCCR with lease expenses")
     assert sub_fccr == "FCCR"
 
+
+def test_zen_adapter_unit_economics_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # Margin of Safety: Resilient (>= 0.30)
+    res_mos_res = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "MARGIN_OF_SAFETY", "value": 0.35},
+    ))
+    assert res_mos_res.selected_choice == "RESILIENT"
+    assert res_mos_res.output_payload["tier"] == "RESILIENT"
+    assert res_mos_res.output_payload["is_safe"] is True
+
+    # Margin of Safety: Moderate (>= 0.15)
+    res_mos_mod = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "MARGIN_OF_SAFETY", "value": 0.20},
+    ))
+    assert res_mos_mod.selected_choice == "MODERATE"
+    assert res_mos_mod.output_payload["is_safe"] is True
+
+    # Margin of Safety: Thin (>= 0.00)
+    res_mos_thin = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "MARGIN_OF_SAFETY", "value": 0.05},
+    ))
+    assert res_mos_thin.selected_choice == "THIN"
+    assert res_mos_thin.output_payload["is_safe"] is False
+
+    # Margin of Safety: Deficit (< 0.00)
+    res_mos_def = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "MARGIN_OF_SAFETY", "value": -0.10},
+    ))
+    assert res_mos_def.selected_choice == "DEFICIT"
+    assert res_mos_def.output_payload["is_safe"] is False
+
+    # Operating Margin: Prime (>= 0.20)
+    res_op_prime = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "OPERATING_MARGIN", "value": 0.25},
+    ))
+    assert res_op_prime.selected_choice == "PRIME"
+    assert res_op_prime.output_payload["tier"] == "PRIME"
+
+    # Operating Margin: Healthy (>= 0.10)
+    res_op_healthy = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "OPERATING_MARGIN", "value": 0.14},
+    ))
+    assert res_op_healthy.selected_choice == "HEALTHY"
+
+    # Operating Margin: Marginal (>= 0.00)
+    res_op_marginal = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "OPERATING_MARGIN", "value": 0.02},
+    ))
+    assert res_op_marginal.selected_choice == "MARGINAL"
+
+    # Operating Margin: Loss Making (< 0.00)
+    res_op_loss = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.UNIT_ECONOMICS,
+        input_state={"metric": "OPERATING_MARGIN", "value": -0.08},
+    ))
+    assert res_op_loss.selected_choice == "LOSS_MAKING"
+
+
+def test_zen_adapter_revenue_volatility_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # Low Volatility (<= 0.35)
+    res_low = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.REVENUE_VOLATILITY,
+        input_state={"cv": 0.22},
+    ))
+    assert res_low.selected_choice == "LOW"
+    assert res_low.output_payload["volatility_tier"] == "LOW"
+    assert res_low.matched_rule_id == "rule_volatility_low"
+
+    # Moderate Volatility (0.35 < cv <= 0.75)
+    res_mod = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.REVENUE_VOLATILITY,
+        input_state={"cv": 0.55},
+    ))
+    assert res_mod.selected_choice == "MODERATE"
+    assert res_mod.output_payload["volatility_tier"] == "MODERATE"
+    assert res_mod.matched_rule_id == "rule_volatility_moderate"
+
+    # High Volatility (cv > 0.75)
+    res_high = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.REVENUE_VOLATILITY,
+        input_state={"cv": 1.15},
+    ))
+    assert res_high.selected_choice == "HIGH"
+    assert res_high.output_payload["volatility_tier"] == "HIGH"
+    assert res_high.matched_rule_id == "rule_volatility_high"
+
+
+
+def test_zen_adapter_expanded_working_capital_policy():
+    from services.decision.adapters.zen_adapter import ZenRulesAdapter
+    adapter = ZenRulesAdapter()
+
+    # DSO
+    dso_eff = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DSO", "value": 25.0},
+    ))
+    assert dso_eff.selected_choice == "EFFICIENT"
+    assert dso_eff.output_payload["is_risk"] is False
+
+    dso_delay = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DSO", "value": 72.0},
+    ))
+    assert dso_delay.selected_choice == "COLLECTION_DELAY"
+    assert dso_delay.output_payload["is_risk"] is True
+
+    # DPO
+    dpo_distress = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DPO", "value": 110.0},
+    ))
+    assert dpo_distress.selected_choice == "TRADE_DISTRESS"
+    assert dpo_distress.output_payload["is_risk"] is True
+
+    dpo_bal = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DPO", "value": 45.0},
+    ))
+    assert dpo_bal.selected_choice == "BALANCED"
+    assert dpo_bal.output_payload["is_risk"] is False
+
+    # DIR (Defensive Interval Ratio)
+    dir_prime = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DIR", "value": 120.0},
+    ))
+    assert dir_prime.selected_choice == "PRIME"
+    assert dir_prime.output_payload["is_risk"] is False
+
+    dir_crit = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DIR", "value": 10.0},
+    ))
+    assert dir_crit.selected_choice == "CRITICAL"
+    assert dir_crit.output_payload["is_risk"] is True
+
+    # OCF Ratio
+    ocf_strong = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "OCF_RATIO", "value": 1.4},
+    ))
+    assert ocf_strong.selected_choice == "STRONG"
+    assert ocf_strong.output_payload["is_risk"] is False
+
+    ocf_dist = adapter.evaluate(DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "OCF_RATIO", "value": -0.3},
+    ))
+    assert ocf_dist.selected_choice == "DISTRESSED"
+    assert ocf_dist.output_payload["is_risk"] is True
+
+

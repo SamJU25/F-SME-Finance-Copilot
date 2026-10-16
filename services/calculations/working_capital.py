@@ -32,12 +32,21 @@ def calculate_wcr(
             (wcr_dollars / annual_revenue) * Decimal("365")
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
     if wcr_dollars <= Decimal("0.00"):
-        status = "CASH_GENERATIVE"
-    elif wcr_days is not None and wcr_days > Decimal("60.00"):
-        status = "WORKING_CAPITAL_TRAP"
+        req = DecisionRequest(
+            domain=DecisionDomain.WORKING_CAPITAL_RISK,
+            input_state={"metric": "WCR_DOLLARS", "value": float(wcr_dollars)},
+            execution_mode="DETERMINISTIC_ONLY",
+        )
     else:
-        status = "BALANCED"
+        req = DecisionRequest(
+            domain=DecisionDomain.WORKING_CAPITAL_RISK,
+            input_state={"metric": "WCR_DAYS", "value": float(wcr_days or 0)},
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+    status = DecisionEngineRegistry.get_instance().evaluate(req).selected_choice
 
     return wcr_dollars, wcr_days, status
 
@@ -69,12 +78,14 @@ def calculate_dso(
         (average_ar / credit_sales) * Decimal(str(period_days))
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    if dso_days <= Decimal("30.00"):
-        status = "EFFICIENT"
-    elif dso_days <= Decimal("60.00"):
-        status = "COMMERCIAL_STANDARD"
-    else:
-        status = "COLLECTION_DELAY"
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    req = DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DSO", "value": float(dso_days)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    status = DecisionEngineRegistry.get_instance().evaluate(req).selected_choice
 
     return ar_turnover, dso_days, status
 
@@ -106,12 +117,14 @@ def calculate_dpo(
         (average_ap / cogs_or_purchases) * Decimal(str(period_days))
     ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    if dpo_days > Decimal("90.00"):
-        status = "TRADE_DISTRESS"
-    elif dpo_days >= Decimal("30.00"):
-        status = "BALANCED"
-    else:
-        status = "SHORT_FLOAT"
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    req = DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DPO", "value": float(dpo_days)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    status = DecisionEngineRegistry.get_instance().evaluate(req).selected_choice
 
     return ap_turnover, dpo_days, status
 
@@ -142,18 +155,16 @@ def calculate_defensive_interval(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
 
-    if dir_days >= Decimal("90.00"):
-        tier = "PRIME"
-        rationale = f"Robust liquidity buffer ({dir_days} days). Operations secure without new receipts."
-    elif dir_days >= Decimal("30.00"):
-        tier = "MODERATE"
-        rationale = f"Standard commercial buffer ({dir_days} days). Normal operational cushion."
-    elif dir_days >= Decimal("15.00"):
-        tier = "WARNING"
-        rationale = f"Tight liquidity reserve ({dir_days} days). Vulnerable to customer payment delays."
-    else:
-        tier = "CRITICAL"
-        rationale = f"Acute insolvency danger ({dir_days} days). Liquid assets depleted in under 15 days."
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    req = DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "DIR", "value": float(dir_days)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    res = DecisionEngineRegistry.get_instance().evaluate(req)
+    tier = res.selected_choice
+    rationale = res.rationale or f"Defensive Interval Ratio evaluated as {tier} ({dir_days} days)."
 
     return dir_days, tier, rationale
 
@@ -177,17 +188,16 @@ def calculate_operating_cash_flow_ratio(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
 
-    if ratio >= Decimal("1.00"):
-        tier = "STRONG"
-        rationale = f"Strong short-term solvency ({ratio}x). Operating cash flow covers current liabilities."
-    elif ratio >= Decimal("0.50"):
-        tier = "ADEQUATE"
-        rationale = f"Moderate coverage ({ratio}x). Dependent on rolling credit facilities or vendor float."
-    elif ratio >= Decimal("0.00"):
-        tier = "WEAK"
-        rationale = f"Weak liquidity ({ratio}x). High debt rollover and refinancing risk."
-    else:
-        tier = "DISTRESSED"
-        rationale = f"Negative operating cash flow ({ratio}x). Core operations deplete liquidity."
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    req = DecisionRequest(
+        domain=DecisionDomain.WORKING_CAPITAL_RISK,
+        input_state={"metric": "OCF_RATIO", "value": float(ratio)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    res = DecisionEngineRegistry.get_instance().evaluate(req)
+    tier = res.selected_choice
+    rationale = res.rationale or f"Operating Cash Flow Ratio evaluated as {tier} ({ratio}x)."
 
     return ratio, tier, rationale
+

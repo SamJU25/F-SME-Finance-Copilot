@@ -147,23 +147,21 @@ def calculate_predictive_cash(
     confidence_tier = "HIGH"
 
     if target_horizon_days is not None:
-        if target_horizon_days > MAX_FORECAST_HORIZON_DAYS:
-            horizon_capped = True
-            effective_target_days = MAX_FORECAST_HORIZON_DAYS
-            advisory_note = (
-                f"Requested horizon of {target_horizon_days} days was capped at {MAX_FORECAST_HORIZON_DAYS} days (1 year). "
-                "Transactional daily burn extrapolation loses statistical validity beyond 12 months; "
-                "multi-year planning requires an indirect 3-statement corporate budget model."
-            )
-            confidence_tier = "INDICATIVE"
-        elif target_horizon_days > STANDARD_TREASURY_HORIZON_DAYS:
-            confidence_tier = "INDICATIVE"
-            advisory_note = (
-                f"{target_horizon_days}-day forecast reflects an indicative linear trend. "
-                "Corporate treasury models recommend 13-week (90-day) reviews to adjust for payable drifts."
-            )
-        else:
-            confidence_tier = "HIGH"
+        from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+        horizon_req = DecisionRequest(
+            domain=DecisionDomain.DEFICIT_SEVERITY,
+            input_state={
+                "eval_horizon_confidence": True,
+                "target_horizon_days": target_horizon_days,
+            },
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        horizon_res = DecisionEngineRegistry.get_instance().evaluate(horizon_req)
+        confidence_tier = horizon_res.selected_choice
+        horizon_capped = horizon_res.output_payload.get("horizon_capped", False)
+        effective_target_days = horizon_res.output_payload.get("effective_target_days", target_horizon_days)
+        advisory_note = horizon_res.output_payload.get("advisory_note")
 
     effective_sim_days = min(
         MAX_FORECAST_HORIZON_DAYS,
@@ -198,9 +196,9 @@ def calculate_predictive_cash(
         days_until_deficit = 0
         projected_date = latest_date.isoformat()
         shortfall = abs(current_balance)
-        severity = "CRITICAL"
         primary_deficit_trigger = "EXISTING_OVERDRAFT"
     elif average_daily_burn > 0:
+
         # Check recurring monthly total
         recurring_obs = [ob for ob in (payroll_ob, rent_ob, debt_ob) if ob is not None]
         total_recurring_monthly = sum((ob.average_amount for ob in recurring_obs), Decimal("0.00"))

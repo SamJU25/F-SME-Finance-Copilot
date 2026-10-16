@@ -13,6 +13,8 @@ class DecisionDomain(str, Enum):
     DEBT_AFFORDABILITY = "DEBT_AFFORDABILITY"      # DSCR / FCCR commercial debt covenant tiers
     USURY_COMPLIANCE = "USURY_COMPLIANCE"          # Truth-in-lending APR predatory ceiling
     CONCENTRATION_RISK = "CONCENTRATION_RISK"      # Client revenue concentration & HHI tiers
+    UNIT_ECONOMICS = "UNIT_ECONOMICS"              # Margin of safety & operating margin tiers
+    REVENUE_VOLATILITY = "REVENUE_VOLATILITY"      # Weekly inflow coefficient of variation tiers
 
 
 class DecisionRequest(BaseModel):

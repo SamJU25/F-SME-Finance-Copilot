@@ -166,12 +166,15 @@ def calculate_inflow_volatility(transactions: Sequence[DemoTransaction]) -> tupl
         std_dev = variance.sqrt()
         cv = (std_dev / mean_weekly).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    if cv <= Decimal("0.35"):
-        tier = "LOW"
-    elif cv <= Decimal("0.75"):
-        tier = "MODERATE"
-    else:
-        tier = "HIGH"
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.REVENUE_VOLATILITY,
+        input_state={"cv": float(cv)},
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    tier = decision_res.selected_choice
 
     return cv, tier
 

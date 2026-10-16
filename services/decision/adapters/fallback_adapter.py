@@ -33,6 +33,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             DecisionDomain.DEBT_AFFORDABILITY,
             DecisionDomain.USURY_COMPLIANCE,
             DecisionDomain.CONCENTRATION_RISK,
+            DecisionDomain.UNIT_ECONOMICS,
+            DecisionDomain.REVENUE_VOLATILITY,
         ]
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
@@ -56,6 +58,10 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             return self._evaluate_usury_compliance(state)
         elif request.domain == DecisionDomain.CONCENTRATION_RISK:
             return self._evaluate_concentration_risk(state)
+        elif request.domain == DecisionDomain.UNIT_ECONOMICS:
+            return self._evaluate_unit_economics(state)
+        elif request.domain == DecisionDomain.REVENUE_VOLATILITY:
+            return self._evaluate_revenue_volatility(state)
         else:
             raise ValueError(f"Domain {request.domain} not supported by {self.engine_id}")
 
@@ -150,6 +156,69 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         )
 
     def _evaluate_deficit_severity(self, state: Dict[str, Any]) -> DecisionResult:
+        if state.get("eval_horizon_confidence"):
+            target_days = int(state.get("target_horizon_days", 30))
+            if target_days > 365:
+                choice = "INDICATIVE"
+                horizon_capped = True
+                effective_target_days = 365
+                advisory = (
+                    f"Requested horizon of {target_days} days was capped at 365 days (1 year). "
+                    "Transactional daily burn extrapolation loses statistical validity beyond 12 months; "
+                    "multi-year planning requires an indirect 3-statement corporate budget model."
+                )
+            elif target_days > 90:
+                choice = "INDICATIVE"
+                horizon_capped = False
+                effective_target_days = target_days
+                advisory = (
+                    f"{target_days}-day forecast reflects an indicative linear trend. "
+                    "Corporate treasury models recommend 13-week (90-day) reviews to adjust for payable drifts."
+                )
+            else:
+                choice = "HIGH"
+                horizon_capped = False
+                effective_target_days = target_days
+                advisory = None
+            return DecisionResult(
+                domain=DecisionDomain.DEFICIT_SEVERITY,
+                selected_choice=choice,
+                confidence_score=1.0,
+                engine_id=self.engine_id,
+                matched_rule_id=f"fallback_horizon_{choice.lower()}",
+                rationale=advisory or f"Horizon of {target_days} days evaluated as {choice} confidence.",
+                output_payload={
+                    "confidence_tier": choice,
+                    "horizon_capped": horizon_capped,
+                    "effective_target_days": effective_target_days,
+                    "advisory_note": advisory,
+                },
+            )
+
+        if state.get("eval_cash_status"):
+            bal = Decimal(str(state.get("current_balance", 0)))
+            burn = Decimal(str(state.get("average_daily_burn", 0)))
+            runway = state.get("runway_days")
+            thresh = int(state.get("alert_threshold_days", 30))
+            if bal <= 0:
+                status = "CASH_NONPOSITIVE"
+            elif burn == 0:
+                status = "NO_BURN"
+            elif runway is not None and runway < thresh:
+                status = "LOW_RUNWAY"
+            else:
+                status = "WATCH"
+            return DecisionResult(
+                domain=DecisionDomain.DEFICIT_SEVERITY,
+                selected_choice=status,
+                confidence_score=1.0,
+                engine_id=self.engine_id,
+                matched_rule_id=f"fallback_cash_{status.lower()}",
+                rationale=f"Evaluated cash status as {status} (Balance={bal}, Burn={burn}, Runway={runway}, Threshold={thresh}).",
+                output_payload={"cash_status": status},
+            )
+
+
         days = state.get("days_until_deficit")
         if days is not None:
             days = int(days)
@@ -285,6 +354,74 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 status = "BALANCED"
                 is_risk = False
                 rule_id = "fallback_wcr_balanced"
+        elif metric == "DSO":
+            if val <= Decimal("0"):
+                status = "INSTANT_COLLECTION"
+                is_risk = False
+                rule_id = "fallback_dso_instant"
+            elif val >= Decimal("999"):
+                status = "FROZEN_RECEIVABLES"
+                is_risk = True
+                rule_id = "fallback_dso_frozen"
+            elif val <= Decimal("30"):
+                status = "EFFICIENT"
+                is_risk = False
+                rule_id = "fallback_dso_efficient"
+            elif val <= Decimal("60"):
+                status = "COMMERCIAL_STANDARD"
+                is_risk = False
+                rule_id = "fallback_dso_standard"
+            else:
+                status = "COLLECTION_DELAY"
+                is_risk = True
+                rule_id = "fallback_dso_delay"
+        elif metric == "DPO":
+            if val > Decimal("90"):
+                status = "TRADE_DISTRESS"
+                is_risk = True
+                rule_id = "fallback_dpo_distress"
+            elif val >= Decimal("30"):
+                status = "BALANCED"
+                is_risk = False
+                rule_id = "fallback_dpo_balanced"
+            else:
+                status = "SHORT_FLOAT"
+                is_risk = False
+                rule_id = "fallback_dpo_short_float"
+        elif metric == "DIR":
+            if val >= Decimal("90"):
+                status = "PRIME"
+                is_risk = False
+                rule_id = "fallback_dir_prime"
+            elif val >= Decimal("30"):
+                status = "MODERATE"
+                is_risk = False
+                rule_id = "fallback_dir_moderate"
+            elif val >= Decimal("15"):
+                status = "WARNING"
+                is_risk = True
+                rule_id = "fallback_dir_warning"
+            else:
+                status = "CRITICAL"
+                is_risk = True
+                rule_id = "fallback_dir_critical"
+        elif metric == "OCF_RATIO":
+            if val >= Decimal("1.0"):
+                status = "STRONG"
+                is_risk = False
+                rule_id = "fallback_ocf_strong"
+            elif val >= Decimal("0.5"):
+                status = "ADEQUATE"
+                is_risk = False
+                rule_id = "fallback_ocf_adequate"
+            elif val >= Decimal("0.0"):
+                status = "WEAK"
+                is_risk = True
+                rule_id = "fallback_ocf_weak"
+            else:
+                status = "DISTRESSED"
+                is_risk = True
+                rule_id = "fallback_ocf_distressed"
         else:
             status = "BALANCED"
             is_risk = False
@@ -406,6 +543,37 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         )
 
     def _evaluate_concentration_risk(self, state: Dict[str, Any]) -> DecisionResult:
+        if state.get("eval_churn"):
+            burn_val = Decimal(str(state.get("projected_annual_burn", 0)))
+            share_val = Decimal(str(state.get("lost_share", 0)))
+            if burn_val > Decimal("0.00") or share_val >= Decimal("25.00"):
+                sev = "CRITICAL"
+                rec = (
+                    f"Loss of client creates an immediate annual operating deficit of ${burn_val:,.2f} "
+                    f"({share_val}% revenue loss). Secure bridge working capital or cut overhead immediately."
+                )
+            elif share_val >= Decimal("15.00"):
+                sev = "ELEVATED"
+                rec = (
+                    f"Loss represents {share_val}% of annual revenue. Operating cash flow tightens; "
+                    f"diversify pipeline to replace customer volume."
+                )
+            else:
+                sev = "MODERATE"
+                rec = (
+                    f"Loss represents {share_val}% of annual revenue. Operating margin absorbs the variance, "
+                    f"maintain active pipeline."
+                )
+            return DecisionResult(
+                domain=DecisionDomain.CONCENTRATION_RISK,
+                selected_choice=sev,
+                confidence_score=1.0,
+                engine_id=self.engine_id,
+                matched_rule_id=f"fallback_churn_{sev.lower()}",
+                rationale=rec,
+                output_payload={"severity": sev, "recommendation": rec},
+            )
+
         top_1_pct = Decimal(str(state.get("top_1_pct", 0)))
         hhi = Decimal(str(state.get("hhi", 0)))
         top_3_pct = state.get("top_3_pct", "")
@@ -444,4 +612,94 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             rationale=assessment,
             output_payload={"tier": tier, "is_risk": is_risk, "assessment": assessment},
         )
+
+
+    def _evaluate_unit_economics(self, state: Dict[str, Any]) -> DecisionResult:
+        metric = str(state.get("metric", "")).upper()
+        if metric in ("MARGIN_OF_SAFETY", "MOS"):
+            metric = "MOS_PERCENT"
+        elif metric in ("OPERATING_MARGIN", "OP_MARGIN"):
+            metric = "OPERATING_MARGIN_PERCENT"
+        val = Decimal(str(state.get("value", 0)))
+        if metric in ("MOS_PERCENT", "OPERATING_MARGIN_PERCENT") and Decimal("-1.0") <= val <= Decimal("1.0") and val != Decimal("0.0"):
+            val = val * Decimal("100")
+
+        if metric == "MOS_PERCENT":
+            if val >= Decimal("30.0"):
+                tier = "RESILIENT"
+                healthy = True
+                desc = "Strong margin of safety (>=30%). Business can absorb substantial revenue downturns before operating deficit."
+            elif val >= Decimal("15.0"):
+                tier = "MODERATE"
+                healthy = True
+                desc = "Adequate margin of safety (15-30%). Normal commercial buffer."
+            elif val >= Decimal("0.0"):
+                tier = "THIN"
+                healthy = False
+                desc = "Thin margin of safety (<15%). Vulnerable to minor revenue attrition."
+            else:
+                tier = "DEFICIT"
+                healthy = False
+                desc = "Operating below break-even point. Requires immediate cost rationalization or revenue growth."
+        elif metric == "OPERATING_MARGIN_PERCENT":
+            if val >= Decimal("15.0"):
+                tier = "PRIME"
+                healthy = True
+                desc = "High profitability tier (>=15% operating margin). Exceptional cash generation from operations."
+            elif val >= Decimal("5.0"):
+                tier = "HEALTHY"
+                healthy = True
+                desc = "Healthy commercial operating margin (5-15%). Sustainable operating model."
+            elif val >= Decimal("0.0"):
+                tier = "MARGINAL"
+                healthy = False
+                desc = "Marginal profitability (<5% operating margin). High sensitivity to cost increases."
+            else:
+                tier = "LOSS_MAKING"
+                healthy = False
+                desc = "Negative operating margin. Business is incurring operational losses."
+        else:
+            tier = "MODERATE"
+            healthy = True
+            desc = "Baseline operating performance."
+
+        return DecisionResult(
+            domain=DecisionDomain.UNIT_ECONOMICS,
+            selected_choice=tier,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=f"fallback_ue_{tier.lower()}",
+            rationale=desc,
+            output_payload={"tier": tier, "status": tier, "is_healthy": healthy, "is_safe": healthy, "rationale": desc},
+        )
+
+    def _evaluate_revenue_volatility(self, state: Dict[str, Any]) -> DecisionResult:
+        cv = Decimal(str(state.get("cv", 0)))
+
+        if cv <= Decimal("0.35"):
+            tier = "LOW"
+            status = "STABLE"
+            stable = True
+            desc = "Stable recurring customer receipts. Low revenue volatility qualifies for prime borrowing rates."
+        elif cv <= Decimal("0.75"):
+            tier = "MODERATE"
+            status = "MODERATE_FLUCTUATION"
+            stable = True
+            desc = "Normal commercial revenue fluctuation across seasonal or monthly cycles."
+        else:
+            tier = "HIGH"
+            status = "LUMPY_REVENUE"
+            stable = False
+            desc = "Lumpy, irregular revenue inflows. High volatility mandates increased cash buffer and restrictive credit limits."
+
+        return DecisionResult(
+            domain=DecisionDomain.REVENUE_VOLATILITY,
+            selected_choice=tier,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=f"fallback_vol_{tier.lower()}",
+            rationale=desc,
+            output_payload={"tier": tier, "volatility_tier": tier, "volatility_status": status, "is_stable": stable, "description": desc},
+        )
+
 

@@ -99,6 +99,8 @@ def test_reload_decision_tables_api():
     assert zen_status["DEBT_AFFORDABILITY"] == "COMPILED"
     assert zen_status["USURY_COMPLIANCE"] == "COMPILED"
     assert zen_status["CONCENTRATION_RISK"] == "COMPILED"
+    assert zen_status["UNIT_ECONOMICS"] == "COMPILED"
+    assert zen_status["REVENUE_VOLATILITY"] == "COMPILED"
 
 
 def test_evaluate_debt_affordability_api():
@@ -146,4 +148,52 @@ def test_evaluate_concentration_risk_api():
     data = response.json()
     assert data["selected_choice"] == "CRITICAL_DEPENDENCY"
     assert data["output_payload"]["is_risk"] is True
+
+
+def test_evaluate_unit_economics_api():
+    # Margin of Safety test
+    response_mos = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "UNIT_ECONOMICS",
+            "input_state": {"metric": "MARGIN_OF_SAFETY", "value": 0.32},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response_mos.status_code == 200
+    data_mos = response_mos.json()
+    assert data_mos["selected_choice"] == "RESILIENT"
+    assert data_mos["output_payload"]["is_safe"] is True
+    assert data_mos["output_payload"]["tier"] == "RESILIENT"
+
+    # Operating Margin test (10% is HEALTHY, >= 15% is PRIME)
+    response_op = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "UNIT_ECONOMICS",
+            "input_state": {"metric": "OPERATING_MARGIN", "value": 0.10},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response_op.status_code == 200
+    data_op = response_op.json()
+    assert data_op["selected_choice"] == "HEALTHY"
+
+
+def test_evaluate_revenue_volatility_api():
+    response = client.post(
+        "/api/v1/decision/evaluate",
+        json={
+            "domain": "REVENUE_VOLATILITY",
+            "input_state": {"cv": 0.28},
+            "execution_mode": "DETERMINISTIC_ONLY",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["selected_choice"] == "LOW"
+    assert data["output_payload"]["volatility_tier"] == "LOW"
+    assert data["matched_rule_id"] == "rule_volatility_low"
+
+
 

@@ -165,24 +165,21 @@ def calculate_client_churn_impact(
     else:
         burn_expansion = Decimal("0.00")
 
-    if projected_annual_burn > Decimal("0.00") or lost_share >= Decimal("25.00"):
-        severity = "CRITICAL"
-        recommendation = (
-            f"Loss of client creates an immediate annual operating deficit of ${projected_annual_burn:,.2f} "
-            f"({lost_share}% revenue loss). Secure bridge working capital or cut overhead immediately."
-        )
-    elif lost_share >= Decimal("15.00"):
-        severity = "ELEVATED"
-        recommendation = (
-            f"Loss represents {lost_share}% of annual revenue. Operating cash flow tightens; "
-            f"diversify pipeline to replace customer volume."
-        )
-    else:
-        severity = "MODERATE"
-        recommendation = (
-            f"Loss represents {lost_share}% of annual revenue. Operating margin absorbs the variance, "
-            f"maintain active pipeline."
-        )
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.CONCENTRATION_RISK,
+        input_state={
+            "eval_churn": True,
+            "lost_share": float(lost_share),
+            "projected_annual_burn": float(projected_annual_burn),
+        },
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    decision_res = DecisionEngineRegistry.get_instance().evaluate(decision_req)
+    severity = decision_res.selected_choice
+    recommendation = decision_res.output_payload.get("recommendation", decision_res.rationale or "")
+
 
     return {
         "lost_revenue_share_percent": lost_share,

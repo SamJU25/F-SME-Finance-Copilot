@@ -77,6 +77,134 @@
             "out_risk": "false"
           },
           {
+            "_id": "rule_dso_instant",
+            "_description": "DSO 0 days indicates instant customer collections",
+            "in_metric": "'DSO'",
+            "in_value": "<= 0",
+            "out_status": "'INSTANT_COLLECTION'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dso_frozen",
+            "_description": "DSO 999 indicates zero credit sales with outstanding AR",
+            "in_metric": "'DSO'",
+            "in_value": ">= 999",
+            "out_status": "'FROZEN_RECEIVABLES'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_dso_efficient",
+            "_description": "DSO <= 30 days indicates efficient billing and collections",
+            "in_metric": "'DSO'",
+            "in_value": "<= 30",
+            "out_status": "'EFFICIENT'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dso_standard",
+            "_description": "DSO 31-60 days is commercial standard",
+            "in_metric": "'DSO'",
+            "in_value": "<= 60",
+            "out_status": "'COMMERCIAL_STANDARD'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dso_delay",
+            "_description": "DSO > 60 days flags collection delay",
+            "in_metric": "'DSO'",
+            "in_value": "> 60",
+            "out_status": "'COLLECTION_DELAY'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_dpo_distress",
+            "_description": "DPO > 90 days indicates supplier trade distress",
+            "in_metric": "'DPO'",
+            "in_value": "> 90",
+            "out_status": "'TRADE_DISTRESS'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_dpo_balanced",
+            "_description": "DPO 30-90 days is balanced commercial float",
+            "in_metric": "'DPO'",
+            "in_value": ">= 30",
+            "out_status": "'BALANCED'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dpo_short_float",
+            "_description": "DPO < 30 days indicates short supplier float",
+            "in_metric": "'DPO'",
+            "in_value": "< 30",
+            "out_status": "'SHORT_FLOAT'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dir_prime",
+            "_description": "DIR >= 90 days indicates robust liquidity buffer",
+            "in_metric": "'DIR'",
+            "in_value": ">= 90",
+            "out_status": "'PRIME'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dir_moderate",
+            "_description": "DIR 30-89 days indicates standard commercial buffer",
+            "in_metric": "'DIR'",
+            "in_value": ">= 30",
+            "out_status": "'MODERATE'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_dir_warning",
+            "_description": "DIR 15-29 days indicates tight liquidity reserve",
+            "in_metric": "'DIR'",
+            "in_value": ">= 15",
+            "out_status": "'WARNING'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_dir_critical",
+            "_description": "DIR < 15 days indicates acute insolvency danger",
+            "in_metric": "'DIR'",
+            "in_value": "< 15",
+            "out_status": "'CRITICAL'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_ocf_strong",
+            "_description": "Operating cash flow ratio >= 1.0x indicates strong solvency",
+            "in_metric": "'OCF_RATIO'",
+            "in_value": ">= 1.0",
+            "out_status": "'STRONG'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_ocf_adequate",
+            "_description": "Operating cash flow ratio 0.5-0.99x indicates adequate coverage",
+            "in_metric": "'OCF_RATIO'",
+            "in_value": ">= 0.5",
+            "out_status": "'ADEQUATE'",
+            "out_risk": "false"
+          },
+          {
+            "_id": "rule_ocf_weak",
+            "_description": "Operating cash flow ratio 0.0-0.49x indicates weak liquidity",
+            "in_metric": "'OCF_RATIO'",
+            "in_value": ">= 0.0",
+            "out_status": "'WEAK'",
+            "out_risk": "true"
+          },
+          {
+            "_id": "rule_ocf_distressed",
+            "_description": "Operating cash flow ratio < 0.0x indicates operational cash drain",
+            "in_metric": "'OCF_RATIO'",
+            "in_value": "< 0.0",
+            "out_status": "'DISTRESSED'",
+            "out_risk": "true"
+          },
+          {
             "_id": "rule_default_balanced",
             "_description": "Default balanced baseline",
             "in_metric": "",

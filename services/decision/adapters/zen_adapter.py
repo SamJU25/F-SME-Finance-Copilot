@@ -42,6 +42,8 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.DEBT_AFFORDABILITY,
             DecisionDomain.USURY_COMPLIANCE,
             DecisionDomain.CONCENTRATION_RISK,
+            DecisionDomain.UNIT_ECONOMICS,
+            DecisionDomain.REVENUE_VOLATILITY,
         ]
 
     def _get_domain_file_map(self) -> Dict[DecisionDomain, str]:
@@ -53,6 +55,8 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.DEBT_AFFORDABILITY: "debt_covenant_policy.json",
             DecisionDomain.USURY_COMPLIANCE: "usury_policy.json",
             DecisionDomain.CONCENTRATION_RISK: "concentration_policy.json",
+            DecisionDomain.UNIT_ECONOMICS: "unit_economics_policy.json",
+            DecisionDomain.REVENUE_VOLATILITY: "revenue_volatility_policy.json",
         }
 
     def _load_decision_tables(self, force: bool = False) -> Dict[str, str]:
@@ -162,8 +166,54 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             selected_choice = result_dict.get("security_tier", "TIER_1_OBSERVATION")
             rationale = f"Evaluated in {perf} via JDM security_gate_policy.json (Rule={matched_rule_id}, Action={ctx.get('action_type')})."
         elif request.domain == DecisionDomain.DEFICIT_SEVERITY:
-            selected_choice = result_dict.get("severity", "SAFE")
-            rationale = f"Evaluated in {perf} via JDM deficit_severity_policy.json (Rule={matched_rule_id}, Days={ctx.get('days_until_deficit')})."
+            if request.input_state.get("eval_horizon_confidence"):
+                target_days = int(ctx.get("target_horizon_days", 30))
+                if target_days > 365:
+                    selected_choice = "INDICATIVE"
+                    horizon_capped = True
+                    effective_target_days = 365
+                    advisory = (
+                        f"Requested horizon of {target_days} days was capped at 365 days (1 year). "
+                        "Transactional daily burn extrapolation loses statistical validity beyond 12 months; "
+                        "multi-year planning requires an indirect 3-statement corporate budget model."
+                    )
+                elif target_days > 90:
+                    selected_choice = "INDICATIVE"
+                    horizon_capped = False
+                    effective_target_days = target_days
+                    advisory = (
+                        f"{target_days}-day forecast reflects an indicative linear trend. "
+                        "Corporate treasury models recommend 13-week (90-day) reviews to adjust for payable drifts."
+                    )
+                else:
+                    selected_choice = "HIGH"
+                    horizon_capped = False
+                    effective_target_days = target_days
+                    advisory = None
+                result_dict = {
+                    "confidence_tier": selected_choice,
+                    "horizon_capped": horizon_capped,
+                    "effective_target_days": effective_target_days,
+                    "advisory_note": advisory,
+                }
+                rationale = advisory or f"Horizon of {target_days} days evaluated as {selected_choice} confidence."
+            elif request.input_state.get("eval_cash_status"):
+                bal = float(ctx.get("current_balance", 0))
+                burn = float(ctx.get("average_daily_burn", 0))
+                runway = ctx.get("runway_days")
+                thresh = int(ctx.get("alert_threshold_days", 30))
+                if bal <= 0:
+                    selected_choice = "CASH_NONPOSITIVE"
+                elif burn == 0:
+                    selected_choice = "NO_BURN"
+                elif runway is not None and runway < thresh:
+                    selected_choice = "LOW_RUNWAY"
+                else:
+                    selected_choice = "WATCH"
+                rationale = f"Evaluated cash status as {selected_choice} (Balance={bal}, Burn={burn}, Runway={runway}, Threshold={thresh})."
+            else:
+                selected_choice = result_dict.get("severity", "SAFE")
+                rationale = f"Evaluated in {perf} via JDM deficit_severity_policy.json (Rule={matched_rule_id}, Days={ctx.get('days_until_deficit')})."
         elif request.domain == DecisionDomain.WORKING_CAPITAL_RISK:
             selected_choice = result_dict.get("status", "BALANCED")
             rationale = f"Evaluated in {perf} via JDM working_capital_policy.json (Rule={matched_rule_id}, Metric={ctx.get('metric')}, Value={ctx.get('value')})."
@@ -178,14 +228,49 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             selected_choice = "PREDATORY" if is_pred else "COMPLIANT"
             rationale = result_dict.get("rationale") or f"Evaluated in {perf} via JDM usury_policy.json (Rule={matched_rule_id}, APR={ctx.get('apr')}%)."
         elif request.domain == DecisionDomain.CONCENTRATION_RISK:
-            selected_choice = result_dict.get("tier", "DIVERSIFIED")
-            raw_assess = result_dict.get("assessment", "")
-            if "{top_1}" in raw_assess or "{hhi}" in raw_assess or "{top_3}" in raw_assess:
-                top_1_val = request.input_state.get("top_1_pct", ctx.get("top_1_pct", 0))
-                top_3_val = request.input_state.get("top_3_pct", "")
-                hhi_val = request.input_state.get("hhi", ctx.get("hhi", 0))
-                raw_assess = raw_assess.replace("{top_1}", str(top_1_val)).replace("{top_3}", str(top_3_val)).replace("{hhi}", str(hhi_val))
-            rationale = raw_assess or f"Evaluated in {perf} via JDM concentration_policy.json (Rule={matched_rule_id}, Top1={ctx.get('top_1_pct')}%, HHI={ctx.get('hhi')})."
+            if request.input_state.get("eval_churn"):
+                burn_val = float(ctx.get("projected_annual_burn", 0))
+                share_val = float(ctx.get("lost_share", 0))
+                if burn_val > 0.0 or share_val >= 25.0:
+                    selected_choice = "CRITICAL"
+                    rec = (
+                        f"Loss of client creates an immediate annual operating deficit of ${burn_val:,.2f} "
+                        f"({share_val}% revenue loss). Secure bridge working capital or cut overhead immediately."
+                    )
+                elif share_val >= 15.0:
+                    selected_choice = "ELEVATED"
+                    rec = (
+                        f"Loss represents {share_val}% of annual revenue. Operating cash flow tightens; "
+                        f"diversify pipeline to replace customer volume."
+                    )
+                else:
+                    selected_choice = "MODERATE"
+                    rec = (
+                        f"Loss represents {share_val}% of annual revenue. Operating margin absorbs the variance, "
+                        f"maintain active pipeline."
+                    )
+                result_dict = {"severity": selected_choice, "recommendation": rec}
+                rationale = rec
+            else:
+                selected_choice = result_dict.get("tier", "DIVERSIFIED")
+                raw_assess = result_dict.get("assessment", "")
+                if "{top_1}" in raw_assess or "{hhi}" in raw_assess or "{top_3}" in raw_assess:
+                    top_1_val = request.input_state.get("top_1_pct", ctx.get("top_1_pct", 0))
+                    top_3_val = request.input_state.get("top_3_pct", "")
+                    hhi_val = request.input_state.get("hhi", ctx.get("hhi", 0))
+                    raw_assess = raw_assess.replace("{top_1}", str(top_1_val)).replace("{top_3}", str(top_3_val)).replace("{hhi}", str(hhi_val))
+                rationale = raw_assess or f"Evaluated in {perf} via JDM concentration_policy.json (Rule={matched_rule_id}, Top1={ctx.get('top_1_pct')}%, HHI={ctx.get('hhi')})."
+
+        elif request.domain == DecisionDomain.UNIT_ECONOMICS:
+            selected_choice = result_dict.get("tier", result_dict.get("status", "MODERATE"))
+            result_dict["tier"] = selected_choice
+            result_dict["is_safe"] = result_dict.get("is_healthy", True)
+            rationale = result_dict.get("rationale") or f"Evaluated in {perf} via JDM unit_economics_policy.json (Rule={matched_rule_id}, Metric={ctx.get('metric')}, Value={ctx.get('value')}%)."
+        elif request.domain == DecisionDomain.REVENUE_VOLATILITY:
+            selected_choice = result_dict.get("tier", "LOW")
+            result_dict["volatility_tier"] = selected_choice
+            rationale = result_dict.get("description") or f"Evaluated in {perf} via JDM revenue_volatility_policy.json (Rule={matched_rule_id}, CV={ctx.get('cv')})."
+
         else:
             selected_choice = str(result_dict)
             rationale = f"Evaluated in {perf} via GoRules ZEN Engine."
@@ -221,6 +306,19 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             return {"action_type": action_type}
 
         elif request.domain == DecisionDomain.DEFICIT_SEVERITY:
+            if state.get("eval_horizon_confidence"):
+                return {
+                    "eval_horizon_confidence": True,
+                    "target_horizon_days": int(state.get("target_horizon_days", 30)),
+                }
+            if state.get("eval_cash_status"):
+                return {
+                    "eval_cash_status": True,
+                    "current_balance": float(Decimal(str(state.get("current_balance", 0)))),
+                    "average_daily_burn": float(Decimal(str(state.get("average_daily_burn", 0)))),
+                    "runway_days": state.get("runway_days"),
+                    "alert_threshold_days": int(state.get("alert_threshold_days", 30)),
+                }
             days = state.get("days_until_deficit")
             has_deficit = state.get("has_deficit")
             if has_deficit is None:
@@ -247,8 +345,31 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             return {"apr": apr, "product_type": product}
 
         elif request.domain == DecisionDomain.CONCENTRATION_RISK:
+            if state.get("eval_churn"):
+                return {
+                    "eval_churn": True,
+                    "lost_share": float(Decimal(str(state.get("lost_share", 0)))),
+                    "projected_annual_burn": float(Decimal(str(state.get("projected_annual_burn", 0)))),
+                }
             top1 = float(Decimal(str(state.get("top_1_pct", 0))))
             hhi = float(Decimal(str(state.get("hhi", 0))))
             return {"top_1_pct": top1, "hhi": hhi}
+
+
+        elif request.domain == DecisionDomain.UNIT_ECONOMICS:
+            metric = str(state.get("metric", "")).upper()
+            if metric in ("MARGIN_OF_SAFETY", "MOS"):
+                metric = "MOS_PERCENT"
+            elif metric in ("OPERATING_MARGIN", "OP_MARGIN"):
+                metric = "OPERATING_MARGIN_PERCENT"
+            val = float(Decimal(str(state.get("value", 0))))
+            if metric in ("MOS_PERCENT", "OPERATING_MARGIN_PERCENT") and -1.0 <= val <= 1.0 and val != 0.0:
+                val = val * 100.0
+            return {"metric": metric, "value": val}
+
+
+        elif request.domain == DecisionDomain.REVENUE_VOLATILITY:
+            cv = float(Decimal(str(state.get("cv", 0))))
+            return {"cv": cv}
 
         return state

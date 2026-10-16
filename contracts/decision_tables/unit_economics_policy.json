@@ -1,0 +1,160 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "UnitEconomicsRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "UnitEconomicsPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_metric",
+            "field": "metric",
+            "name": "Unit Economics Metric"
+          },
+          {
+            "id": "in_value",
+            "field": "value",
+            "name": "Metric Percentage Value"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_tier",
+            "field": "tier",
+            "name": "Performance Tier"
+          },
+          {
+            "id": "out_status",
+            "field": "status",
+            "name": "Operational Status"
+          },
+          {
+            "id": "out_healthy",
+            "field": "is_healthy",
+            "name": "Is Operationally Healthy"
+          },
+          {
+            "id": "out_rationale",
+            "field": "rationale",
+            "name": "Assessment Rationale"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_mos_resilient",
+            "_description": "Margin of safety >= 30%",
+            "in_metric": "'MOS_PERCENT'",
+            "in_value": ">= 30.0",
+            "out_tier": "'RESILIENT'",
+            "out_status": "'RESILIENT'",
+            "out_healthy": "true",
+            "out_rationale": "'Strong margin of safety (>=30%). Business can absorb substantial revenue downturns before operating deficit.'"
+          },
+          {
+            "_id": "rule_mos_moderate",
+            "_description": "Margin of safety >= 15%",
+            "in_metric": "'MOS_PERCENT'",
+            "in_value": ">= 15.0",
+            "out_tier": "'MODERATE'",
+            "out_status": "'MODERATE'",
+            "out_healthy": "true",
+            "out_rationale": "'Adequate margin of safety (15-30%). Normal commercial buffer.'"
+          },
+          {
+            "_id": "rule_mos_thin",
+            "_description": "Margin of safety >= 0%",
+            "in_metric": "'MOS_PERCENT'",
+            "in_value": ">= 0.0",
+            "out_tier": "'THIN'",
+            "out_status": "'THIN'",
+            "out_healthy": "false",
+            "out_rationale": "'Thin margin of safety (<15%). Vulnerable to minor revenue attrition.'"
+          },
+          {
+            "_id": "rule_mos_deficit",
+            "_description": "Margin of safety < 0%",
+            "in_metric": "'MOS_PERCENT'",
+            "in_value": "< 0.0",
+            "out_tier": "'DEFICIT'",
+            "out_status": "'DEFICIT'",
+            "out_healthy": "false",
+            "out_rationale": "'Operating below break-even point. Requires immediate cost rationalization or revenue growth.'"
+          },
+          {
+            "_id": "rule_margin_prime",
+            "_description": "Operating margin >= 15%",
+            "in_metric": "'OPERATING_MARGIN_PERCENT'",
+            "in_value": ">= 15.0",
+            "out_tier": "'PRIME'",
+            "out_status": "'PRIME'",
+            "out_healthy": "true",
+            "out_rationale": "'High profitability tier (>=15% operating margin). Exceptional cash generation from operations.'"
+          },
+          {
+            "_id": "rule_margin_healthy",
+            "_description": "Operating margin >= 5%",
+            "in_metric": "'OPERATING_MARGIN_PERCENT'",
+            "in_value": ">= 5.0",
+            "out_tier": "'HEALTHY'",
+            "out_status": "'HEALTHY'",
+            "out_healthy": "true",
+            "out_rationale": "'Healthy commercial operating margin (5-15%). Sustainable operating model.'"
+          },
+          {
+            "_id": "rule_margin_marginal",
+            "_description": "Operating margin >= 0%",
+            "in_metric": "'OPERATING_MARGIN_PERCENT'",
+            "in_value": ">= 0.0",
+            "out_tier": "'MARGINAL'",
+            "out_status": "'MARGINAL'",
+            "out_healthy": "false",
+            "out_rationale": "'Marginal profitability (<5% operating margin). High sensitivity to cost increases.'"
+          },
+          {
+            "_id": "rule_margin_loss",
+            "_description": "Operating margin < 0%",
+            "in_metric": "'OPERATING_MARGIN_PERCENT'",
+            "in_value": "< 0.0",
+            "out_tier": "'LOSS_MAKING'",
+            "out_status": "'LOSS_MAKING'",
+            "out_healthy": "false",
+            "out_rationale": "'Negative operating margin. Business is incurring operational losses.'"
+          },
+          {
+            "_id": "rule_default",
+            "_description": "Default baseline",
+            "in_metric": "",
+            "in_value": "",
+            "out_tier": "'MODERATE'",
+            "out_status": "'MODERATE'",
+            "out_healthy": "true",
+            "out_rationale": "'Baseline operating performance.'"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "UnitEconomicsResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "RevenueVolatilityRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "RevenueVolatilityPolicyTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_cv",
+            "field": "cv",
+            "name": "Coefficient of Variation"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_tier",
+            "field": "tier",
+            "name": "Revenue Volatility Tier"
+          },
+          {
+            "id": "out_status",
+            "field": "volatility_status",
+            "name": "Volatility Status"
+          },
+          {
+            "id": "out_stable",
+            "field": "is_stable",
+            "name": "Is Revenue Flow Stable"
+          },
+          {
+            "id": "out_desc",
+            "field": "description",
+            "name": "Volatility Assessment Description"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_volatility_low",
+            "_description": "CV <= 0.35 indicates steady recurring receipts",
+            "in_cv": "<= 0.35",
+            "out_tier": "'LOW'",
+            "out_status": "'STABLE'",
+            "out_stable": "true",
+            "out_desc": "'Stable recurring customer receipts. Low revenue volatility qualifies for prime borrowing rates.'"
+          },
+          {
+            "_id": "rule_volatility_moderate",
+            "_description": "0.35 < CV <= 0.75 indicates normal commercial fluctuation",
+            "in_cv": "<= 0.75",
+            "out_tier": "'MODERATE'",
+            "out_status": "'MODERATE_FLUCTUATION'",
+            "out_stable": "true",
+            "out_desc": "'Normal commercial revenue fluctuation across seasonal or monthly cycles.'"
+          },
+          {
+            "_id": "rule_volatility_high",
+            "_description": "CV > 0.75 indicates lumpy or irregular inflows",
+            "in_cv": "> 0.75",
+            "out_tier": "'HIGH'",
+            "out_status": "'LUMPY_REVENUE'",
+            "out_stable": "false",
+            "out_desc": "'Lumpy, irregular revenue inflows. High volatility mandates increased cash buffer and restrictive credit limits.'"
+          },
+          {
+            "_id": "rule_default",
+            "_description": "Default stability baseline",
+            "in_cv": "",
+            "out_tier": "'LOW'",
+            "out_status": "'STABLE'",
+            "out_stable": "true",
+            "out_desc": "'Baseline revenue stability.'"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output_node",
+      "name": "RevenueVolatilityResponse",
+      "type": "outputNode"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    },
+    {
+      "id": "edge_table_to_out",
+      "sourceId": "table_node",
+      "targetId": "output_node"
+    }
+  ]
+}

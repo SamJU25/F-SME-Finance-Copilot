@@ -76,14 +76,20 @@ def calculate_cash_analysis(
     else:
         projected_depletion_date = None
 
-    if current_balance <= 0:
-        cash_status = "CASH_NONPOSITIVE"
-    elif average_daily_burn == 0:
-        cash_status = "NO_BURN"
-    elif runway_days < alert_threshold_days:
-        cash_status = "LOW_RUNWAY"
-    else:
-        cash_status = "WATCH"
+    from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+
+    decision_req = DecisionRequest(
+        domain=DecisionDomain.DEFICIT_SEVERITY,
+        input_state={
+            "eval_cash_status": True,
+            "current_balance": float(current_balance),
+            "average_daily_burn": float(average_daily_burn),
+            "runway_days": runway_days,
+            "alert_threshold_days": alert_threshold_days,
+        },
+        execution_mode="DETERMINISTIC_ONLY",
+    )
+    cash_status = DecisionEngineRegistry.get_instance().evaluate(decision_req).selected_choice
 
     return CashAnalysisResult(
         currency=ordered[0].currency,
