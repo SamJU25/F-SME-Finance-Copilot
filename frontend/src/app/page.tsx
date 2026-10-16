@@ -4,6 +4,8 @@ import React, { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -533,6 +535,7 @@ export default function HomePage() {
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [accountAnalysisCache, setAccountAnalysisCache] = useState<Record<string, CashAnalysisResponse>>({});
+  const [fileTextsByName, setFileTextsByName] = useState<Record<string, string>>({});
 
   const displayResult = useMemo(() => {
     if (!result) return null;
@@ -569,9 +572,16 @@ export default function HomePage() {
 
   const dynamicAlertDate = computeAlertBoundaryDate(displayResult?.end_date, threshold) || displayResult?.alert_boundary_date;
 
+  const activeCsvText = useMemo(() => {
+    if (selectedAccount !== 'all' && fileTextsByName[selectedAccount]) {
+      return fileTextsByName[selectedAccount];
+    }
+    return csvText;
+  }, [selectedAccount, fileTextsByName, csvText]);
+
   const trajectoryData = useMemo(() => {
-    return buildCashTrajectorySeries(csvText, displayResult, Number(threshold) || 30);
-  }, [csvText, displayResult, threshold]);
+    return buildCashTrajectorySeries(activeCsvText, displayResult, Number(threshold) || 30);
+  }, [activeCsvText, displayResult, threshold]);
 
   const availableMonths = useMemo(() => {
     const monthsMap = new Map<string, string>();
@@ -1060,20 +1070,28 @@ export default function HomePage() {
   async function loadAllFilesText(files: File[], activeSessionId: string): Promise<string> {
     if (files.length === 0) {
       setCsvText(null);
+      setFileTextsByName({});
       return '';
     }
-    const texts = await Promise.all(
-      files.map((f) =>
-        typeof f.text === 'function'
-          ? f.text()
-          : new Promise<string>((resolve) => {
-              const r = new FileReader();
-              r.onload = () => resolve((r.result as string) || '');
-              r.readAsText(f);
-            })
-      )
+    const entries = await Promise.all(
+      files.map(async (f) => {
+        const text =
+          typeof f.text === 'function'
+            ? await f.text()
+            : await new Promise<string>((resolve) => {
+                const r = new FileReader();
+                r.onload = () => resolve((r.result as string) || '');
+                r.readAsText(f);
+              });
+        return { name: f.name, text };
+      })
     );
-    const combined = texts.join('\n');
+    const textsMap: Record<string, string> = {};
+    entries.forEach((e) => {
+      textsMap[e.name] = e.text;
+    });
+    setFileTextsByName(textsMap);
+    const combined = entries.map((e) => e.text).join('\n');
     setCsvText(combined);
     try {
       localStorage.setItem(`sme_copilot_csv_${activeSessionId}`, combined);
@@ -1188,6 +1206,10 @@ export default function HomePage() {
     setFile(null);
     setFilesList([]);
     setCsvText(null);
+    setFileTextsByName({});
+    setSelectedAccount('all');
+    setSelectedMonth('all');
+    setAccountAnalysisCache({});
     setResult(null);
     setError(null);
     if (fileInputRef.current) {
@@ -1988,7 +2010,7 @@ export default function HomePage() {
                   {/* Account Combobox / Switcher */}
                   <div className="filter-group">
                     <label className="filter-label" htmlFor="account-selector">
-                      <span>🏛️</span> Account:
+                      <span>🏛️</span> View:
                     </label>
                     <select
                       id="account-selector"
@@ -1999,15 +2021,15 @@ export default function HomePage() {
                     >
                       <option value="all">
                         {isSingleAccountPortfolio
-                          ? `Consolidated Timeline (All ${result.accounts_breakdown?.length} Statements) — ${money(result.current_balance, result.currency)}`
-                          : `All Accounts (Consolidated Treasury) — ${money(result.current_balance, result.currency)}`}
+                          ? `📊 Consolidated Timeline (All ${result.accounts_breakdown?.length || 2} Statements) — ${money(result.current_balance, result.currency)}`
+                          : `📊 All Accounts (Consolidated Treasury) — ${money(result.current_balance, result.currency)}`}
                       </option>
                       {result.accounts_breakdown &&
                         result.accounts_breakdown.map((acc, idx) => (
                           <option key={idx} value={acc.file_name}>
                             {isSingleAccountPortfolio
-                              ? `Statement: ${acc.file_name} — ${money(acc.closing_balance, result.currency)}`
-                              : `${acc.account_id} (${acc.file_name}) — ${money(acc.closing_balance, result.currency)}`}
+                              ? `📄 Statement: ${acc.file_name} — ${money(acc.closing_balance, result.currency)}`
+                              : `🏛️ ${acc.account_id} (${acc.file_name}) — ${money(acc.closing_balance, result.currency)}`}
                           </option>
                         ))}
                     </select>
@@ -2027,11 +2049,11 @@ export default function HomePage() {
                         aria-label="Select statement calendar month"
                       >
                         <option value="all">
-                          Full Timeline ({result.period_days} Days)
+                          🗓️ Full Timeline ({result.period_days} Days)
                         </option>
                         {availableMonths.map((m) => (
                           <option key={m.key} value={m.key}>
-                            {m.label}
+                            📅 {m.label}
                           </option>
                         ))}
                       </select>
@@ -2211,6 +2233,33 @@ export default function HomePage() {
                   Period change: {money((displayResult || result).net_period_change, (displayResult || result).currency)} over {(displayResult || result).period_days}d
                 </div>
               </div>
+
+              <div
+                className={`verdict-card ${(displayResult || result).working_capital_status === 'WORKING_CAPITAL_TRAP' ? 'warning' : 'safe'}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setActiveTab('working_capital')}
+                title="Click to view full Working Capital & CCC decomposition"
+              >
+                <div className="verdict-card-head">
+                  <span className="verdict-card-label">Cash Conversion Cycle</span>
+                  <span
+                    className={`wc-badge ${(displayResult || result).working_capital_status || 'BALANCED'}`}
+                    style={{ padding: '2px 8px', fontSize: 10.5 }}
+                  >
+                    {(displayResult || result).working_capital_status?.replace(/_/g, ' ') || 'BALANCED'}
+                  </span>
+                </div>
+                <div className="verdict-card-value">
+                  {(displayResult || result).cash_conversion_cycle_days !== undefined && (displayResult || result).cash_conversion_cycle_days !== null
+                    ? `${(displayResult || result).cash_conversion_cycle_days} Days`
+                    : 'Balanced'}
+                </div>
+                <div className="verdict-card-sub">
+                  {(displayResult || result).working_capital_rationale
+                    ? (displayResult || result).working_capital_rationale
+                    : 'Measures cash tied up across inventory, receivables, and payables.'}
+                </div>
+              </div>
             </div>
 
             {/* Segmented Workspace Navigation */}
@@ -2265,18 +2314,20 @@ export default function HomePage() {
                     <div>
                       <h3 className="chart-title">Treasury Pulse & Forward Runway Projection</h3>
                       <p className="chart-subtitle">
-                        Historical daily balance ledger corridor with forward burn depletion trajectory
+                        {selectedAccount === 'all'
+                          ? `Consolidated ledger across ${isSingleAccountPortfolio ? `${result.accounts_breakdown?.length || 2} statements merged` : `${uniqueAccountClusters.length || 1} accounts`} with forward burn depletion trajectory`
+                          : `Filtered ledger for ${selectedAccount} (${(displayResult || result).period_days}d window)`}
                       </p>
                     </div>
                     <div className="chart-legend-row">
                       <div className="legend-item">
                         <span className="legend-dot historical" />
-                        <span>Historical Ledger</span>
+                        <span>Historical Balance</span>
                       </div>
                       {(displayResult || result).runway_days !== null && (
                         <div className="legend-item">
                           <span className="legend-dot forecast" />
-                          <span>Forward Depletion Corridor</span>
+                          <span>Forward Projection</span>
                         </div>
                       )}
                       {dynamicAlertDate && (
@@ -2285,77 +2336,146 @@ export default function HomePage() {
                           <span>Alert Horizon ({threshold}d)</span>
                         </div>
                       )}
+                      <div className="legend-item">
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#10b981', display: 'inline-block' }} />
+                        <span>Inflow</span>
+                      </div>
+                      <div className="legend-item">
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#94a3b8', display: 'inline-block' }} />
+                        <span>Outflow</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ width: '100%', height: 320, marginTop: 16 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={displayedChartData} margin={{ top: 12, right: 16, left: 0, bottom: 4 }}>
-                        <defs>
-                          <linearGradient id="historicalGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#146b55" stopOpacity={0.25} />
-                            <stop offset="95%" stopColor="#146b55" stopOpacity={0.0} />
-                          </linearGradient>
-                          <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#d97706" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#d97706" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" vertical={false} />
-                        <XAxis
-                          dataKey="displayDate"
-                          stroke="#718779"
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={{ stroke: '#dce3de' }}
-                        />
-                        <YAxis
-                          stroke="#718779"
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={{ stroke: '#dce3de' }}
-                          tickFormatter={(val: number) =>
-                            `$${Math.abs(val) >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`
-                          }
-                        />
-                        <Tooltip content={<CustomChartTooltip currency={(displayResult || result).currency} />} />
-                        <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
-                        {alertHorizonPoint && (
-                          <ReferenceLine
-                            x={alertHorizonPoint.displayDate}
-                            stroke="#d97706"
-                            strokeDasharray="4 4"
-                            strokeWidth={1.5}
-                            label={{
-                              value: `${threshold}d Alert Horizon`,
-                              position: 'insideTopRight',
-                              fill: '#d97706',
-                              fontSize: 10.5,
-                              fontWeight: 600,
-                            }}
+                  <div style={{ width: '100%', marginTop: 14 }}>
+                    {/* Upper Track: Cash Balance Area Corridor (230px) */}
+                    <div style={{ width: '100%', height: 230 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          syncId="treasuryPulse"
+                          data={displayedChartData}
+                          margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="historicalGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#146b55" stopOpacity={0.25} />
+                              <stop offset="95%" stopColor="#146b55" stopOpacity={0.0} />
+                            </linearGradient>
+                            <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#d97706" stopOpacity={0.2} />
+                              <stop offset="95%" stopColor="#d97706" stopOpacity={0.0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e8ede9" vertical={false} />
+                          <XAxis
+                            dataKey="displayDate"
+                            stroke="#718779"
+                            fontSize={11}
+                            tickLine={false}
+                            axisLine={false}
+                            tick={false}
+                            height={0}
                           />
-                        )}
-                        <Area
-                          type="monotone"
-                          dataKey="balance"
-                          stroke="#146b55"
-                          strokeWidth={2.5}
-                          fillOpacity={1}
-                          fill="url(#historicalGradient)"
-                          name="Historical Balance"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="projection"
-                          stroke="#d97706"
-                          strokeWidth={2}
-                          strokeDasharray="4 4"
-                          fillOpacity={1}
-                          fill="url(#forecastGradient)"
-                          name="Projected Balance"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                          <YAxis
+                            stroke="#718779"
+                            fontSize={11}
+                            width={60}
+                            tickLine={false}
+                            axisLine={{ stroke: '#dce3de' }}
+                            tickFormatter={(val: number) =>
+                              `$${Math.abs(val) >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`
+                            }
+                          />
+                          <Tooltip content={<CustomChartTooltip currency={(displayResult || result).currency} />} />
+                          <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
+                          {alertHorizonPoint && (
+                            <ReferenceLine
+                              x={alertHorizonPoint.displayDate}
+                              stroke="#d97706"
+                              strokeDasharray="4 4"
+                              strokeWidth={1.5}
+                              label={{
+                                value: `${threshold}d Alert Horizon`,
+                                position: 'insideTopRight',
+                                fill: '#d97706',
+                                fontSize: 10.5,
+                                fontWeight: 600,
+                              }}
+                            />
+                          )}
+                          <Area
+                            type="monotone"
+                            dataKey="balance"
+                            stroke="#146b55"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#historicalGradient)"
+                            name="Historical Balance"
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="projection"
+                            stroke="#d97706"
+                            strokeWidth={2}
+                            strokeDasharray="4 4"
+                            fillOpacity={1}
+                            fill="url(#forecastGradient)"
+                            name="Projected Balance"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Track Divider & Flow Meta */}
+                    <div className="chart-track-divider">
+                      <span className="chart-track-label">Daily Inflow & Outflow Volume</span>
+                      <span className="chart-track-meta">Synchronized timeline · Tabular flow decomposition</span>
+                    </div>
+
+                    {/* Lower Track: Daily Volume Histogram (90px) */}
+                    <div style={{ width: '100%', height: 90 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          syncId="treasuryPulse"
+                          data={displayedChartData}
+                          margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f3" vertical={false} />
+                          <XAxis
+                            dataKey="displayDate"
+                            stroke="#718779"
+                            fontSize={10.5}
+                            tickLine={false}
+                            axisLine={{ stroke: '#dce3de' }}
+                          />
+                          <YAxis
+                            stroke="#718779"
+                            fontSize={9.5}
+                            tickLine={false}
+                            axisLine={false}
+                            width={60}
+                            tickFormatter={(val: number) =>
+                              val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${val}`
+                            }
+                          />
+                          <Tooltip content={<CustomChartTooltip currency={(displayResult || result).currency} />} />
+                          <Bar
+                            dataKey="inflow"
+                            fill="#10b981"
+                            radius={[2, 2, 0, 0]}
+                            maxBarSize={14}
+                            name="Daily Inflow"
+                          />
+                          <Bar
+                            dataKey="outflow"
+                            fill="#94a3b8"
+                            radius={[2, 2, 0, 0]}
+                            maxBarSize={14}
+                            name="Daily Outflow"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
 

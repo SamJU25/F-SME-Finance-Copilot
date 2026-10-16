@@ -2087,14 +2087,19 @@ input[type='number'].threshold-custom-input {
   border-color: #e5a8a2;
 }
 
-/* 3-Card Verdict Strip */
+/* 4-Card Financial Tetrad (Above the Fold) */
 .verdict-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
   margin-top: 18px;
 }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .verdict-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
   .verdict-strip {
     grid-template-columns: 1fr;
   }
@@ -2102,16 +2107,32 @@ input[type='number'].threshold-custom-input {
 .verdict-card {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 20px 22px;
+  border-radius: 12px;
+  padding: 18px 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.verdict-card:hover {
+  border-color: #bfcac1;
+  box-shadow: 0 4px 12px rgba(23, 43, 45, 0.04);
 }
 .verdict-card.hero-liquidity {
   border-color: #b8d4c5;
   background: linear-gradient(180deg, #ffffff 0%, #f4faf6 100%);
+}
+.verdict-card.critical {
+  border-color: #f0c3bf;
+  background: linear-gradient(180deg, #ffffff 0%, #fdf5f4 100%);
+}
+.verdict-card.warning {
+  border-color: #eed5a5;
+  background: linear-gradient(180deg, #ffffff 0%, #fffbf2 100%);
+}
+.verdict-card.safe {
+  border-color: var(--line);
 }
 .verdict-card-head {
   display: flex;
@@ -2129,24 +2150,30 @@ input[type='number'].threshold-custom-input {
   white-space: nowrap;
 }
 .verdict-card-tag {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--green);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .verdict-card-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
   color: var(--ink);
-  margin: 4px 0 6px;
+  margin: 3px 0 6px;
 }
 .verdict-card-sub {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted);
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* Segmented Workspace Navigation */
@@ -2240,6 +2267,28 @@ input[type='number'].threshold-custom-input {
 }
 .legend-dot.alert {
   background: #dc2626;
+}
+
+/* Dual-Track Synchronized Chart Divider & Labels */
+.chart-track-divider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px 6px;
+  border-top: 1px dashed var(--line);
+  margin-top: 8px;
+}
+.chart-track-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.chart-track-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /* Tooltip */
@@ -2714,18 +2763,31 @@ input[type='number'].threshold-custom-input {
   gap: 5px;
 }
 .filter-select {
-  padding: 6px 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 6px 32px 6px 12px;
   border-radius: 8px;
   border: 1px solid #bfcac1;
-  background: white;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--ink);
   cursor: pointer;
   outline: none;
   font-family: inherit;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
   transition: all 0.15s ease;
-  min-width: 160px;
+  min-width: 190px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.filter-select:hover {
+  border-color: #9cb1a0;
+  background-color: #fafcfb;
 }
 .filter-select:focus {
   border-color: var(--green);
