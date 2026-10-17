@@ -990,9 +990,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792229298.2359972,
-    "seen": 1792229779.8420863,
-    "ast_hash": "5e78cc80c992511754a8f06b22874fc7",
+    "mtime": 1792266595.4336839,
+    "seen": 1792266614.9275603,
+    "ast_hash": "ce69f43aa48028782752e9f5f9e4d3a0",
     "semantic_hash": ""
   },
   "requirements.txt": {
@@ -1049,58 +1049,10 @@
     "ast_hash": "9091987f084f2d945648234c70c5b7a1",
     "semantic_hash": ""
   },
-  "docs/archive/SME_Finance_Copilot_Decade_Resilient_Security_Architecture.md": {
-    "mtime": 1791930381.7271862,
-    "seen": 1791932291.159286,
-    "ast_hash": "71512db5f2f41080ad1239cc76caf93b",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Final_System_Design.md": {
-    "mtime": 1791931534.7653108,
-    "seen": 1791932291.1592877,
-    "ast_hash": "34e4bedecd17c92a1132048eac54fc3a",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Game_Changing_Tech_Research.md": {
-    "mtime": 1791926873.6440606,
-    "seen": 1791932291.1592891,
-    "ast_hash": "8dd8767474e86dfb4f32df8dbfe136fb",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Master_Architecture_Plan.md": {
-    "mtime": 1791927653.7550578,
-    "seen": 1791932291.15929,
-    "ast_hash": "1a7264e2d585c91964e0149da1646ba6",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md": {
-    "mtime": 1791930762.3610847,
-    "seen": 1791932291.159291,
-    "ast_hash": "962f73e444bc036290fd240bdec6ba0c",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Security_Adversarial_Verification.md": {
-    "mtime": 1791930609.7329378,
-    "seen": 1791932291.1592925,
-    "ast_hash": "c2c195186d4e422178d160ae5567029e",
-    "semantic_hash": ""
-  },
   "docs/architecture.md": {
     "mtime": 1792262309.9369822,
     "seen": 1792262480.871827,
     "ast_hash": "49a343cefe135963fc83f601308f8513",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Complete_Architectural_Plan.md": {
-    "mtime": 1791932169.0588796,
-    "seen": 1791932770.8914757,
-    "ast_hash": "4d55a12f35dd0a6a8b8102cac0c265f7",
-    "semantic_hash": ""
-  },
-  "docs/archive/SME_Finance_Copilot_Complete_System_Design.md": {
-    "mtime": 1791932153.1853461,
-    "seen": 1791932770.891477,
-    "ast_hash": "b9a8216133b6ef7025f0b4ef8c36befd",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -1419,12 +1371,6 @@
     "mtime": 1791998488.2564683,
     "seen": 1791998728.4014661,
     "ast_hash": "2a87686cb1ecabc9593c53ba88795af8",
-    "semantic_hash": ""
-  },
-  "SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
-    "mtime": 1792229333.5066025,
-    "seen": 1792229779.8420892,
-    "ast_hash": "02522790885d92a735b88e3c609c63c0",
     "semantic_hash": ""
   },
   "docker-compose.yml": {
@@ -1836,9 +1782,9 @@
     "semantic_hash": ""
   },
   "scripts/train_local_model.py": {
-    "mtime": 1792163424.504089,
-    "seen": 1792163773.1071095,
-    "ast_hash": "1e1efd9affdf6ac44f202eeb80648efb",
+    "mtime": 1792266539.2999768,
+    "seen": 1792266614.8867497,
+    "ast_hash": "b325226c2a5e9ff37784f0c8abfde05d",
     "semantic_hash": ""
   },
   "scripts/merge_model.py": {
@@ -1848,15 +1794,15 @@
     "semantic_hash": ""
   },
   "scripts/run_gpu_training.ps1": {
-    "mtime": 1792161317.140458,
-    "seen": 1792161359.5640993,
-    "ast_hash": "35e25cea6189e21f480e533fc0e1de44",
+    "mtime": 1792266508.7851703,
+    "seen": 1792266614.886745,
+    "ast_hash": "4bad2436e5819381a910eba5074d46d3",
     "semantic_hash": ""
   },
   "scripts/verify_local_inference.py": {
-    "mtime": 1792161219.2240448,
-    "seen": 1792161359.5642083,
-    "ast_hash": "51376309ad6ce9c6ff105f0efb3658c0",
+    "mtime": 1792266583.8535087,
+    "seen": 1792266614.886919,
+    "ast_hash": "e94ff990a39a419eb5cdad465770b3c9",
     "semantic_hash": ""
   },
   "services/agent/local_transformers.py": {
