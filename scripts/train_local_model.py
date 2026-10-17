@@ -1,16 +1,16 @@
 """Production QLoRA Fine-Tuning Pipeline for SME Finance Copilot.
 
-Fine-tunes open-weight foundation models (default: Qwen/Qwen2.5-7B-Instruct or Llama-3.2-3B-Instruct)
-on the verified financial tool-calling and reasoning dataset (`dataset/finetune_train.jsonl`).
+Fine-tunes open-weight foundation models (default: Qwen/Qwen2.5-3B-Instruct)
+on the verified financial reasoning and executive communication dataset (`dataset/finetune_train.jsonl`).
 
 Optimizations:
 - 4-Bit NormalFloat4 (NF4) Quantization with Double Quant via bitsandbytes.
 - Low-Rank Adaptation (LoRA) on all attention & MLP projection layers.
 - ChatML conversation tokenization via Hugging Face TRL SFTTrainer.
-- Automatic Ollama Modelfile export for local zero-cost deployment.
+- Standalone PyTorch/PEFT native LoRA checkpoint export.
 
 Hardware Requirements:
-- Trainable on a single 8GB-16GB VRAM GPU (RTX 3060/4060, T4, L4, A100).
+- Trainable on a single 6GB-16GB VRAM GPU (RTX 4050/3060/4060, T4, L4, A100).
 """
 
 from __future__ import annotations

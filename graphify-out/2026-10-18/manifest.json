@@ -1315,7 +1315,7 @@
   },
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
-    "seen": 1792259713.4986596,
+    "seen": 1792262515.3124626,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -1830,9 +1830,9 @@
     "semantic_hash": ""
   },
   "scripts/generate_finetune_dataset.py": {
-    "mtime": 1792225782.3412025,
-    "seen": 1792225925.6349518,
-    "ast_hash": "75be0086e37cb04013ceed37382ce3ad",
+    "mtime": 1792264964.9470384,
+    "seen": 1792265616.8059683,
+    "ast_hash": "b29f72d1f3a9240e26113330e59a4092",
     "semantic_hash": ""
   },
   "scripts/train_local_model.py": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": ""
   },
   "scripts/verify_dataset_health.py": {
-    "mtime": 1792160686.9466765,
-    "seen": 1792160752.3338313,
-    "ast_hash": "9bc0ddb97bf3693c4acd613a393703f9",
+    "mtime": 1792264902.824556,
+    "seen": 1792265616.806299,
+    "ast_hash": "b32bfffa770569f6e275cbe97d517fd4",
     "semantic_hash": ""
   },
   "notebooks/train_colab.py": {
@@ -2013,12 +2013,6 @@
     "mtime": 1792248783.491511,
     "seen": 1792249072.730246,
     "ast_hash": "36dd6386ee26383c71296a2929da7324",
-    "semantic_hash": ""
-  },
-  ".claude/launch.json": {
-    "mtime": 1792249188.4400878,
-    "seen": 1792250001.5723343,
-    "ast_hash": "207a48da6f694c41ffb8791572b697ed",
     "semantic_hash": ""
   },
   "tests/unit/test_knowledge_cards.py": {

@@ -11,7 +11,7 @@
 [![FISCO BCOS](https://img.shields.io/badge/Consortium-FISCO_BCOS-blueviolet.svg)](https://fisco-bcos.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Verified Implementation**: 416 automated tests passing across multi-format statement ingestion (CSV and PDF), 25+ deterministic financial engines, dual local SLM inference (3B/0.5B), Universal LLM Bridge with dynamic model discovery, FastEmbed semantic routing, and 3-tier security governance with WebAuthn passkeys.
+**Verified Implementation**: 668 automated tests passing across multi-format statement ingestion (CSV and PDF), 25+ deterministic financial engines, local SLM inference (Qwen 2.5 3B), Universal LLM Bridge with dynamic model discovery, FastEmbed semantic routing, and 3-tier security governance with WebAuthn passkeys.
 
 ---
 

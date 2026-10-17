@@ -1,2884 +1,1372 @@
-"""Production Financial Training Dataset Generator for SME Finance Copilot.
+"""Fine-tune dataset generator for the SME Finance Copilot Qwen LoRA adapters.
 
-Generates institutional-grade, multi-turn, ChatML-formatted datasets for fine-tuning
-local Small/Medium Language Models (e.g. Qwen-2.5-7B, Llama-3.2-3B).
+Every example is shaped exactly like a runtime call to the local model
+(LocalTransformersEngine.generate never passes tools):
 
-Enforces 4 Core Pillars:
-1. 0% LLM Math: Deterministic function-calling for 25+ Python calculation engines.
-2. Live Market Retrieval: Calling `tool_search_market_intelligence` for out-of-memory queries (SOFR, prime rates, macro news).
-3. Financial & Accounting Domain Mastery: 3-statement linking, accrual vs cash, debt covenants, predatory rate detection.
-4. Prudent Underwriting Skepticism: Asking clarifying questions when financial records are incomplete.
+    system    = the production prompt from services/agent/prompts.py, rendered with the
+                same deterministic engine output (base_reply) the supervisor builds
+    user      = the owner's question, kept only if the production router sends it down
+                the branch that produced base_reply
+    assistant = 3-6 sentences of plain prose that answer first, copy figures verbatim from
+                base_reply, explain the impact and end with one action
+
+Rows are dropped unless the reply passes numbers_are_grounded() (the runtime guard) and
+survives sanitize_cfo_reply() unchanged, so the model never learns text the code deletes.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import random
+import re
 import sys
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Any, Dict, List
+from collections import Counter
+from datetime import date, timedelta
+from decimal import Decimal
+from typing import Any, Callable, Dict, List, Optional
 
-# Ensure repository root is in python path
+# Disables LLM routing and on-disk model checks inside the services imported below.
+os.environ.setdefault("PYTEST_CURRENT_TEST", "generate_finetune_dataset")
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from services.calculations.credit_distress import (
-    calculate_altman_z_score,
-    calculate_net_debt_to_ebitda,
-    calculate_debt_service_burden,
+from services.agent.dynamic_router import classify_intent_dynamic, classify_sub_intent_dynamic
+from services.agent.knowledge import load_cards, format_reference_cards
+from services.agent.prompts import (
+    evaluate_persona_policy,
+    get_cash_diagnostic_prompt,
+    get_concept_prompt,
+    get_conversational_system_prompt,
+    get_credit_underwriting_prompt,
+    get_missing_statement_prompt,
+    numbers_are_grounded,
+    sanitize_cfo_reply,
 )
-from services.calculations.capital_efficiency import (
-    calculate_roic,
-    calculate_roa,
-    calculate_eva,
-)
-from services.calculations.valuation import (
-    calculate_free_cash_flow,
-    calculate_wacc,
-    calculate_enterprise_value_multiples,
-    calculate_dcf_valuation,
-)
-from services.calculations.saas_unit_economics import (
-    calculate_ltv_cac,
-    calculate_cac_payback,
-    calculate_net_revenue_retention,
-)
-from services.calculations.debt_service import (
-    calculate_dscr,
-    calculate_factoring_proceeds,
-    calculate_loan_amortization,
-    calculate_prudent_debt_capacity,
-)
-from services.calculations.lease_vs_buy import calculate_lease_vs_buy
-from services.calculations.runway import calculate_cash_conversion_cycle
-from services.calculations.treasury import calculate_cash_drag
-from services.calculations.concentration_risk import (
-    calculate_client_concentration,
-    calculate_revenue_attrition_impact,
-)
-from services.calculations.working_capital import (
-    calculate_wcr,
-    calculate_operating_cash_flow_ratio,
-    calculate_defensive_interval,
-)
-from services.calculations.unit_economics import (
-    calculate_break_even,
-    calculate_break_even_units,
-    calculate_operating_margins,
-)
-from services.calculations.trade_credit import calculate_trade_credit_apr
-from services.calculations.dupont import calculate_dupont_roe
-from services.calculations.currency import (
-    calculate_currency_conversion,
-    calculate_fx_exposure,
-)
-from services.calculations.currency_registry import (
-    CurrencyRegistry,
-    WORLD_CURRENCIES,
-)
-from services.calculations.fx_rate_service import get_live_exchange_rate
-
-SYSTEM_PROMPT = """You are the SME Finance Copilot, an autonomous financial participant AI engineered for commercial underwriting, working capital analysis, and treasury advisory.
-
-STRICT OPERATIONAL DIRECTIVES:
-1. ZERO MENTAL MATH: You are strictly forbidden from performing arithmetic or calculating financial ratios in your response text. You must invoke the designated Python calculation tool with typed arguments.
-2. DYNAMIC MARKET RETRIEVAL & CONTINUOUS RATES: For questions regarding dynamic, continuously fluctuating market variables—including foreign exchange spot rates (e.g. EUR/USD, GBP/USD, USD/BDT, USD/INR), benchmark interest rates (SOFR, Prime Rate, Euribor), or live regulations—invoke `tool_search_market_intelligence` or `tool_convert_currency`. NEVER fabricate, guess, or memorize volatile currency rates or interest rates from memory.
-3. UNDERWRITING SKEPTICISM: If user-provided financial figures are incomplete or ambiguous, do NOT guess. Ask targeted clarifying questions specifying the missing parameters before offering an underwriting verdict.
-4. INSTITUTIONAL ACCURACY: Distinguish strictly between accounting profit (Net Income) and operating cash liquidity (FCFF/FCFE). Warn users proactively about working capital traps, predatory APRs (>36%), and debt covenant breaches.
-5. UNIVERSAL MULTI-CURRENCY INTEGRITY: Seamlessly handle all 160+ ISO 4217 world currencies (USD, EUR, GBP, JPY, CAD, AUD, BDT, INR, AED, SAR, BRL, SGD, etc.). Explicitly preserve currency provenance. Never guess foreign exchange spot rates; dispatch `tool_convert_currency` (which dynamically fetches live market rates) or `tool_get_live_exchange_rate`.
-"""
+from services.agent.schema import AgentChatRequest
+from services.agent.subagents import CreditSubagent, LiquiditySubagent, RiskManagerSubagent
+from services.agent.supervisor import is_off_topic_query
+from services.agent.tools import tool_analyze_cash_flow, tool_underwrite_credit
 
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../dataset"))
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+SUBAGENTS = (CreditSubagent, LiquiditySubagent, RiskManagerSubagent)
+CASH_BRANCHES = ("RUNWAY", "BALANCE", "BURN", "ADVICE", "DEFICIT")
+
+# Copied from supervisor.py: the general-chat path appends one of these to the CONVERSATIONAL prompt.
+STATEMENT_LOADED_NOTE = "\nNote: A transactional bank statement is already loaded into session."
+NO_STATEMENT_DIRECTIVE = (
+    "\nCRITICAL SAFETY DIRECTIVE: No bank statement CSV has been loaded yet. "
+    "You MUST NOT invent, guess, or output any financial figures, dollar amounts, "
+    "deficit amounts, burn rates, or metric bullet lists. "
+    "Introduce yourself directly in one or two sentences as the Autonomous SME Finance Copilot "
+    "and ask the business owner to upload their bank statement CSV."
+)
 
 
-def _fmt_dec(val: Any, decimals: int = 2) -> str:
-    """Format decimal string consistently."""
-    if not isinstance(val, Decimal):
-        val = Decimal(str(val))
-    q = Decimal("0.01") if decimals == 2 else Decimal("0.0001")
-    return str(val.quantize(q, rounding=ROUND_HALF_UP))
+def money(value: Any) -> str:
+    """Matches the supervisor's f"${float(v):,.2f}" output without float currency math."""
+    return f"${Decimal(str(value)):,.2f}"
+
+
+def plain(value: Any) -> str:
+    return f"{Decimal(str(value)):,.2f}"
+
+
+def pick(rng: random.Random, options: List[str], **fields: Any) -> str:
+    return rng.choice(options).format(**fields)
 
 
 # ==============================================================================
-# 1. Calculation Tool Calling Generators (Category A)
+# Runtime routing (production router, cached per question)
 # ==============================================================================
 
-def generate_altman_z_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        assets = Decimal(str(random.randint(150000, 5000000)))
-        wc = (assets * Decimal(str(round(random.uniform(-0.15, 0.40), 4)))).quantize(Decimal("0.01"))
-        re = (assets * Decimal(str(round(random.uniform(-0.20, 0.50), 4)))).quantize(Decimal("0.01"))
-        ebit = (assets * Decimal(str(round(random.uniform(-0.10, 0.30), 4)))).quantize(Decimal("0.01"))
-        liab = (assets * Decimal(str(round(random.uniform(0.20, 0.85), 4)))).quantize(Decimal("0.01"))
-        eq = (assets - liab).quantize(Decimal("0.01"))
-        rev = (assets * Decimal(str(round(random.uniform(0.50, 2.50), 4)))).quantize(Decimal("0.01"))
-
-        res = calculate_altman_z_score(
-            working_capital=wc,
-            retained_earnings=re,
-            ebit=ebit,
-            book_value_equity=eq,
-            total_liabilities=liab,
-            revenue=rev,
-            total_assets=assets,
-        )
-
-        prompts = [
-            f"Calculate the Altman Z'-Score for our business. Total assets are ${_fmt_dec(assets)}, working capital is ${_fmt_dec(wc)}, retained earnings ${_fmt_dec(re)}, EBIT ${_fmt_dec(ebit)}, equity ${_fmt_dec(eq)}, liabilities ${_fmt_dec(liab)}, and sales ${_fmt_dec(rev)}.",
-            f"Please assess our commercial insolvency risk using Altman Z. We have: Assets: ${_fmt_dec(assets)}, WC: ${_fmt_dec(wc)}, Retained Earnings: ${_fmt_dec(re)}, Operating Income: ${_fmt_dec(ebit)}, Net Worth: ${_fmt_dec(eq)}, Total Debt/Liab: ${_fmt_dec(liab)}, Annual Revenue: ${_fmt_dec(rev)}.",
-            f"Check if our firm is in the Altman Z distress zone: working capital ${_fmt_dec(wc)}, retained earnings ${_fmt_dec(re)}, operating profit ${_fmt_dec(ebit)}, book equity ${_fmt_dec(eq)}, total liabilities ${_fmt_dec(liab)}, revenue ${_fmt_dec(rev)}, total assets ${_fmt_dec(assets)}.",
-        ]
-
-        user_msg = random.choice(prompts)
-        tool_args = {
-            "working_capital": _fmt_dec(wc),
-            "retained_earnings": _fmt_dec(re),
-            "ebit": _fmt_dec(ebit),
-            "book_value_equity": _fmt_dec(eq),
-            "total_liabilities": _fmt_dec(liab),
-            "revenue": _fmt_dec(rev),
-            "total_assets": _fmt_dec(assets),
-        }
-
-        assistant_reply = (
-            f"### Altman Z'-Score SME Insolvency Distress Audit\n\n"
-            f"- **Altman Z'-Score**: **{res['altman_z_score']}**\n"
-            f"- **Distress Classification Zone**: `{res['distress_zone']}` ({res['distress_level']})\n"
-            f"- **Working Capital / Assets (X1)**: {res['x1_working_capital_to_assets']}\n"
-            f"- **Retained Earnings / Assets (X2)**: {res['x2_retained_earnings_to_assets']}\n"
-            f"- **Operating Income / Assets (X3)**: {res['x3_ebit_to_assets']}\n"
-            f"- **Equity / Liabilities (X4)**: {res['x4_equity_to_liabilities']}\n"
-            f"- **Asset Turnover (X5)**: {res['x5_asset_turnover']}\n\n"
-            f"**Underwriting Assessment**: {res['recommendation']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Evaluate commercial insolvency distress using Altman Z'-Score for private non-public SME.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Total Assets: ${_fmt_dec(assets)}\n"
-            f"   - Working Capital: ${_fmt_dec(wc)}\n"
-            f"   - Retained Earnings: ${_fmt_dec(re)}\n"
-            f"   - Operating Income (EBIT): ${_fmt_dec(ebit)}\n"
-            f"   - Book Value of Equity: ${_fmt_dec(eq)}\n"
-            f"   - Total Liabilities: ${_fmt_dec(liab)}\n"
-            f"   - Annual Revenue: ${_fmt_dec(rev)}\n"
-            f"3. Accounting & Covenant Principles:\n"
-            f"   - Evaluates balance sheet liquidity (X1), cumulative reinvested profit (X2), operational asset productivity (X3), debt cushion (X4), turnover velocity (X5).\n"
-            f"   - Covenant Zones: Safe Zone (> 2.90), Grey Zone (1.23 to 2.90), Distress Zone (< 1.23).\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_altman_z_score` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_msg},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_altman_z_score",
-                        "arguments": tool_args,
-                    }],
-                },
-                {
-                    "role": "tool",
-                    "name": "tool_calculate_altman_z_score",
-                    "content": json.dumps(res),
-                },
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_net_debt_ebitda_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        ebitda = Decimal(str(random.randint(50000, 1500000)))
-        debt = Decimal(str(random.randint(20000, 4000000)))
-        cash = Decimal(str(random.randint(10000, 1000000)))
-
-        res = calculate_net_debt_to_ebitda(total_debt=debt, cash_and_equivalents=cash, ebitda=ebitda)
-
-        prompts = [
-            f"What is our Net Debt to EBITDA ratio with total debt ${_fmt_dec(debt)}, cash balance ${_fmt_dec(cash)}, and annual EBITDA ${_fmt_dec(ebitda)}?",
-            f"We have ${_fmt_dec(debt)} in commercial borrowings, ${_fmt_dec(cash)} in cash reserves, and generated ${_fmt_dec(ebitda)} EBITDA. Are we within bank leverage covenants?",
-            f"Calculate Net Debt to EBITDA multiple: Debt = ${_fmt_dec(debt)}, Cash = ${_fmt_dec(cash)}, EBITDA = ${_fmt_dec(ebitda)}.",
-        ]
-
-        assistant_reply = (
-            f"### Net Debt to EBITDA Leverage Audit\n\n"
-            f"- **Total Debt**: ${_fmt_dec(debt)}\n"
-            f"- **Cash & Liquid Reserves**: ${_fmt_dec(cash)}\n"
-            f"- **Net Financial Debt**: ${_fmt_dec(res['net_debt'])}\n"
-            f"- **Annual Operating EBITDA**: ${_fmt_dec(ebitda)}\n"
-            f"- **Net Debt / EBITDA Multiple**: **{res['net_debt_to_ebitda_ratio']}x**\n"
-            f"- **Leverage Tier**: `{res['leverage_tier']}`\n"
-            f"- **Covenant Verdict**: `{res['policy_status']}`\n\n"
-            f"**Credit Guidance**: {res['recommendation']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Evaluate corporate leverage and debt capacity via Net Debt to EBITDA multiple.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Total Debt: ${_fmt_dec(debt)}\n"
-            f"   - Cash & Liquid Reserves: ${_fmt_dec(cash)}\n"
-            f"   - Annual Operating EBITDA: ${_fmt_dec(ebitda)}\n"
-            f"3. Accounting & Covenant Principles:\n"
-            f"   - Net Debt = Total Debt - Cash & Cash Equivalents (accounting for liquid cash cushion).\n"
-            f"   - Bank Covenant Benchmarks: Conservative (< 2.0x), Moderate (2.0x - 3.5x), High Leverage (3.5x - 4.5x), Overleveraged / Covenant Default Threat (> 4.5x).\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_net_debt_to_ebitda` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_net_debt_to_ebitda",
-                        "arguments": {
-                            "total_debt": _fmt_dec(debt),
-                            "cash_and_equivalents": _fmt_dec(cash),
-                            "ebitda": _fmt_dec(ebitda),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_net_debt_to_ebitda", "content": json.dumps(res)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_roic_eva_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        ebit = Decimal(str(random.randint(60000, 2000000)))
-        equity = Decimal(str(random.randint(500000, 5000000)))
-        debt = Decimal(str(random.randint(200000, 3000000)))
-        cash = Decimal(str(random.randint(10000, 200000)))
-        tax = Decimal("21.00")
-
-        res_roic = calculate_roic(ebit=ebit, total_debt=debt, total_equity=equity, cash_and_equivalents=cash, corporate_tax_rate_pct=tax)
-        wacc = Decimal(str(random.choice([8.0, 9.0, 10.0, 11.5, 12.0])))
-        inv_cap = Decimal(res_roic["invested_capital"])
-        res_eva = calculate_eva(ebit=ebit, invested_capital=inv_cap, wacc_pct=wacc, corporate_tax_rate_pct=tax)
-
-        prompts = [
-            f"Calculate our Return on Invested Capital (ROIC) for operating income ${_fmt_dec(ebit)}, total debt ${_fmt_dec(debt)}, book equity ${_fmt_dec(equity)}, and cash ${_fmt_dec(cash)} at {tax}% corporate tax.",
-            f"Assess our capital efficiency: Operating Profit (EBIT) ${_fmt_dec(ebit)}, Debt ${_fmt_dec(debt)}, Shareholder Equity ${_fmt_dec(equity)}, Cash Reserves ${_fmt_dec(cash)}. Is our business creating surplus economic value?",
-        ]
-
-        assistant_reply = (
-            f"### Return on Invested Capital (ROIC) & Capital Efficiency Audit\n\n"
-            f"- **Operating Income (EBIT)**: ${_fmt_dec(ebit)}\n"
-            f"- **Net Operating Profit After Tax (NOPAT)**: ${_fmt_dec(res_roic['nopat'])}\n"
-            f"- **Total Invested Capital**: ${_fmt_dec(res_roic['invested_capital'])}\n"
-            f"- **ROIC Metric**: **{res_roic['roic_pct']}%**\n"
-            f"- **Efficiency Tier**: `{res_roic['tier']}`\n\n"
-            f"**Strategic Assessment**: {res_roic['recommendation']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Evaluate operational capital allocation efficiency and economic profit via ROIC & Economic Value Added (EVA).\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Operating Income (EBIT): ${_fmt_dec(ebit)}\n"
-            f"   - Total Debt: ${_fmt_dec(debt)}\n"
-            f"   - Shareholder Equity: ${_fmt_dec(equity)}\n"
-            f"   - Cash Reserves: ${_fmt_dec(cash)}\n"
-            f"   - Corporate Tax Rate: {tax}%\n"
-            f"3. Accounting & Value Creation Principles:\n"
-            f"   - NOPAT = EBIT * (1 - Tax Rate).\n"
-            f"   - Invested Capital = Total Debt + Total Equity - Cash Reserves.\n"
-            f"   - ROIC = NOPAT / Invested Capital.\n"
-            f"   - Economic Profit Spread: ROIC vs WACC benchmark. Value created when ROIC > Hurdle Rate.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_roic` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_roic",
-                        "arguments": {
-                            "ebit": _fmt_dec(ebit),
-                            "total_debt": _fmt_dec(debt),
-                            "total_equity": _fmt_dec(equity),
-                            "cash_and_equivalents": _fmt_dec(cash),
-                            "tax_rate_pct": _fmt_dec(tax),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_roic", "content": json.dumps(res_roic)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_dcf_wacc_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        eq = Decimal(str(random.randint(200000, 5000000)))
-        debt = Decimal(str(random.randint(50000, 3000000)))
-        ke = Decimal(str(round(random.uniform(10.0, 16.0), 2)))
-        kd = Decimal(str(round(random.uniform(5.0, 10.0), 2)))
-        tax = Decimal("21.00")
-
-        res_wacc = calculate_wacc(equity_value=eq, total_debt=debt, cost_of_equity_pct=ke, pre_tax_cost_of_debt_pct=kd, corporate_tax_rate_pct=tax)
-        wacc_val = Decimal(res_wacc["wacc_pct"])
-
-        base_flow = Decimal(str(random.randint(40000, 300000)))
-        flows = [
-            base_flow,
-            (base_flow * Decimal("1.12")).quantize(Decimal("0.01")),
-            (base_flow * Decimal("1.25")).quantize(Decimal("0.01")),
-        ]
-        g = Decimal("2.50")
-        res_dcf = calculate_dcf_valuation(projected_fcfs=flows, wacc_pct=wacc_val, terminal_growth_rate_pct=g, total_debt=debt, cash_and_equivalents=Decimal("50000.00"))
-
-        prompts = [
-            f"Calculate our Weighted Average Cost of Capital (WACC) with equity ${_fmt_dec(eq)} at {ke}%, debt ${_fmt_dec(debt)} at {kd}%, and 21% corporate tax rate.",
-            f"What is our firm WACC? Market value of equity is ${_fmt_dec(eq)} (cost of equity {ke}%), interest-bearing debt is ${_fmt_dec(debt)} (pre-tax cost of debt {kd}%), corporate tax is 21%.",
-        ]
-
-        assistant_reply = (
-            f"### Weighted Average Cost of Capital (WACC) Analysis\n\n"
-            f"- **Total Capital Base**: ${_fmt_dec(res_wacc['total_firm_capital'])}\n"
-            f"- **Equity Weight**: {res_wacc['equity_weight_pct']}%\n"
-            f"- **Debt Weight**: {res_wacc['debt_weight_pct']}%\n"
-            f"- **After-Tax Cost of Debt**: {res_wacc['after_tax_cost_of_debt_pct']}%\n"
-            f"- **Blended WACC Hurdle Rate**: **{res_wacc['wacc_pct']}%**\n\n"
-            f"**Hurdle Guidance**: {res_wacc['recommendation']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Calculate Weighted Average Cost of Capital (WACC) hurdle rate and capital structure weights.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Equity Market/Book Value: ${_fmt_dec(eq)}\n"
-            f"   - Total Debt Obligations: ${_fmt_dec(debt)}\n"
-            f"   - Cost of Equity (Ke): {ke}%\n"
-            f"   - Pre-Tax Cost of Debt (Kd): {kd}%\n"
-            f"   - Corporate Tax Rate: {tax}%\n"
-            f"3. Corporate Finance & Capital Structure Principles:\n"
-            f"   - Total Capital Base V = Equity + Debt.\n"
-            f"   - Interest expense tax shield: After-Tax Cost of Debt = Kd * (1 - Tax Rate).\n"
-            f"   - WACC = (E/V * Ke) + (D/V * After-Tax Kd).\n"
-            f"   - Serves as the minimum hurdle rate for discounting multi-period Free Cash Flows.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_wacc` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_wacc",
-                        "arguments": {
-                            "equity_value": _fmt_dec(eq),
-                            "total_debt": _fmt_dec(debt),
-                            "cost_of_equity_pct": _fmt_dec(ke),
-                            "pre_tax_cost_of_debt_pct": _fmt_dec(kd),
-                            "corporate_tax_rate_pct": _fmt_dec(tax),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_wacc", "content": json.dumps(res_wacc)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_saas_unit_economics_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        arpu = Decimal(str(random.randint(600, 24000)))
-        margin = Decimal(str(round(random.uniform(65.0, 88.0), 1)))
-        churn = Decimal(str(round(random.uniform(4.0, 18.0), 1)))
-        cac = Decimal(str(random.randint(300, 15000)))
-
-        res = calculate_ltv_cac(annual_arpu=arpu, gross_margin_pct=margin, annual_churn_rate_pct=churn, cac=cac)
-
-        prompts = [
-            f"Calculate LTV/CAC ratio for annual ARPU ${_fmt_dec(arpu)}, gross margin {margin}%, annual churn {churn}%, and CAC ${_fmt_dec(cac)}.",
-            f"Assess our subscription unit economics: ARPU = ${_fmt_dec(arpu)}, Gross Margin = {margin}%, Churn = {churn}%, CAC = ${_fmt_dec(cac)}. Can we aggressively expand customer acquisition?",
-        ]
-
-        assistant_reply = (
-            f"### Customer Lifetime Value (LTV) & LTV/CAC Ratio Audit\n\n"
-            f"- **Customer Lifetime Value (LTV)**: ${_fmt_dec(res['lifetime_value'])}\n"
-            f"- **Customer Acquisition Cost (CAC)**: ${_fmt_dec(cac)}\n"
-            f"- **LTV / CAC Multiple**: **{res['ltv_to_cac_ratio']}x**\n"
-            f"- **Unit Economics Tier**: `{res['unit_economics_tier']}`\n\n"
-            f"**Capital Efficiency Assessment**: {res['recommendation']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Audit SaaS subscription unit economics, Customer Lifetime Value (LTV), and LTV/CAC ratio.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Annual ARPU: ${_fmt_dec(arpu)}\n"
-            f"   - Gross Margin: {margin}%\n"
-            f"   - Annual Churn Rate: {churn}%\n"
-            f"   - Customer Acquisition Cost (CAC): ${_fmt_dec(cac)}\n"
-            f"3. Subscription Economics & Underwriting Principles:\n"
-            f"   - Customer Lifetime Value (LTV) = (ARPU * Gross Margin) / Churn Rate.\n"
-            f"   - LTV/CAC Benchmarks: < 1.5x (Unsustainable burn / immediate failure risk), 1.5x-3.0x (Acceptable), 3.0x-5.0x (Institutional venture tier), > 5.0x (Capital efficient expansion).\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_ltv_cac` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_ltv_cac",
-                        "arguments": {
-                            "arpu": _fmt_dec(arpu),
-                            "gross_margin_pct": _fmt_dec(margin),
-                            "churn_rate_pct": _fmt_dec(churn),
-                            "cac": _fmt_dec(cac),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_ltv_cac", "content": json.dumps(res)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_dscr_amortization_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        noi = Decimal(str(random.randint(80000, 1200000)))
-        ads = Decimal(str(random.randint(40000, 800000)))
-
-        dscr, status, rationale = calculate_dscr(net_operating_income=noi, total_debt_service=ads)
-        res_dscr = {
-            "net_operating_income": _fmt_dec(noi),
-            "total_debt_service": _fmt_dec(ads),
-            "dscr": str(dscr),
-            "underwriting_status": status,
-            "rationale": rationale,
-        }
-
-        prompts = [
-            f"Calculate our Debt Service Coverage Ratio (DSCR) for annual NOI ${_fmt_dec(noi)} and total debt service ${_fmt_dec(ads)}.",
-            f"Can we meet bank underwriting requirements? Our Net Operating Income is ${_fmt_dec(noi)} and annual debt repayments are ${_fmt_dec(ads)}.",
-        ]
-
-        assistant_reply = (
-            f"### Debt Service Coverage Ratio (DSCR) Assessment\n\n"
-            f"- **Net Operating Income (NOI)**: ${_fmt_dec(noi)}\n"
-            f"- **Annual Debt Service**: ${_fmt_dec(ads)}\n"
-            f"- **DSCR Metric**: **{res_dscr['dscr']}x**\n"
-            f"- **Underwriting Covenant Verdict**: `{res_dscr['underwriting_status']}`\n\n"
-            f"**Credit Assessment**: {res_dscr['rationale']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Verify debt service capacity and loan covenant compliance via Debt Service Coverage Ratio (DSCR).\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Net Operating Income (NOI): ${_fmt_dec(noi)}\n"
-            f"   - Total Annual Debt Service: ${_fmt_dec(ads)}\n"
-            f"3. Commercial Underwriting Principles:\n"
-            f"   - DSCR = Net Operating Income / Annual Debt Service.\n"
-            f"   - Commercial Bank Underwriting Standards: Minimum 1.25x for Senior Bank Debt, 1.15x for SBA facilities, < 1.00x indicates operational insolvency cash drain.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_dscr` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_dscr",
-                        "arguments": {
-                            "net_operating_income": _fmt_dec(noi),
-                            "total_debt_service": _fmt_dec(ads),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_dscr", "content": json.dumps(res_dscr)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_factoring_proceeds_records(count: int = 100) -> List[Dict[str, Any]]:
-
-    records = []
-    for _ in range(count):
-        inv = Decimal(str(random.randint(25000, 350000)))
-        adv_pct = Decimal(str(random.choice([75, 80, 85, 90])))
-        adv_rate = adv_pct / Decimal("100")
-        fee_pct = Decimal(str(random.choice([1.5, 2.0, 2.5, 3.0, 4.0])))
-        fee_rate = fee_pct / Decimal("100")
-        days = random.choice([30, 45, 60, 90])
-        ancillary = Decimal(str(random.choice([0, 150, 250, 350])))
-
-        advance, rebate, net_proceeds, apr, is_predatory = calculate_factoring_proceeds(
-            invoice_face_value=inv,
-            advance_rate=adv_rate,
-            discount_fee_rate=fee_rate,
-            collection_days=days,
-            ancillary_fees=ancillary,
-        )
-
-        prompts = [
-            f"We have an outstanding customer invoice of ${_fmt_dec(inv)}. A factoring company offers an {adv_pct}% advance with a {fee_pct}% discount fee over {days} days expected collection. What net cash will we receive upfront and what is the true APR?",
-            f"Calculate our net invoice factoring advance on ${_fmt_dec(inv)} at {adv_pct}% advance rate and {fee_pct}% factor fee ({days} days collection cycle).",
-            f"How much upfront cash do we get if we factor a ${_fmt_dec(inv)} invoice with an {adv_pct}% advance rate, {fee_pct}% factoring fee, and ${_fmt_dec(ancillary)} wire fee over {days} days?",
-        ]
-
-        tool_args = {
-            "invoice_amount": _fmt_dec(inv),
-            "advance_rate_pct": str(adv_pct),
-            "fee_rate_pct": str(fee_pct),
-            "collection_days": days,
-            "ancillary_fees": _fmt_dec(ancillary),
-        }
-
-        res_payload = {
-            "invoice_face_value": _fmt_dec(inv),
-            "advance_rate_percent": _fmt_dec(adv_pct),
-            "advance_amount": _fmt_dec(advance),
-            "factoring_fee_amount": _fmt_dec(inv * fee_rate),
-            "rebate_amount": _fmt_dec(rebate),
-            "net_proceeds": _fmt_dec(net_proceeds),
-            "collection_days": days,
-            "true_apr_percent": str(apr),
-            "is_predatory_apr": is_predatory,
-        }
-
-        warning_note = "⚠️ **PREDATORY APR WARNING**: This facility exceeds 36.00% APR." if is_predatory else "ℹ️ Standard commercial factoring tier."
-
-        assistant_reply = (
-            f"### Invoice Factoring Cash Advance Schedule\n\n"
-            f"- **Gross Invoice Face Value**: ${_fmt_dec(inv)}\n"
-            f"- **Immediate Cash Advance ({adv_pct}%)**: **${_fmt_dec(advance)}**\n"
-            f"- **Factoring Discount Fee ({fee_pct}%)**: ${_fmt_dec(inv * fee_rate)}\n"
-            f"- **Reserve Escrow Rebate**: ${_fmt_dec(rebate)} (Returned upon customer payment)\n"
-            f"- **Net Cash Realized**: **${_fmt_dec(net_proceeds)}**\n"
-            f"- **Effective Annualized APR**: **{apr}%**\n\n"
-            f"**CFO Advisory**: {warning_note} Factor fees compound rapidly on long collection cycles. Confirm customer payment discipline before factoring large receivables."
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Calculate invoice factoring advance proceeds, reserve rebate, discount fees, and true annualized APR.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Invoice Face Value: ${_fmt_dec(inv)}\n"
-            f"   - Advance Rate: {adv_pct}%\n"
-            f"   - Discount Fee Rate: {fee_pct}%\n"
-            f"   - Collection Horizon: {days} days\n"
-            f"   - Ancillary Wire Fees: ${_fmt_dec(ancillary)}\n"
-            f"3. Financial Truth Invariant: A {fee_pct}% fee for {days} days translates to an annualized APR of {apr}%. Flag predatory if >36%.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_factoring_proceeds` with typed Decimal arguments.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_factoring_proceeds",
-                        "arguments": tool_args,
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_factoring_proceeds", "content": json.dumps(res_payload)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_trade_credit_records(count: int = 150) -> List[Dict[str, Any]]:
-
-    records = []
-    terms = [
-        {"disc": Decimal("2.0"), "disc_d": 10, "net_d": 30},
-        {"disc": Decimal("1.0"), "disc_d": 10, "net_d": 30},
-        {"disc": Decimal("3.0"), "disc_d": 15, "net_d": 45},
-        {"disc": Decimal("2.0"), "disc_d": 10, "net_d": 60},
-    ]
-    for _ in range(count):
-        t = random.choice(terms)
-        disc, disc_d, net_d = t["disc"], t["disc_d"], t["net_d"]
-        inv = Decimal(str(random.randint(5000, 150000)))
-        res = calculate_trade_credit_apr(
-            discount_pct=disc,
-            discount_days=disc_d,
-            net_days=net_d,
-            invoice_amount=inv,
-            benchmark_borrowing_rate_pct=Decimal("0.08"),
-        )
-
-        prompts = [
-            f"Our supplier offers {disc}% discount if paid in {disc_d} days, otherwise full amount in {net_d} days ({disc}/{disc_d} net {net_d}) on a ${_fmt_dec(inv)} invoice. What is the annualized cost of skipping the discount?",
-            f"What is the effective APR of {disc}/{disc_d} net {net_d} trade credit on our ${_fmt_dec(inv)} vendor bill? Should we take the discount or pay at {net_d} days?",
-        ]
-
-        assistant_reply = (
-            f"### Trade Credit Early-Payment Discount APR Audit\n\n"
-            f"- **Trade Credit Terms**: `{disc}/{disc_d} net {net_d}`\n"
-            f"- **Effective Annualized APR**: **{res['implied_apr_percent']}%**\n"
-            f"- **Trade Credit Classification**: `{res['status']}`\n"
-            f"- **Early Discount Dollar Savings**: ${_fmt_dec(res['discount_dollar_savings'])}\n"
-            f"- **Net Trade Benefit**: ${_fmt_dec(res['net_benefit_dollars'])}\n\n"
-            f"**Strategic Guidance**: {res['cfo_recommendation']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Evaluate trade credit terms ({disc}/{disc_d} net {net_d}) to determine the true annualized cost of foregoing the early-payment discount.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Discount Percentage: {disc}%\n"
-            f"   - Discount Window: {disc_d} days\n"
-            f"   - Full Due Date: {net_d} days\n"
-            f"   - Invoice Amount: ${_fmt_dec(inv)}\n"
-            f"3. Financial Mechanics & Working Capital Strategy:\n"
-            f"   - Skipping a cash discount is effectively borrowing money from the supplier for ({net_d} - {disc_d}) days.\n"
-            f"   - Annualized APR formula: (Discount% / (100 - Discount%)) * (365 / (Net Days - Discount Days)).\n"
-            f"   - If effective APR exceeds bank credit line borrowing costs (typically 8%-12%), the SME should borrow from bank line to capture the early payment discount.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_trade_credit_apr` with typed parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_trade_credit_apr",
-                        "arguments": {
-                            "discount_pct": str(disc),
-                            "discount_days": disc_d,
-                            "net_days": net_d,
-                            "invoice_amount": _fmt_dec(inv),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_trade_credit_apr", "content": json.dumps(res)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_wcr_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        rev = Decimal(str(random.randint(500000, 8000000)))
-        ar = (rev * Decimal(str(round(random.uniform(0.08, 0.25), 4)))).quantize(Decimal("0.01"))
-        inv = (rev * Decimal(str(round(random.uniform(0.05, 0.20), 4)))).quantize(Decimal("0.01"))
-        ap = (rev * Decimal(str(round(random.uniform(0.04, 0.15), 4)))).quantize(Decimal("0.01"))
-
-        wcr_amt, wcr_pct, status = calculate_wcr(accounts_receivable=ar, inventory=inv, accounts_payable=ap, annual_revenue=rev)
-        res_wcr = {
-            "wcr_amount": _fmt_dec(wcr_amt),
-            "wcr_pct_of_revenue": str(wcr_pct) if wcr_pct else "0.0",
-            "working_capital_status": status,
-        }
-
-        prompts = [
-            f"What is our Working Capital Requirement (WCR) with Accounts Receivable ${_fmt_dec(ar)}, Inventory ${_fmt_dec(inv)}, and Accounts Payable ${_fmt_dec(ap)} on annual turnover ${_fmt_dec(rev)}?",
-            f"Calculate our operational working capital need: A/R = ${_fmt_dec(ar)}, Inventory = ${_fmt_dec(inv)}, A/P = ${_fmt_dec(ap)}, Annual Sales = ${_fmt_dec(rev)}.",
-        ]
-
-        assistant_reply = (
-            f"### Operating Working Capital Requirement (WCR) Analysis\n\n"
-            f"- **Accounts Receivable (A/R)**: ${_fmt_dec(ar)}\n"
-            f"- **Inventory Stock**: ${_fmt_dec(inv)}\n"
-            f"- **Accounts Payable (A/P)**: ${_fmt_dec(ap)}\n"
-            f"- **Total Operational WCR**: **${res_wcr['wcr_amount']}** ({res_wcr['wcr_pct_of_revenue']}% of annual revenue)\n"
-            f"- **Liquidity Assessment**: `{res_wcr['working_capital_status']}`\n\n"
-            f"**Treasury Guidance**: A positive WCR of ${res_wcr['wcr_amount']} represents operational cash tied up in trade assets that must be financed via permanent equity or revolving working capital facilities."
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Calculate the Operating Working Capital Requirement (WCR) and assess trade asset liquidity.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Accounts Receivable: ${_fmt_dec(ar)}\n"
-            f"   - Inventory: ${_fmt_dec(inv)}\n"
-            f"   - Accounts Payable: ${_fmt_dec(ap)}\n"
-            f"   - Annual Turnover: ${_fmt_dec(rev)}\n"
-            f"3. Accounting & Working Capital Principles:\n"
-            f"   - Operating WCR = Accounts Receivable + Inventory - Accounts Payable.\n"
-            f"   - Measures operating assets that must be financed before customer cash collection.\n"
-            f"   - A rapidly expanding WCR during revenue growth causes liquidity shortages and working capital depletion.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_wcr` with typed Decimal parameters (zero mental arithmetic).\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_wcr",
-                        "arguments": {
-                            "accounts_receivable": _fmt_dec(ar),
-                            "inventory": _fmt_dec(inv),
-                            "accounts_payable": _fmt_dec(ap),
-                            "annual_revenue": _fmt_dec(rev),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_wcr", "content": json.dumps(res_wcr)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_client_concentration_records(count: int = 100) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        total_rev = Decimal(str(random.randint(500000, 5000000)))
-        t1_pct = Decimal(str(random.choice([25, 35, 45, 60, 75])))
-        t1_amt = (total_rev * (t1_pct / Decimal("100"))).quantize(Decimal("0.01"))
-        rem = total_rev - t1_amt
-        c2 = (rem * Decimal("0.50")).quantize(Decimal("0.01"))
-        c3 = (rem * Decimal("0.30")).quantize(Decimal("0.01"))
-        c4 = rem - c2 - c3
-
-        client_dict = {"Client_A": t1_amt, "Client_B": c2, "Client_C": c3, "Client_D": c4}
-        t1, t3, hhi, tier, desc = calculate_client_concentration(client_dict, total_rev)
-
-        prompts = [
-            f"Our company has 4 key customer accounts generating ${_fmt_dec(t1_amt)}, ${_fmt_dec(c2)}, ${_fmt_dec(c3)}, and ${_fmt_dec(c4)} this year (Total revenue: ${_fmt_dec(total_rev)}). What is our customer concentration risk and HHI score for bank underwriting?",
-            f"Calculate our revenue concentration profile: Top customer brings in ${_fmt_dec(t1_amt)}, Client B ${_fmt_dec(c2)}, Client C ${_fmt_dec(c3)}, Client D ${_fmt_dec(c4)}. Is this a high credit risk for loan approval?",
-            f"Assess our customer revenue concentration. Our largest client generates ${_fmt_dec(t1_amt)} out of ${_fmt_dec(total_rev)} total turnover. What is our Herfindahl-Hirschman Index?",
-        ]
-
-        tool_args = {
-            "client_inflows": {k: _fmt_dec(v) for k, v in client_dict.items()},
-            "total_inflow": _fmt_dec(total_rev),
-        }
-
-        res_payload = {
-            "top_1_share_percent": str(t1),
-            "top_3_share_percent": str(t3),
-            "hhi_index": str(hhi),
-            "concentration_tier": tier,
-            "assessment": desc,
-        }
-
-        assistant_reply = (
-            f"### Commercial Customer Concentration & Credit Risk Audit\n\n"
-            f"- **Largest Customer Share (Top 1)**: **{t1}%** (${_fmt_dec(t1_amt)})\n"
-            f"- **Top 3 Accounts Share**: **{t3}%**\n"
-            f"- **Herfindahl-Hirschman Index (HHI)**: **{hhi}**\n"
-            f"- **Concentration Risk Tier**: `{tier}`\n\n"
-            f"**Bank Underwriting Assessment**: {desc} Commercial bank lenders penalize borrowers where a single customer accounts for >30% of gross turnover, as losing that account threatens debt service coverage."
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Evaluate customer concentration risk, Top 1 share, Top 3 share, and HHI index.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Largest Client: ${_fmt_dec(t1_amt)} ({t1}% of total)\n"
-            f"   - Total Revenue: ${_fmt_dec(total_rev)}\n"
-            f"3. Credit Underwriting Standard: Top 1 > 30% triggers high dependency; HHI > 2,500 indicates highly concentrated market power.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_client_concentration` with typed parameters.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_client_concentration",
-                        "arguments": tool_args,
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_client_concentration", "content": json.dumps(res_payload)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_defensive_interval_records(count: int = 100) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        qa = Decimal(str(random.randint(50000, 1500000)))
-        daily_burn = Decimal(str(random.randint(1200, 15000)))
-        days, tier, rat = calculate_defensive_interval(quick_assets=qa, daily_operating_expenses=daily_burn)
-
-        prompts = [
-            f"Our company has ${_fmt_dec(qa)} in quick liquid assets (cash and receivables), and our daily operating expense burn is ${_fmt_dec(daily_burn)}. How many days can we survive if all customer inflows stop?",
-            f"Calculate our Defensive Interval Ratio (DIR) in days given quick assets of ${_fmt_dec(qa)} and daily cash burn of ${_fmt_dec(daily_burn)}.",
-            f"What is our zero-revenue survival buffer? We hold ${_fmt_dec(qa)} in liquid assets with daily cash outflows of ${_fmt_dec(daily_burn)}.",
-        ]
-
-        tool_args = {
-            "quick_assets": _fmt_dec(qa),
-            "daily_operating_expenses": _fmt_dec(daily_burn),
-        }
-
-        res_payload = {
-            "quick_assets": _fmt_dec(qa),
-            "daily_operating_expenses": _fmt_dec(daily_burn),
-            "defensive_interval_days": str(days),
-            "liquidity_tier": tier,
-            "rationale": rat,
-        }
-
-        assistant_reply = (
-            f"### Defensive Interval Ratio (DIR) Survival Runway Analysis\n\n"
-            f"- **Quick Liquid Assets**: ${_fmt_dec(qa)}\n"
-            f"- **Daily Operating Cash Burn**: ${_fmt_dec(daily_burn)} per day\n"
-            f"- **Defensive Survival Interval**: **{days} Days**\n"
-            f"- **Liquidity Resilience Tier**: `{tier}`\n\n"
-            f"**Treasury Guidance**: {rat} Commercial lenders require at least 30–60 defensive days to ensure solvency during operational disruptions."
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Calculate Defensive Interval Ratio (DIR = Quick Assets / Daily Operating Cash Expenses).\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Quick Assets: ${_fmt_dec(qa)}\n"
-            f"   - Daily Operating Burn: ${_fmt_dec(daily_burn)}\n"
-            f"3. Treasury Standard: Evaluates how many days the business can operate strictly on existing liquid assets with zero revenue.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_defensive_interval` with typed Decimal parameters.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_defensive_interval",
-                        "arguments": tool_args,
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_defensive_interval", "content": json.dumps(res_payload)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_cash_conversion_cycle_records(count: int = 150) -> List[Dict[str, Any]]:
-
-    records = []
-    for _ in range(count):
-        dso = random.randint(30, 90)
-        dio = random.randint(20, 75)
-        dpo = random.randint(25, 60)
-
-        ccc, status, advice = calculate_cash_conversion_cycle(dso_days=dso, dpo_days=dpo, dio_days=dio)
-        res_ccc = {
-            "dso_days": dso,
-            "dio_days": dio,
-            "dpo_days": dpo,
-            "cash_conversion_cycle_days": ccc,
-            "tier": status,
-            "recommendation": advice,
-        }
-
-        prompts = [
-            f"What is our Cash Conversion Cycle (CCC) if our Days Sales Outstanding (DSO) is {dso} days, Days Inventory Outstanding (DIO) is {dio} days, and Days Payable Outstanding (DPO) is {dpo} days?",
-            f"Calculate our working capital cash cycle: DSO = {dso} days, DIO = {dio} days, DPO = {dpo} days. How long is our cash locked up in operations?",
-        ]
-
-        assistant_reply = (
-            f"### Cash Conversion Cycle (CCC) Working Capital Diagnostic\n\n"
-            f"- **Days Sales Outstanding (DSO)**: {dso} days\n"
-            f"- **Days Inventory Outstanding (DIO)**: {dio} days\n"
-            f"- **Days Payable Outstanding (DPO)**: {dpo} days\n"
-            f"- **Net Cash Conversion Cycle**: **{ccc} days**\n"
-            f"- **Efficiency Status**: `{status}`\n\n"
-            f"**CFO Recommendation**: {advice}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Calculate Cash Conversion Cycle (CCC = DIO + DSO - DPO) to evaluate cash lockup velocity.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - DSO (Receivables collection period): {dso} days\n"
-            f"   - DIO (Inventory shelf period): {dio} days\n"
-            f"   - DPO (Supplier payment period): {dpo} days\n"
-            f"3. Working Capital Principles:\n"
-            f"   - CCC measures the net number of days from paying for raw materials until receiving cash from customer sales.\n"
-            f"   - Shorter or negative CCC frees up operational liquidity; prolonged CCC (>60 days) requires commercial working capital financing.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_cash_conversion_cycle` with typed integer arguments.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_cash_conversion_cycle",
-                        "arguments": {
-                            "dso_days": dso,
-                            "dio_days": dio,
-                            "dpo_days": dpo,
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_cash_conversion_cycle", "content": json.dumps(res_ccc)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_dupont_roe_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        rev = Decimal(str(random.randint(800000, 10000000)))
-        margin = Decimal(str(round(random.uniform(0.04, 0.18), 4)))
-        ni = (rev * margin).quantize(Decimal("0.01"))
-        assets = (rev * Decimal(str(round(random.uniform(0.60, 1.80), 4)))).quantize(Decimal("0.01"))
-        equity = (assets * Decimal(str(round(random.uniform(0.35, 0.75), 4)))).quantize(Decimal("0.01"))
-
-        res = calculate_dupont_roe(net_income=ni, revenue=rev, total_assets=assets, total_equity=equity)
-
-        prompts = [
-            f"Run a DuPont ROE decomposition for Net Income ${_fmt_dec(ni)}, Sales ${_fmt_dec(rev)}, Total Assets ${_fmt_dec(assets)}, and Shareholder Equity ${_fmt_dec(equity)}.",
-            f"Decompose our Return on Equity (ROE) using the 3-stage DuPont model: Net Profit ${_fmt_dec(ni)}, Turnover ${_fmt_dec(rev)}, Assets ${_fmt_dec(assets)}, Net Worth ${_fmt_dec(equity)}.",
-        ]
-
-        assistant_reply = (
-            f"### DuPont 3-Stage Return on Equity (ROE) Decomposition\n\n"
-            f"- **Net Profit Margin (Profitability)**: {res['net_profit_margin_pct']}%\n"
-            f"- **Asset Turnover (Operating Efficiency)**: {res['asset_turnover']}x\n"
-            f"- **Equity Multiplier (Financial Leverage)**: {res['equity_multiplier']}x\n"
-            f"- **Total Return on Equity (ROE)**: **{res['return_on_equity_pct']}%**\n"
-            f"- **Primary Return Driver**: `{res['primary_driver']}`\n\n"
-            f"**Strategic Assessment**: {res['rationale']}"
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Deconstruct Return on Equity (ROE) using DuPont 3-stage framework.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Net Income: ${_fmt_dec(ni)}\n"
-            f"   - Gross Revenue: ${_fmt_dec(rev)}\n"
-            f"   - Balance Sheet Assets: ${_fmt_dec(assets)}\n"
-            f"   - Shareholder Equity: ${_fmt_dec(equity)}\n"
-            f"3. Corporate Finance Principles:\n"
-            f"   - ROE = (Net Income / Revenue) * (Revenue / Assets) * (Assets / Equity).\n"
-            f"   - Separates operational margin, asset turnover velocity, and balance sheet leverage.\n"
-            f"   - Identifies whether high ROE is genuine operational quality or risky financial leverage.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_dupont_roe` with typed Decimal parameters.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_dupont_roe",
-                        "arguments": {
-                            "net_income": _fmt_dec(ni),
-                            "revenue": _fmt_dec(rev),
-                            "total_assets": _fmt_dec(assets),
-                            "total_equity": _fmt_dec(equity),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_dupont_roe", "content": json.dumps(res)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_prudent_debt_capacity_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        noi = Decimal(str(random.randint(100000, 1500000)))
-        ads = Decimal(str(random.randint(10000, 250000)))
-        rate = Decimal(str(round(random.uniform(0.065, 0.11), 3)))
-        years = random.choice([3, 5, 7])
-
-        cap = calculate_prudent_debt_capacity(
-            net_operating_income=noi,
-            target_dscr=Decimal("1.25"),
-            existing_annual_debt_service=ads,
-            annual_interest_rate=rate,
-            term_years=years,
-        )
-        res_cap = {
-            "net_operating_income": _fmt_dec(noi),
-            "existing_annual_debt_service": _fmt_dec(ads),
-            "target_dscr": "1.25",
-            "borrowing_interest_rate_pct": _fmt_dec(rate * 100),
-            "loan_term_years": years,
-            "maximum_prudent_debt_capacity": _fmt_dec(cap),
-        }
-
-        prompts = [
-            f"What is our maximum prudent debt capacity if our annual NOI is ${_fmt_dec(noi)}, existing annual debt repayments are ${_fmt_dec(ads)}, targeting 1.25x DSCR on a {years}-year commercial loan at {_fmt_dec(rate * 100)}% interest?",
-            f"How much additional term debt can our business prudently take on? NOI = ${_fmt_dec(noi)}, Current Debt Service = ${_fmt_dec(ads)}, Interest = {_fmt_dec(rate * 100)}%, Term = {years} years, Minimum DSCR = 1.25x.",
-        ]
-
-        assistant_reply = (
-            f"### Prudent Commercial Borrowing Capacity Assessment\n\n"
-            f"- **Net Operating Income (NOI)**: ${_fmt_dec(noi)}\n"
-            f"- **Existing Annual Debt Service**: ${_fmt_dec(ads)}\n"
-            f"- **Covenant Hurdle**: Minimum `1.25x` DSCR\n"
-            f"- **Proposed Facility Terms**: {years}-year amortization at {_fmt_dec(rate * 100)}% APR\n"
-            f"- **Maximum Prudent Debt Capacity**: **${res_cap['maximum_prudent_debt_capacity']}**\n\n"
-            f"**Underwriting Guidance**: Borrowing up to ${res_cap['maximum_prudent_debt_capacity']} maintains a 1.25x DSCR cushion, ensuring operational cash flow can service senior debt obligations without defaulting during seasonal dips."
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Determine maximum additional borrowing capacity constrained by 1.25x DSCR banking covenants.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Operating Income (NOI): ${_fmt_dec(noi)}\n"
-            f"   - Existing Annual Debt Service: ${_fmt_dec(ads)}\n"
-            f"   - Target Covenant DSCR: 1.25x\n"
-            f"   - Loan Term: {years} years\n"
-            f"   - Quoted Annual Interest: {_fmt_dec(rate * 100)}%\n"
-            f"3. Underwriting Principles:\n"
-            f"   - Allowable total debt service = NOI / Target DSCR.\n"
-            f"   - Incremental debt service available = Allowable Debt Service - Existing Debt Service.\n"
-            f"   - Debt capacity = Present value of incremental debt service amortized over {years} years at {_fmt_dec(rate * 100)}% APR.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_prudent_debt_capacity` with typed parameters.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_prudent_debt_capacity",
-                        "arguments": {
-                            "net_operating_income": _fmt_dec(noi),
-                            "existing_annual_debt_service": _fmt_dec(ads),
-                            "annual_interest_rate": str(rate),
-                            "term_years": years,
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_prudent_debt_capacity", "content": json.dumps(res_cap)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-def generate_break_even_records(count: int = 150) -> List[Dict[str, Any]]:
-    records = []
-    for _ in range(count):
-        fc = Decimal(str(random.randint(40000, 600000)))
-        cm_ratio = Decimal(str(round(random.uniform(0.25, 0.70), 2)))
-
-        be_sales = calculate_break_even(fixed_costs=fc, cm_ratio=cm_ratio)
-        res_be = {
-            "fixed_costs": _fmt_dec(fc),
-            "contribution_margin_ratio": str(cm_ratio),
-            "break_even_sales_revenue": _fmt_dec(be_sales),
-        }
-
-        prompts = [
-            f"Calculate our Break-Even Revenue with annual fixed costs of ${_fmt_dec(fc)} and a contribution margin ratio of {cm_ratio * 100}%.",
-            f"What sales revenue must our business generate to reach zero operating profit? Fixed overhead is ${_fmt_dec(fc)} and CM ratio is {cm_ratio * 100}%.",
-        ]
-
-        assistant_reply = (
-            f"### Cost-Volume-Profit (CVP) Break-Even Revenue Analysis\n\n"
-            f"- **Annual Fixed Overhead**: ${_fmt_dec(fc)}\n"
-            f"- **Contribution Margin (CM) Ratio**: {cm_ratio * 100}%\n"
-            f"- **Required Break-Even Turnover**: **${res_be['break_even_sales_revenue']}**\n\n"
-            f"**Operating Assessment**: Your business must generate at least ${res_be['break_even_sales_revenue']} in revenue annually to cover all fixed operating overhead before generating net operating profit."
-        )
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Financial Objective: Calculate Break-Even Revenue via CVP (Cost-Volume-Profit) analysis.\n"
-            f"2. Parameter Extraction Verification:\n"
-            f"   - Fixed Overhead Costs: ${_fmt_dec(fc)}\n"
-            f"   - Contribution Margin Ratio: {cm_ratio * 100}%\n"
-            f"3. Managerial Accounting Principles:\n"
-            f"   - Break-Even Sales = Fixed Costs / Contribution Margin Ratio.\n"
-            f"   - Every revenue dollar above break-even yields profit equal to the CM ratio.\n"
-            f"4. Tool Execution Strategy: Strictly dispatching `tool_calculate_break_even` with typed parameters.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": random.choice(prompts)},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_calculate_break_even",
-                        "arguments": {
-                            "fixed_costs": _fmt_dec(fc),
-                            "cm_ratio": str(cm_ratio),
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_calculate_break_even", "content": json.dumps(res_be)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-# ==============================================================================
-# 2. Live Market Intelligence & Online Search Generators (Category B)
-# ==============================================================================
-
-def generate_live_market_search_records(count: int = 150) -> List[Dict[str, Any]]:
-    """Simulates dynamic online market research retrieval for out-of-memory queries with rich topic diversity."""
-    topics = [
-        {
-            "query": "current SOFR interest rate benchmark 2026",
-            "prompts": [
-                "What is the current SOFR rate today for commercial floating-rate debt?",
-                "What is the latest 30-day SOFR benchmark for our bank loan pricing?",
-                "Can you look up the current Secured Overnight Financing Rate (SOFR)?",
-                "What rate is SOFR trading at right now for variable rate commercial loans?",
-            ],
-            "search_result": "Secured Overnight Financing Rate (SOFR) benchmark rate is currently 4.82% annualized as published by the Federal Reserve Bank of New York.",
-            "answer": "### Live Market Benchmark: SOFR Rate\n\nAccording to real-time market data from the Federal Reserve Bank of New York:\n- **Current SOFR Rate**: **4.82%** (Annualized)\n\n*Strategic Underwriting Note*: For floating-rate commercial loans quoted at `SOFR + Spread` (e.g. SOFR + 3.00%), your current borrowing interest rate would be approximately **7.82%**.",
-        },
-        {
-            "query": "US commercial bank prime loan rate 2026",
-            "prompts": [
-                "What is the national prime rate right now for small business bank loans?",
-                "What is the current Wall Street Journal Prime Rate?",
-                "Can you check the current US commercial prime lending rate?",
-                "What is the prevailing WSJ Prime Rate for SBA loan margin spreads?",
-            ],
-            "search_result": "The US Wall Street Journal Prime Rate is currently 7.75%, effective following the latest Federal Open Market Committee rate decision.",
-            "answer": "### Live Market Benchmark: WSJ Prime Rate\n\nBased on current financial data:\n- **US Prime Lending Rate**: **7.75%**\n\n*Commercial Banking Guidance*: Most SBA 7(a) variable loans are capped at `Prime + 2.75%` to `Prime + 4.75%` (effective ~10.50% to 12.50% APR).",
-        },
-        {
-            "query": "federal reserve fed funds target rate range 2026",
-            "prompts": [
-                "What is the current Federal Funds target rate set by the Fed?",
-                "Where is the Fed Funds target range sitting right now?",
-                "Can you check the current Federal Reserve benchmark rate?",
-            ],
-            "search_result": "The Federal Reserve's Federal Open Market Committee (FOMC) target range for the federal funds rate is currently 4.75% to 5.00%.",
-            "answer": "### Live Market Benchmark: Federal Funds Target Rate\n\n- **Target Range**: **4.75% – 5.00%**\n- **Effective Federal Funds Rate (EFFR)**: **4.83%**\n\n*Macro Context*: Short-term borrowing facilities and treasury money market yields remain closely tied to this policy corridor.",
-        },
-        {
-            "query": "SBA 7a maximum loan amount guaranty fees 2026",
-            "prompts": [
-                "What is the maximum borrowing limit and guaranty fee structure for an SBA 7(a) loan?",
-                "How much can an SME borrow under the SBA 7(a) program and what are the upfront guarantee fees?",
-                "What are the 2026 SBA 7(a) guaranty fee percentages on loans over $700,000?",
-            ],
-            "search_result": "SBA 7(a) maximum loan limit is $5,000,000. Upfront guaranty fees range from 0% (under $150k) to 3.5% (over $700k) with an ongoing annual service fee of 0.55% of guaranteed portion.",
-            "answer": "### SBA 7(a) Commercial Loan Facility Parameters\n\n- **Maximum Loan Ceiling**: **$5,000,000**\n- **Maximum SBA Guarantee**: Up to 85% for loans ≤ $150,000; up to 75% for loans > $150,000\n- **Upfront Guaranty Fee**: 3.50% to 3.75% for facilities exceeding $700,000\n- **Ongoing Annual Service Fee**: ~0.55% of the guaranteed balance",
-        },
-        {
-            "query": "average B2B SaaS ARR valuation multiples 2026",
-            "prompts": [
-                "What are current public and private enterprise value to ARR multiples for B2B SaaS?",
-                "What is the median EV/ARR multiple for cloud software companies right now?",
-                "Can you search current valuation multiples for subscription B2B software companies?",
-            ],
-            "search_result": "Median public B2B SaaS multiples are trading at 6.2x EV/NTM Revenue, with top-quartile performers (>120% NRR, Rule of 40 > 40%) trading at 9.5x-12.0x ARR.",
-            "answer": "### B2B SaaS Enterprise Value Multiples Benchmark\n\n- **Median B2B SaaS Multiple**: **6.2x EV / NTM ARR**\n- **Top-Quartile Multiple**: **9.5x to 12.0x ARR** (Requires Rule of 40 ≥ 40% and NRR ≥ 115%)\n- **Lower-Quartile Multiple**: **3.5x to 4.5x ARR** (Subdued growth < 15% or high churn > 15%)",
-        },
-        {
-            "query": "European Central Bank ECB deposit facility refinancing rate 2026",
-            "prompts": [
-                "What are the current ECB key interest rates in Europe?",
-                "What is the latest European Central Bank deposit facility rate?",
-                "Can you look up the current Eurozone policy rate set by the ECB?",
-            ],
-            "search_result": "The European Central Bank (ECB) deposit facility rate is currently 3.25%, with the main refinancing operations rate standing at 3.40%.",
-            "answer": "### Live European Central Bank (ECB) Policy Rates\n\n- **Deposit Facility Rate**: **3.25%**\n- **Main Refinancing Operations Rate**: **3.40%**\n- **Marginal Lending Facility**: **3.65%**\n\n*Treasury Guidance*: EUR-denominated liquidity facilities and Euribor loans benchmark directly against these rates.",
-        },
-        {
-            "query": "Bank of England official bank rate UK 2026",
-            "prompts": [
-                "What is the current Bank of England base interest rate?",
-                "Can you check the current UK BoE policy rate?",
-                "What is the prevailing interest rate in the UK for commercial lending benchmarks?",
-            ],
-            "search_result": "The Bank of England Monetary Policy Committee (MPC) official Bank Rate is currently 4.75%.",
-            "answer": "### Live UK Market Benchmark: Bank of England Base Rate\n\n- **Official Bank Rate**: **4.75%**\n\n*UK SME Context*: Most commercial bank overdrafts and revolving credit facilities in the UK price at `Base Rate + Margin` (typically 2.50%–4.50%).",
-        },
-        {
-            "query": "SBA 504 loan program debenture rate real estate 2026",
-            "prompts": [
-                "What are the current terms and interest rates for the SBA 504 loan program?",
-                "What is the maximum borrowing amount under an SBA 504 commercial real estate loan?",
-                "Can you check the latest SBA 504 debenture rates for commercial property purchase?",
-            ],
-            "search_result": "SBA 504 20-year and 25-year debenture rates are currently averaging 6.15% to 6.35% fixed. Maximum SBA portion is $5.0M ($5.5M for small manufacturers).",
-            "answer": "### SBA 504 Commercial Real Estate & Heavy Equipment Facility\n\n- **Maximum SBA Portion**: **$5,000,000** ($5,500,000 for manufacturing projects)\n- **Standard Financing Structure**: 50% Bank 1st Lien, 40% CDC/SBA 2nd Lien, 10% Borrower Equity\n- **Effective Fixed Interest Rate**: **6.15% – 6.35%** (20-year / 25-year debentures)\n\n*Advantage*: Fixed long-term financing that preserves operational working capital with only 10% equity down.",
-        },
-        {
-            "query": "US 10-year Treasury note benchmark yield 2026",
-            "prompts": [
-                "What is the current yield on the 10-year US Treasury note?",
-                "Can you search today's 10-year Treasury benchmark rate?",
-                "What is the risk-free benchmark rate for US 10-year Treasuries right now?",
-            ],
-            "search_result": "The 10-Year US Treasury benchmark yield is currently trading at 4.22% in open bond market trading.",
-            "answer": "### Live Risk-Free Benchmark: 10-Year US Treasury Yield\n\n- **Current 10-Yr Benchmark Yield**: **4.22%**\n\n*Valuation Application*: Used as the foundational risk-free rate ($R_f$) in Capital Asset Pricing Model (CAPM) and Discounted Cash Flow (DCF) weighted cost of capital models.",
-        },
-        {
-            "query": "Section 179 CapEx equipment depreciation deduction limit 2026",
-            "prompts": [
-                "What is the current IRS Section 179 equipment deduction limit for business CapEx?",
-                "How much equipment purchase can our SME write off under Section 179 this year?",
-                "What is the maximum Section 179 expense limit and equipment phaseout ceiling?",
-            ],
-            "search_result": "The IRS Section 179 expense deduction limit is $1,220,000 with a total equipment purchase phase-out threshold of $3,050,000.",
-            "answer": "### IRS Section 179 Capital Expenditure Tax Shelter\n\n- **Maximum Expense Deduction**: **$1,220,000** (Full write-off in Year 1)\n- **Equipment Spending Cap**: **$3,050,000** (Deduction reduces dollar-for-dollar above this threshold)\n\n*Tax Strategy*: Enables immediate first-year operational cash tax savings when acquiring machinery, commercial vehicles, or qualifying business hardware.",
-        },
-        {
-            "query": "FDIC commercial deposit insurance limits and ICS sweep accounts 2026",
-            "prompts": [
-                "What is the FDIC insurance limit for commercial business accounts and how do ICS sweeps work?",
-                "How can our SME insure liquid cash balances exceeding $250,000 across banks?",
-                "What are the FDIC deposit coverage rules for commercial operating accounts?",
-            ],
-            "search_result": "Standard FDIC insurance covers up to $250,000 per depositor per insured bank. IntraFi Insured Cash Sweep (ICS) networks distribute multi-million dollar balances across participating banks to provide 100% FDIC coverage.",
-            "answer": "### Commercial Cash Protection & FDIC Insurance Parameters\n\n- **Standard FDIC Limit**: **$250,000** per legal entity per insured depository institution\n- **Multi-Million Solution**: **IntraFi / Insured Cash Sweep (ICS)** automatically breaks large treasury balances into increments under $250k across a network of FDIC banks.\n\n*Treasury Recommendation*: Any operational cash exceeding $250,000 should be placed in ICS sweep accounts or short-term US Treasury Bills to eliminate uninsured bank counterparty risk.",
-        },
-        {
-            "query": "UK HMRC VAT registration threshold 2026",
-            "prompts": [
-                "What is the UK VAT registration turnover threshold for small businesses?",
-                "At what revenue level is a UK SME legally required to register for VAT?",
-                "Can you check the current UK Value Added Tax mandatory registration threshold?",
-            ],
-            "search_result": "The UK HMRC mandatory VAT registration threshold is £90,000 of taxable turnover over a rolling 12-month period.",
-            "answer": "### UK HMRC VAT Compliance Benchmark\n\n- **Mandatory Registration Threshold**: **£90,000** (Rolling 12-month taxable turnover)\n- **Deregistration Threshold**: **£88,000**\n\n*Compliance Invariant*: When rolling 12-month turnover reaches £90,000, you must register within 30 days of the month-end or face statutory late penalties.",
-        },
-    ]
-
-    records = []
-    for _ in range(count):
-        t = random.choice(topics)
-        user_prompt = random.choice(t["prompts"])
-        thought_content = (
-            f"<thought>\n"
-            f"1. User Query Analysis: The user is requesting live market benchmark or regulatory data: '{t['query']}'.\n"
-            f"2. Epistemic Awareness & Anti-Hallucination Directive:\n"
-            f"   - Benchmark interest rates (SOFR, Prime Rate, Fed Funds rate), current SBA ceiling limits, and active B2B valuation multiples are dynamic and market-dependent.\n"
-            f"   - Financial Copilot rule: NEVER guess or hallucinate interest rates or regulatory ceilings from memory.\n"
-            f"3. Action Strategy: Dispatch `tool_search_market_intelligence` to retrieve verified, real-time institutional benchmark data.\n"
-            f"</thought>"
-        )
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_search_market_intelligence",
-                        "arguments": {"query": t["query"]},
-                    }],
-                },
-                {"role": "tool", "name": "tool_search_market_intelligence", "content": t["search_result"]},
-                {"role": "assistant", "content": t["answer"]},
-            ]
-        })
-    return records
-
-
-
-# ==============================================================================
-# 2.5 Multi-Currency & Continuous Floating Rate Changes (Category E)
-# ==============================================================================
-
-def generate_multi_currency_and_fx_records(count: int = 350) -> List[Dict[str, Any]]:
-    """Teaches handling of 160+ world currencies across all continents and dynamic live rate resolution via tools."""
-    records = []
-
-    all_currencies = list(WORLD_CURRENCIES.values())
-    major_reporting_currencies = ["USD", "EUR", "GBP", "SGD", "CAD", "AUD"]
-
-    for _ in range(count):
-        sub_type = random.choice(["conversion_quoted", "conversion_live", "fx_exposure", "floating_rate_reset", "market_rate_search"])
-
-        # Pick random source currency from any world region
-        from_meta = random.choice(all_currencies)
-        # Pick target currency (different from source)
-        possible_targets = [c for c in major_reporting_currencies if c != from_meta.code]
-        to_code = random.choice(possible_targets)
-        to_meta = CurrencyRegistry.get_metadata(to_code)
-
-        # Scale amount appropriately for currency denomination value
-        if from_meta.code in ("JPY", "KRW", "VND", "IDR"):
-            amt = Decimal(str(random.randint(1500000, 75000000)))
-        elif from_meta.code in ("BDT", "INR", "PKR", "LKR", "PHP", "THB"):
-            amt = Decimal(str(random.randint(250000, 15000000)))
+_ROUTE_CACHE: Dict[tuple, tuple] = {}
+
+
+def route(question: str, has_csv: bool) -> tuple:
+    """Returns (intent, sub_intent, handled_by_quant_subagent) as the supervisor would see them."""
+    key = (question, has_csv)
+    if key not in _ROUTE_CACHE:
+        if is_off_topic_query(question):
+            _ROUTE_CACHE[key] = ("OFF_TOPIC", None, False)
         else:
-            amt = Decimal(str(random.randint(15000, 500000)))
+            intent = classify_intent_dynamic(message=question, history=None, has_csv=has_csv)
+            sub = classify_sub_intent_dynamic(question)
+            _ROUTE_CACHE[key] = (intent, sub, any(s.can_handle(sub) for s in SUBAGENTS))
+    return _ROUTE_CACHE[key]
 
-        # Choose denomination representation (symbol, ISO code, or colloquial name)
-        denom_choice = random.choice(["symbol", "code", "name"])
-        if denom_choice == "symbol" and from_meta.symbol:
-            amt_display = f"{from_meta.symbol}{_fmt_dec(amt, from_meta.decimals)}"
-        elif denom_choice == "name":
-            amt_display = f"{_fmt_dec(amt, from_meta.decimals)} {from_meta.name}"
+
+def cash_branch(question: str) -> Optional[str]:
+    intent, sub, quant = route(question, True)
+    if intent != "CASH_DIAGNOSTIC" or quant:
+        return None
+    return sub if sub in CASH_BRANCHES else "SUMMARY"
+
+
+# ==============================================================================
+# Synthetic bank statements
+# ==============================================================================
+
+PROFILES = {
+    # name: (opening balance range, daily inflow mean, daily outflow mean)
+    "cash_positive": ((40_000, 250_000), (2_500, 9_000), (600, 2_500)),
+    "slow_burn": ((60_000, 300_000), (1_000, 4_000), (1_800, 6_000)),
+    "fast_burn": ((15_000, 90_000), (300, 1_500), (1_500, 5_000)),
+    "near_deficit": ((8_000, 40_000), (400, 1_500), (1_200, 3_500)),
+    "overdrawn": ((1_000, 6_000), (200, 800), (900, 2_500)),
+}
+PROFILE_WEIGHTS = [3, 4, 3, 3, 1]
+INFLOW_LABELS = ["Client Invoice Payment", "Customer Transfer", "Stripe Payout", "Wholesale Order Receipt", "POS Settlement", "Retainer Payment"]
+OUTFLOW_LABELS = ["Supplier Payment", "Payroll Run", "Inventory Purchase", "Utilities", "Software Subscriptions", "Contractor Invoice", "Fuel and Logistics"]
+
+
+def make_statement(rng: random.Random, profile: str) -> str:
+    (bal_lo, bal_hi), (in_lo, in_hi), (out_lo, out_hi) = PROFILES[profile]
+    balance = Decimal(rng.randrange(bal_lo, bal_hi, 50))
+    inflow_mu, outflow_mu = rng.randint(in_lo, in_hi), rng.randint(out_lo, out_hi)
+    rent = Decimal(rng.randrange(1_500, 9_000, 250))
+    loan = Decimal(rng.randrange(800, 4_000, 100)) if rng.random() < 0.4 else None
+    start = date(2026, rng.randint(3, 8), 1)
+    days = rng.choice([30, 45, 60, 75, 90])
+    rows = ["transaction_id,posted_on,amount,currency,description,closing_balance"]
+    tx = 0
+    for offset in range(days):
+        day = start + timedelta(days=offset)
+        entries = []
+        if day.day == 1:
+            entries.append((-rent, "Office Rent"))
+        if loan is not None and day.day == 15:
+            entries.append((-loan, "Term Loan Repayment"))
+        if rng.random() < 0.35:
+            entries.append((Decimal(rng.randint(inflow_mu // 2, inflow_mu * 2)), rng.choice(INFLOW_LABELS)))
+        if rng.random() < 0.65:
+            entries.append((-Decimal(rng.randint(outflow_mu // 2, outflow_mu * 3 // 2)), rng.choice(OUTFLOW_LABELS)))
+        for amount, label in entries:
+            tx += 1
+            balance += amount
+            rows.append(f"tx_{tx:04d},{day.isoformat()},{amount:.2f},USD,{label},{balance:.2f}")
+    return "\n".join(rows) + "\n"
+
+
+# ==============================================================================
+# base_reply builders (mirror supervisor.run_copilot_supervisor branches exactly)
+# ==============================================================================
+
+
+def runway_desc(cash: Dict[str, Any]) -> str:
+    return f"{cash['runway_days']} days" if cash["runway_days"] is not None else "Infinite (Cash positive)"
+
+
+def cash_base_reply(cash: Dict[str, Any], branch: str) -> str:
+    rd = runway_desc(cash)
+    pred = f" {cash['predictive_explanation']}" if cash.get("predictive_explanation") else ""
+    target = ""
+    if cash.get("target_horizon_days") and cash.get("forecast_target_balance") is not None:
+        tier_label = f" [{cash.get('confidence_tier', 'HIGH')} CONFIDENCE]"
+        advisory = f" {cash['advisory_note']}" if cash.get("advisory_note") else ""
+        target = (
+            f" Specifically for Day {cash['target_horizon_days']} ({cash['target_horizon_date']}){tier_label}, "
+            f"projected balance is {money(cash['forecast_target_balance'])}.{advisory}"
+        )
+    tail = f"{pred}{target}"
+
+    if branch == "RUNWAY":
+        return f"You have {rd} of cash runway remaining at an average daily burn of {money(cash['average_daily_burn'])}/day (current balance: {money(cash['current_balance'])}, Status: {cash['cash_status']}).{tail}"
+    if branch == "BALANCE":
+        return f"Your current cash balance is {money(cash['current_balance'])} {cash['currency']} (net change across reviewed period: {money(cash['net_period_change'])}).{tail}"
+    if branch == "BURN":
+        return f"Your average daily burn rate is {money(cash['average_daily_burn'])}/day (gross outflows: {money(cash['gross_outflows'])} vs inflows: {money(cash['gross_inflows'])}), providing {rd} of cash runway remaining (Status: {cash['cash_status']}).{tail}"
+    if branch == "ADVICE":
+        if cash.get("has_projected_deficit"):
+            shortfall = cash.get("projected_shortfall_amount")
+            bridge = cash.get("recommended_bridge_amount") or shortfall
+            tmpl = evaluate_persona_policy(prompt_type="ADVICE_DEFICIT").get("guidance_text", "")
+            head = tmpl.format(
+                cash_status=cash["cash_status"], runway_desc=rd,
+                shortfall=cash.get("projected_shortfall_amount", "0.00"),
+                date=cash.get("projected_deficit_date", "upcoming dates"),
+                trigger=cash.get("primary_deficit_trigger", "recurring commitments"),
+                bridge=money(bridge) if bridge else "liquidity support",
+            )
+        elif cash.get("cash_status") == "WATCH":
+            tmpl = evaluate_persona_policy(prompt_type="ADVICE_WATCH").get("guidance_text", "")
+            head = tmpl.format(
+                cash_status="WATCH", runway_desc=rd, balance=plain(cash["current_balance"]),
+                burn=plain(cash["average_daily_burn"]), runway_days=cash["runway_days"],
+            )
         else:
-            amt_display = f"{_fmt_dec(amt, from_meta.decimals)} {from_meta.code}"
-
-        if sub_type == "conversion_quoted":
-            rate_info = get_live_exchange_rate(from_meta.code, to_code)
-            spot_rate = Decimal(str(rate_info["spot_rate"]))
-            spread = Decimal(str(random.choice([0, 15, 25, 35, 50])))
-
-            res = calculate_currency_conversion(
-                amount=amt,
-                exchange_rate=spot_rate,
-                from_currency=from_meta.code,
-                to_currency=to_code,
-                spread_bps=spread,
+            tmpl = evaluate_persona_policy(prompt_type="ADVICE_HEALTHY").get("guidance_text", "")
+            head = tmpl.format(cash_status="HEALTHY", runway_desc=rd, balance=plain(cash["current_balance"]))
+        return f"{head}{tail}"
+    if branch == "DEFICIT":
+        if cash.get("has_projected_deficit"):
+            tmpl = evaluate_persona_policy(prompt_type="DEFICIT_EARLY_WARNING").get("guidance_text", "")
+            head = tmpl.format(
+                shortfall=cash.get("projected_shortfall_amount", "0.00"), days=cash.get("days_until_deficit", "N/A"),
+                date=cash.get("projected_deficit_date", "N/A"), severity=cash.get("deficit_severity", "WARNING"),
+                trigger=cash.get("primary_deficit_trigger", "operational burn"),
             )
+        else:
+            tmpl = evaluate_persona_policy(prompt_type="DEFICIT_SAFE").get("guidance_text", "")
+            head = tmpl.format(runway_desc=rd, cash_status=cash["cash_status"])
+        return f"{head}{tail}"
 
-            prompts = [
-                f"We received a payment of {amt_display} from a customer. Our bank quotes an exchange rate of {_fmt_dec(spot_rate, 4)} with a {spread} bps conversion fee. What net {to_code} will be credited?",
-                f"Please convert {amt_display} to {to_meta.name} ({to_code}) at a quoted rate of {_fmt_dec(spot_rate, 4)} with {spread} basis points spread. Provide the full breakdown.",
-                f"Calculate the net proceeds of converting {amt_display} into {to_code} given a bank spot rate of {_fmt_dec(spot_rate, 4)} and a {spread} bps markup.",
-            ]
+    pred_line = f"\n- **Liquidity Forecast**: {pred.strip()}" if pred else ""
+    target_line = f"\n- **Target Horizon**: {target.strip()}" if target else ""
+    return (
+        f"### Financial Diagnostic Summary\n\n"
+        f"- **Current Balance**: {money(cash['current_balance'])} {cash['currency']}\n"
+        f"- **Average Daily Burn**: {money(cash['average_daily_burn'])}/day\n"
+        f"- **Estimated Historical Runway**: {rd} (Status: `{cash['cash_status']}`, Threshold: {cash['alert_threshold_days']} days)"
+        f"{pred_line}{target_line}"
+    )
 
-            thought = (
-                f"<thought>\n"
-                f"1. Multi-Currency Conversion Analysis: Converting {amt_display} ({from_meta.name}) to {to_code} ({to_meta.name}).\n"
-                f"2. FX Operational Parameters:\n"
-                f"   - Original Amount: {res['original_amount']} {from_meta.code}\n"
-                f"   - Spot Rate: {res['spot_exchange_rate']} ({from_meta.code}/{to_code})\n"
-                f"   - Bank Spread: {spread} bps\n"
-                f"3. 0% Mental Math & ISO Precision Mandate: Dispatch `tool_convert_currency` with typed arguments.\n"
-                f"</thought>\n\n"
-            )
 
-            answer = (
-                f"### Deterministic Multi-Currency Conversion Schedule\n\n"
-                f"- **Original Amount**: **{res['original_amount']} {from_meta.code}** ({from_meta.name})\n"
-                f"- **Quoted Spot Exchange Rate**: `{res['spot_exchange_rate']}` ({from_meta.code}/{to_code})\n"
-                f"- **Gross Converted Amount**: {res['gross_converted_amount']} {to_code}\n"
-                f"- **Bank Spread Fee ({res['spread_bps']} bps)**: {res['spread_fee']} {to_code}\n"
-                f"- **Net Proceeds Credited**: **{res['net_converted_amount']} {to_code}**\n"
-                f"- **Effective Executed Rate**: `{res['effective_exchange_rate']}`\n\n"
-                f"**Treasury Guidance**: The {res['spread_bps']} bps markup deducted {res['spread_fee']} {to_code} in bank transaction drag. For cross-border volumes, evaluate multi-currency accounts to eliminate retail conversion fees."
-            )
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": random.choice(prompts)},
-                    {
-                        "role": "assistant",
-                        "content": thought,
-                        "tool_calls": [{
-                            "name": "tool_convert_currency",
-                            "arguments": {
-                                "amount": _fmt_dec(amt, from_meta.decimals),
-                                "exchange_rate": _fmt_dec(spot_rate, 4),
-                                "from_currency": from_meta.code,
-                                "to_currency": to_code,
-                                "spread_bps": str(spread),
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_convert_currency", "content": json.dumps(res)},
-                    {"role": "assistant", "content": answer},
-                ]
-            })
-
-        elif sub_type == "conversion_live":
-            # Live market conversion without user rate
-            res = calculate_currency_conversion(
-                amount=amt,
-                from_currency=from_meta.code,
-                to_currency=to_code,
-            )
-
-            prompts = [
-                f"Convert {amt_display} to {to_code} at the current market rate.",
-                f"How much is {amt_display} worth in {to_meta.name} ({to_code}) today?",
-                f"What is the live exchange conversion of {amt_display} into {to_code}?",
-            ]
-
-            thought = (
-                f"<thought>\n"
-                f"1. Live Multi-Currency Conversion: User requested conversion of {amt_display} into {to_code} without providing an exchange rate.\n"
-                f"2. Dynamic Rate Principle: Exchange rates fluctuate continuously. Never guess an exchange rate from memory.\n"
-                f"3. Action Strategy: Invoke `tool_convert_currency` with from_currency='{from_meta.code}' and to_currency='{to_code}' to resolve the live market spot rate dynamically.\n"
-                f"</thought>\n\n"
-            )
-
-            answer = (
-                f"### Live Multi-Currency Market Conversion\n\n"
-                f"- **Original Amount**: **{res['original_amount']} {from_meta.code}** ({from_meta.name})\n"
-                f"- **Live Market Spot Rate**: `{res['spot_exchange_rate']}` ({from_meta.code}/{to_code})\n"
-                f"- **Rate Source**: `{res['exchange_rate_source']}`\n"
-                f"- **Converted Amount**: **{res['net_converted_amount']} {to_code}**\n\n"
-                f"*Market Volatility Note*: FX rates fluctuate continuously during open market trading hours. Final executed settlement rates depend on counterparty execution timing."
-            )
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": random.choice(prompts)},
-                    {
-                        "role": "assistant",
-                        "content": thought,
-                        "tool_calls": [{
-                            "name": "tool_convert_currency",
-                            "arguments": {
-                                "amount": _fmt_dec(amt, from_meta.decimals),
-                                "from_currency": from_meta.code,
-                                "to_currency": to_code,
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_convert_currency", "content": json.dumps(res)},
-                    {"role": "assistant", "content": answer},
-                ]
-            })
-
-        elif sub_type == "fx_exposure":
-            recv = amt
-            pay = (amt * Decimal(str(random.choice([0.15, 0.25, 0.40, 0.60])))).quantize(Decimal("1") if from_meta.decimals == 0 else Decimal("0.01"))
-            shock = Decimal(str(random.choice([3.0, 5.0, 7.5, 10.0])))
-
-            res = calculate_fx_exposure(
-                foreign_receivables=recv,
-                foreign_payables=pay,
-                base_currency=to_code,
-                foreign_currency=from_meta.code,
-                adverse_shock_pct=shock,
-            )
-
-            user_msg = (
-                f"Our SME has {_fmt_dec(recv, from_meta.decimals)} {from_meta.code} in customer receivables due over the next 60 days, and {_fmt_dec(pay, from_meta.decimals)} {from_meta.code} in supplier payables. "
-                f"Our reporting currency is {to_code}. What is our net foreign currency exposure and downside cash flow risk if {from_meta.code} depreciates by {shock}%?"
-            )
-
-            thought = (
-                f"<thought>\n"
-                f"1. Foreign Exchange Exposure Audit: Evaluating Net Open Position (NOP) for {from_meta.code} receivables vs payables against {to_code}.\n"
-                f"2. Risk Parameters: Receivables {_fmt_dec(recv, from_meta.decimals)} {from_meta.code}, Payables {_fmt_dec(pay, from_meta.decimals)} {from_meta.code}, Shock {shock}%.\n"
-                f"3. Risk Governance Mandate: Never guess FX Value-at-Risk. Invoke `tool_calculate_fx_exposure`.\n"
-                f"</thought>\n\n"
-            )
-
-            hedge_status = "⚠️ **Recommended (Forward Contract or FX Options Hedge)**" if res["recommend_forward_contract_hedge"] else "Optional (Monitor position)"
-            answer = (
-                f"### Cross-Border FX Exposure & Volatility Audit: {from_meta.code} / {to_code}\n\n"
-                f"- **Foreign Receivables**: {res['foreign_receivables']} {from_meta.code}\n"
-                f"- **Foreign Payables**: {res['foreign_payables']} {from_meta.code}\n"
-                f"- **Net Open Position (NOP)**: **{res['net_foreign_exposure']} {from_meta.code}** ({res['position_type']})\n"
-                f"- **Base Equivalent Value ({to_code})**: {res['base_equivalent_exposure']} {to_code}\n"
-                f"- **Current Spot Rate**: `{res['current_spot_rate']}`\n"
-                f"- **Adverse Shock ({shock}%)**: Potential Cash Loss of **{res['potential_cash_loss']} {to_code}**\n"
-                f"- **Hedging Recommendation**: {hedge_status}\n\n"
-                f"**CFO Risk Assessment**: {res['risk_summary']} An adverse {shock}% currency movement threatens {res['potential_cash_loss']} {to_code} in operating cash flow. Forward contracts lock in the spot conversion and protect operational margin."
-            )
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_msg},
-                    {
-                        "role": "assistant",
-                        "content": thought,
-                        "tool_calls": [{
-                            "name": "tool_calculate_fx_exposure",
-                            "arguments": {
-                                "foreign_receivables": _fmt_dec(recv, from_meta.decimals),
-                                "foreign_payables": _fmt_dec(pay, from_meta.decimals),
-                                "base_currency": to_code,
-                                "foreign_currency": from_meta.code,
-                                "adverse_shock_pct": str(shock),
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_fx_exposure", "content": json.dumps(res)},
-                    {"role": "assistant", "content": answer},
-                ]
-            })
-
-        elif sub_type == "floating_rate_reset":
-            balance = Decimal(str(random.randint(150000, 1000000)))
-            benchmark_name = random.choice(["30-day SOFR", "WSJ Prime Rate", "Euribor", "SONIA"])
-            old_base = Decimal(str(round(random.uniform(4.50, 5.50), 2)))
-            rate_delta = Decimal(str(random.choice([-0.50, -0.25, 0.25, 0.50])))
-            new_base = (old_base + rate_delta).quantize(Decimal("0.01"))
-            margin = Decimal(str(round(random.uniform(2.50, 4.00), 2)))
-            term_years = random.choice([3, 5, 7])
-            term_months = term_years * 12
-
-            old_apr = old_base + margin
-            new_apr = new_base + margin
-
-            old_pmt, _, _ = calculate_loan_amortization(principal=balance, annual_interest_rate=old_apr / Decimal("100"), term_months=term_months)
-            new_pmt, new_tot_int, _ = calculate_loan_amortization(principal=balance, annual_interest_rate=new_apr / Decimal("100"), term_months=term_months)
-
-            monthly_diff = (new_pmt - old_pmt).quantize(Decimal("0.01"))
-            direction = "savings" if monthly_diff < Decimal("0.00") else "increase"
-
-            user_msg = (
-                f"Our floating commercial loan has a balance of ${_fmt_dec(balance)} amortized over {term_years} years ({term_months} months) at {benchmark_name} + {margin}%. "
-                f"The {benchmark_name} benchmark just changed from {old_base}% to {new_base}%. What is our new monthly payment and monthly cash flow impact?"
-            )
-
-            thought = (
-                f"<thought>\n"
-                f"1. Floating Benchmark Interest Rate Reset: {benchmark_name} adjusted from {old_base}% to {new_base}% (Delta: {rate_delta}%).\n"
-                f"2. Loan Structure: Principal ${_fmt_dec(balance)}, Term {term_years} years ({term_months} months), Margin {margin}%.\n"
-                f"   - Old APR: {old_base}% + {margin}% = {old_apr}%\n"
-                f"   - New APR: {new_base}% + {margin}% = {new_apr}%\n"
-                f"3. 0% Mental Math: Dispatch `tool_calculate_loan_amortization` for deterministic payment schedule.\n"
-                f"</thought>\n\n"
-            )
-
-            new_res = {
-                "principal": _fmt_dec(balance),
-                "annual_interest_rate_pct": _fmt_dec(new_apr),
-                "term_months": term_months,
-                "monthly_payment": _fmt_dec(new_pmt),
-                "total_interest": _fmt_dec(new_tot_int),
-            }
-
-            answer = (
-                f"### Floating Benchmark Rate Adjustment ({benchmark_name} Reset)\n\n"
-                f"- **Loan Principal Balance**: ${_fmt_dec(balance)}\n"
-                f"- **Previous Benchmark ({benchmark_name})**: {old_base}% + {margin}% Margin = **{old_apr}% APR**\n"
-                f"- **New Benchmark ({benchmark_name})**: {new_base}% + {margin}% Margin = **{new_apr}% APR**\n"
-                f"- **Previous Monthly Payment**: ${_fmt_dec(old_pmt)}\n"
-                f"- **New Monthly Payment**: **${_fmt_dec(new_pmt)}**\n"
-                f"- **Monthly Cash Flow Impact**: **${abs(monthly_diff)} {direction} per month**\n\n"
-                f"**CFO Advisory**: Floating rate contracts reset on periodic determination dates (typically monthly or quarterly). Update forward cash flow projections to reflect the revised ${_fmt_dec(new_pmt)} monthly debt service."
-            )
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_msg},
-                    {
-                        "role": "assistant",
-                        "content": thought,
-                        "tool_calls": [{
-                            "name": "tool_calculate_loan_amortization",
-                            "arguments": {
-                                "principal": _fmt_dec(balance),
-                                "annual_interest_rate_pct": _fmt_dec(new_apr),
-                                "term_months": term_months,
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_loan_amortization", "content": json.dumps(new_res)},
-                    {"role": "assistant", "content": answer},
-                ]
-            })
-
-        else: # market_rate_search
-            rate_info = get_live_exchange_rate(from_meta.code, to_code)
-            spot = Decimal(str(rate_info["spot_rate"]))
-            query = f"current {from_meta.code} to {to_code} spot exchange rate live market"
-            user_msg = f"What is the live exchange rate between {from_meta.name} ({from_meta.code}) and {to_meta.name} ({to_code}) today?"
-
-            thought = (
-                f"<thought>\n"
-                f"1. Request Inspection: User requested live market exchange rate for {from_meta.code} / {to_code}.\n"
-                f"2. Continuous Volatility Invariant: Foreign exchange rates change second-by-second during active market hours.\n"
-                f"   - NEVER fabricate or memorize static currency exchange rates from training weights.\n"
-                f"3. Action Strategy: Query live market intelligence via `tool_search_market_intelligence` or `tool_get_live_exchange_rate`.\n"
-                f"</thought>\n\n"
-            )
-
-            search_mock = f"Live spot exchange rate: 1 {from_meta.code} = {_fmt_dec(spot, 4)} {to_code} via central bank reference feeds."
-            answer = (
-                f"### Live Multi-Currency Exchange Benchmark: {from_meta.code} / {to_code}\n\n"
-                f"- **Base Currency**: {from_meta.name} ({from_meta.code})\n"
-                f"- **Target Currency**: {to_meta.name} ({to_code})\n"
-                f"- **Live Market Spot Rate**: **1 {from_meta.code} = {_fmt_dec(spot, 4)} {to_code}**\n\n"
-                f"*Market Volatility Note*: Foreign exchange rates fluctuate continuously. Confirm live quotes with your banking counterparty when executing cross-border payments or financing advances."
-            )
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_msg},
-                    {
-                        "role": "assistant",
-                        "content": thought,
-                        "tool_calls": [{
-                            "name": "tool_search_market_intelligence",
-                            "arguments": {"query": query},
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_search_market_intelligence", "content": search_mock},
-                    {"role": "assistant", "content": answer},
-                ]
-            })
-
-    return records
+def underwriting_base_reply(uw: Dict[str, Any]) -> str:
+    dossier, options = uw["dossier"], uw["matched_options"]
+    top = options[0] if options else None
+    opt_summary = (
+        f"Top matched facility is {top['facility_name']} from {top['provider']} "
+        f"at {top['apr_percent']}% APR (Max: {money(top['max_amount'])})."
+        if top
+        else "No non-predatory credit facilities currently meet the underwriting criteria."
+    )
+    return (
+        f"### Credit Underwriting Assessment\n\n"
+        f"- **Underwriting evaluation complete**. Classification: `{dossier['risk_tier']}`\n"
+        f"- **Daily Average Balance (DAB)**: {money(dossier['daily_average_balance'])}\n"
+        f"- **Maximum Qualified Limit**: {money(dossier['max_qualified_limit'])}\n"
+        f"- **Matched Facility**: {opt_summary}\n\n"
+        "To apply, request staging for the chosen facility."
+    )
 
 
 # ==============================================================================
-# 3. Deep Financial & Accounting Principles (Category C)
+# Cash diagnostic prose
 # ==============================================================================
 
-def generate_financial_reasoning_records(count: int = 350) -> List[Dict[str, Any]]:
-    """Teaches core accounting truths: Cash vs Profit, Working Capital Expansion traps, Predatory APRs."""
-    records = []
-    industries = [
-        "precision CNC machining shop", "B2B SaaS platform", "wholesale food distributor",
-        "commercial HVAC contractor", "medical supply vendor", "logistics freight brokerage",
-        "retail e-commerce brand", "architectural engineering firm", "pharmaceutical packaging SME",
-    ]
+TRIGGER_PHRASES = {
+    "OPERATING_BURN": ["day-to-day operating burn", "ongoing operating costs outrunning receipts"],
+    "RENT": ["the recurring rent payment", "the monthly rent obligation"],
+    "DEBT_SERVICE": ["scheduled loan repayments", "the term loan repayment schedule"],
+    "EXISTING_OVERDRAFT": ["the account already being overdrawn", "the existing overdraft"],
+}
 
-    for _ in range(count):
-        archetype = random.choice([
-            "accrual_vs_cash", "predatory_factor_rate", "dscr_vs_de",
-            "growth_cash_trap", "trade_credit_apr", "ebitda_vs_fcff",
-            "personal_guarantees", "deferred_revenue",
+ACTIONS = {
+    "critical": [
+        "Stage the {bridge} working capital draw this week so it is in place before {ddate}.",
+        "Chase your largest open invoices today and stage a {bridge} bridge for your approval before {ddate}.",
+        "Hold non-essential supplier payments and request staging for a {bridge} bridge facility now.",
+        "Request staging for the {bridge} bridge now; it only executes after you approve it.",
+    ],
+    "warning": [
+        "Start collection calls on overdue invoices now and line up a working capital line before {ddate}.",
+        "Push the next large supplier payment out where terms allow, and get a credit line pre-qualified before {ddate}.",
+        "Run the credit underwriting check this week so a facility is ready well before {ddate}.",
+    ],
+    "watch_deficit": [
+        "Tighten collections over the next few weeks and decide which recurring costs can be cut.",
+        "Use the lead time to renegotiate supplier terms and bring receivables in faster.",
+        "Set a weekly cash review and get a credit line pre-qualified while the pressure is still distant.",
+    ],
+    "watch": [
+        "Bring forward collections on open invoices and review your largest recurring outflows this month.",
+        "Ask your biggest customers for faster payment terms and trim discretionary spend before the runway shortens.",
+        "Set a weekly cash review so the burn does not drift higher unnoticed.",
+        "Get a working capital line pre-qualified now, while the numbers still support good terms.",
+    ],
+    "no_burn": [
+        "Consider sweeping cash beyond your operating reserve into a money market account so it earns yield.",
+        "Use this position to set up a credit line now, before you need one.",
+        "Keep collections on their current schedule and decide how much surplus cash should be put to work.",
+    ],
+    "nonpositive": [
+        "Fund the overdraft first, from incoming receivables or a staged bridge facility, before fees and returned payments pile up.",
+        "Call your largest debtors today and pause every payment that is not payroll or tax until the account is back above zero.",
+    ],
+}
+
+
+def cash_facts(cash: Dict[str, Any]) -> Dict[str, Any]:
+    explanation = cash.get("predictive_explanation") or ""
+    reserve = re.search(r"Projected 90-day reserve: (\$[-\d,]+\.\d{2})", explanation)
+    has_def = bool(cash.get("has_projected_deficit"))
+    severity = cash.get("deficit_severity") or "SAFE"
+    if cash["cash_status"] == "CASH_NONPOSITIVE":
+        situation = "nonpositive"
+    elif has_def and severity == "CRITICAL":
+        situation = "critical"
+    elif has_def and severity == "WARNING":
+        situation = "warning"
+    elif has_def:
+        situation = "watch_deficit"
+    elif cash["cash_status"] == "NO_BURN":
+        situation = "no_burn"
+    else:
+        situation = "watch"
+    return {
+        "bal": money(cash["current_balance"]),
+        "cur": cash["currency"],
+        "burn": money(cash["average_daily_burn"]),
+        "runway": cash["runway_days"],
+        "status": cash["cash_status"],
+        "thr": cash["alert_threshold_days"],
+        "infl": money(cash["gross_inflows"]),
+        "outf": money(cash["gross_outflows"]),
+        "net": money(cash["net_period_change"]),
+        "net_negative": Decimal(str(cash["net_period_change"])) < 0,
+        "has_def": has_def,
+        "sev": severity,
+        "short": money(cash.get("projected_shortfall_amount") or "0"),
+        "bridge": money(cash.get("recommended_bridge_amount") or cash.get("projected_shortfall_amount") or "0"),
+        "ddate": cash.get("projected_deficit_date"),
+        "ddays": cash.get("days_until_deficit"),
+        "trigger": cash.get("primary_deficit_trigger") or "OPERATING_BURN",
+        "reserve": reserve.group(1) if reserve else None,
+        "hd": cash.get("target_horizon_days"),
+        "hdate": cash.get("target_horizon_date"),
+        "hbal": money(cash["forecast_target_balance"]) if cash.get("forecast_target_balance") is not None else None,
+        "htier": cash.get("confidence_tier"),
+        "situation": situation,
+    }
+
+
+def forecast_sentence(rng: random.Random, f: Dict[str, Any]) -> Optional[str]:
+    """Deficit or safe-horizon sentence using only figures the predictive explanation prints."""
+    trig = rng.choice(TRIGGER_PHRASES.get(f["trigger"], TRIGGER_PHRASES["OPERATING_BURN"]))
+    if f["situation"] in ("critical", "warning") or (f["situation"] == "nonpositive" and f["ddate"] and f["sev"] in ("CRITICAL", "WARNING")):
+        return pick(rng, [
+            "The forecast flags a {short} shortfall on {ddate}, {ddays} days out, driven by {trig}.",
+            "On the current pattern the account goes {short} short around {ddate}, mainly because of {trig}.",
+            "The projection shows a {short} gap opening on {ddate}, and {trig} is the main cause.",
+            "Expect a shortfall of {short} by {ddate} unless something changes; {trig} is behind it.",
+        ], trig=trig, **f)
+    if f["situation"] == "watch_deficit":
+        return pick(rng, [
+            "The forecast shows the account slipping into deficit in {ddays} days if nothing changes.",
+            "Further out, the projection turns negative in {ddays} days, driven by {trig}.",
+            "There is no immediate gap, but the forecast turns negative in {ddays} days.",
+        ], trig=trig, **f)
+    if f["reserve"]:
+        return pick(rng, [
+            "The 90-day forecast stays positive, with a projected reserve of {reserve}.",
+            "No shortfall appears in the forecast window, and the projected 90-day reserve is {reserve}.",
+            "Looking ahead, the account stays solvent through the forecast, ending near a {reserve} reserve.",
+        ], **f)
+    return None
+
+
+def horizon_sentence(rng: random.Random, f: Dict[str, Any]) -> Optional[str]:
+    if not f["hd"] or not f["hbal"]:
+        return None
+    return pick(rng, [
+        "For day {hd} ({hdate}), the projected balance is {hbal}, at {htier} confidence.",
+        "By {hdate}, day {hd} of the forecast, the balance is projected at {hbal}.",
+        "On your {hd}-day horizon the forecast lands at {hbal} on {hdate}.",
+        "Projected forward {hd} days to {hdate}, the balance would be {hbal}.",
+    ], **f)
+
+
+def status_sentence(rng: random.Random, f: Dict[str, Any]) -> str:
+    status = f["status"]
+    if status == "LOW_RUNWAY":
+        return rng.choice([
+            "The status is LOW_RUNWAY, meaning cash runs out before the minimum safe horizon.",
+            "That earns a LOW_RUNWAY status: the runway is shorter than the alert threshold allows.",
+            "LOW_RUNWAY status means this needs attention now, not next quarter.",
         ])
+    if status == "WATCH":
+        return rng.choice([
+            "Status is WATCH: the balance covers near-term commitments, but it shrinks every day the burn continues.",
+            "The WATCH status means you are above the alert threshold for now, while the balance keeps falling.",
+            "That keeps you in WATCH status, safe for the moment but trending down.",
+        ])
+    if status == "NO_BURN":
+        return rng.choice([
+            "The status is NO_BURN, so the question is how to use surplus cash rather than how to protect it.",
+            "With a NO_BURN status, cash is building rather than draining.",
+        ])
+    return rng.choice([
+        "The CASH_NONPOSITIVE status means the account is at or below zero right now.",
+        "Status is CASH_NONPOSITIVE: there is no cash buffer left to absorb the next payment.",
+    ])
 
-        if archetype == "accrual_vs_cash":
-            ind = random.choice(industries)
-            profit = Decimal(str(random.randint(65000, 385000)))
-            dso = random.choice([60, 75, 90, 105])
-            prompts = [
-                f"Our {ind} reported ${_fmt_dec(profit)} in net profit on our P&L this quarter, but our bank balance is near zero. Why are we running out of cash if we are profitable?",
-                f"Why is our cash declining every month even though our financial statements show positive net income of ${_fmt_dec(profit)}?",
-                f"Our accountant says our {ind} generated ${_fmt_dec(profit)} in net earnings, but we are struggling to meet payroll next week. Where did the cash go?",
-                f"How can a business make ${_fmt_dec(profit)} in accounting profit and still face an overdraft crisis with DSO at {dso} days?",
-                f"Our P&L shows ${_fmt_dec(profit)} profit, but cash flow is negative. Can you explain the structural disconnect between net income and cash liquidity?",
-            ]
-            thought = (
-                f"<thought>\n"
-                f"1. User Query Analysis: The user's {ind} reported accrual profit (${_fmt_dec(profit)} Net Income), yet their liquid cash balance is shrinking.\n"
-                f"2. Financial & Accounting Principles:\n"
-                f"   - Accrual vs Cash Basis: Net Income recognizes revenue upon invoicing, regardless of cash collection. If DSO is high ({dso} days), sales sit in Accounts Receivable (A/R).\n"
-                f"   - Working Capital Expansion: Growth requires cash outlays for inventory and workforce before revenue is realized.\n"
-                f"   - Cash Outflows Not on P&L: Principal debt repayments and capital expenditures (CapEx) drain cash directly without hitting operating expenses.\n"
-                f"3. Advisory Strategy: Proactively explain the accrual vs cash disconnect, point out the working capital trap, and advise running Cash Conversion Cycle and FCFF analysis.\n"
-                f"</thought>\n\n"
-            )
-            answer = (
-                f"### The Accrual Profit vs. Cash Liquidity Dilemma in {ind.title()}\n\n"
-                f"A business can be highly profitable on an accrual Income Statement while simultaneously suffering severe cash depletion. The 3 primary structural causes are:\n\n"
-                f"1. **Receivable Cash Drag (DSO Lag)**:\n"
-                f"   Revenue is recognized when invoiced, not when cash arrives. With your Days Sales Outstanding (DSO) at **{dso} days**, your '${_fmt_dec(profit)}' profit is locked in customer invoices while payroll and supplier bills must be settled immediately.\n\n"
-                f"2. **Working Capital Expansion Trap**:\n"
-                f"   Revenue growth requires purchasing inventory and paying staff *before* cash collections clear. Operations consume physical cash faster than net income materializes.\n\n"
-                f"3. **Principal Debt Amortization & CapEx**:\n"
-                f"   Loan principal repayments and equipment acquisitions do **not** appear on your Income Statement as operating expenses, but they drain physical cash dollar-for-dollar from your bank account.\n\n"
-                f"**Recommended Action**: Upload your 90-day bank statement CSV to run `calculate_cash_conversion_cycle` and inspect your true Free Cash Flow to Firm (FCFF)."
-            )
-            user_msg = random.choice(prompts)
 
-        elif archetype == "predatory_factor_rate":
-            advance = Decimal(str(random.randint(25000, 350000)))
-            factor = Decimal(str(random.choice([1.14, 1.18, 1.22, 1.25, 1.28, 1.32, 1.36])))
-            term_days = random.choice([30, 45, 60, 90, 120, 180])
-            nominal_pct = ((factor - Decimal("1.00")) * Decimal("100")).quantize(Decimal("0.1"))
-            true_apr = (((factor - Decimal("1.00")) * (Decimal("365") / Decimal(str(term_days)))) * Decimal("100")).quantize(Decimal("0.01"))
-            is_predatory = true_apr > Decimal("36.00")
+def finish(rng: random.Random, first: str, middle: List[Optional[str]], action: str, min_middle: int = 2) -> str:
+    """Keeps 3-6 sentences: the answer, a shuffled subset of supporting sentences, then the action."""
+    middle = [m for m in middle if m]
+    keep = rng.randint(min(min_middle, len(middle)), min(4, len(middle))) if middle else 0
+    picked = set(rng.sample(range(len(middle)), keep))
+    return " ".join([first, *(m for i, m in enumerate(middle) if i in picked), action])
 
-            prompts = [
-                f"A fintech lender offered us an invoice advance of ${_fmt_dec(advance)} at a {factor}x factor rate over {term_days} days. Is that just {nominal_pct}% interest?",
-                f"We received a merchant cash advance quote of ${_fmt_dec(advance)} with a {factor}x factor rate payable in {term_days} days. Is this rate fair or predatory?",
-                f"Should we take a {factor}x factor rate factoring facility on our ${_fmt_dec(advance)} invoices due in {term_days} days? What is the true annualized APR?",
-                f"A lender quoted a {factor}x factor fee on ${_fmt_dec(advance)} for {term_days} days. Can you convert this factor rate to standard Annual Percentage Rate?",
-                f"Is a {factor}x advance fee over {term_days} days considered predatory commercial lending?",
-            ]
-            thought = (
-                f"<thought>\n"
-                f"1. User Query Analysis: User asks if a {factor}x factor rate over {term_days} days on ${_fmt_dec(advance)} is just {nominal_pct}% interest.\n"
-                f"2. Financial Mathematics & Regulatory APR Truth:\n"
-                f"   - Factor rate {factor}x represents a {nominal_pct}% nominal fee for {term_days} days.\n"
-                f"   - Annualization: 365 / {term_days} = {round(365/term_days, 2)} periods per year.\n"
-                f"   - Effective annualized APR: {true_apr}%.\n"
-                f"   - Regulatory Standards: Commercial financing exceeding 36.00% APR is categorized as predatory lending.\n"
-                f"3. Advisory Strategy: Strongly warn the user against the false equivalence between factor rate and APR, provide the mathematical breakdown, and propose non-predatory options.\n"
-                f"</thought>\n\n"
-            )
-            warning_tag = "⚠️ **PREDATORY LENDING WARNING**" if is_predatory else "ℹ️ Commercial Financing Review"
-            answer = (
-                f"### {warning_tag}: Factor Rate vs. True Annualized APR\n\n"
-                f"**No. A {factor}x factor rate over {term_days} days is NOT {nominal_pct}% APR. It is an annualized APR of ~{true_apr}%!**\n\n"
-                f"Here is the mathematical decomposition:\n"
-                f"- **Advance Amount**: ${_fmt_dec(advance)}\n"
-                f"- **Total Payback**: ${_fmt_dec(advance * factor)} (Flat fee of ${_fmt_dec(advance * (factor - Decimal('1.00')))} for {term_days} days)\n"
-                f"- **Nominal Fee**: {nominal_pct}% for {term_days} days\n"
-                f"- **Annualization Multiplier**: 365 / {term_days} = {round(365/term_days, 2)} periods per calendar year\n"
-                f"- **True Annualized APR**: `{nominal_pct}% * (365 / {term_days}) = {true_apr}% APR`\n\n"
-                f"**Institutional Assessment**: Any commercial facility exceeding **36.00% APR** is classified as predatory credit. This fee structure siphons off operational gross margin. We strongly advise evaluating traditional bank lines or SBA 7(a) working capital facilities first."
-            )
-            user_msg = random.choice(prompts)
 
-        elif archetype == "dscr_vs_de":
-            prompts = [
-                "What is the difference between DSCR and Debt-to-Equity, and which one does a commercial bank care about most?",
-                "How do commercial lenders prioritize Debt Service Coverage Ratio versus Debt-to-Equity leverage?",
-                "Why did our bank approve our loan based on DSCR even though our Debt-to-Equity ratio was high?",
-                "When underwritten for a commercial revolving credit line, which covenant is stricter: DSCR or D/E?",
-            ]
-            thought = (
-                "<thought>\n"
-                "1. User Query Analysis: User asks for the structural difference between DSCR and Debt-to-Equity, and which metric commercial bank underwriters prioritize.\n"
-                "2. Commercial Banking & Credit Underwriting Principles:\n"
-                "   - DSCR (Cash Flow Coverage): Measures the ability of operational cash flow (NOI) to service periodic debt obligations. Standard requirement is >= 1.25x.\n"
-                "   - Debt-to-Equity (Leverage Ratio): Measures balance sheet solvency and liquidation cushion. Standard cap is 2.5x - 3.0x.\n"
-                "   - Underwriting Priority: Banks prioritize DSCR because loans are repaid from ongoing operational cash, not forced collateral liquidation.\n"
-                "3. Advisory Strategy: Deliver a clear comparison of cash flow serviceability vs balance sheet leverage, concluding with the underwriter's hierarchy.\n"
-                "</thought>\n\n"
-            )
-            answer = (
-                "### DSCR vs. Debt-to-Equity: Cash Flow vs. Balance Sheet Protection\n\n"
-                "Commercial lenders evaluate both, but they serve completely different covenant functions:\n\n"
-                "1. **Debt Service Coverage Ratio (DSCR = NOI / Annual Debt Service)**:\n"
-                "   - **Measures**: Ongoing cash flow affordability.\n"
-                "   - **Bank Benchmark**: Minimum **1.25x** (commercial banking standard).\n"
-                "   - **Why It Matters**: This proves whether monthly operational cash inflows can pay principal and interest without defaulting.\n\n"
-                "2. **Debt-to-Equity (D/E = Total Liabilities / Shareholder Equity)**:\n"
-                "   - **Measures**: Structural liquidation buffer and balance sheet leverage.\n"
-                "   - **Bank Benchmark**: Maximum **2.5x to 3.0x** for traditional commercial loans.\n"
-                "   - **Why It Matters**: If the business fails, this measures whether assets exceed liabilities to pay back the bank in liquidation.\n\n"
-                "**The Banker's Verdict**: **DSCR is primary for ongoing credit approval**—banks want cash repayment from operations, not a liquidation battle."
-            )
-            user_msg = random.choice(prompts)
+def bold_first_figure(rng: random.Random, text: str) -> str:
+    """Bolds the headline figure in some replies, as the base persona asks, without making it a fixed habit."""
+    if rng.random() > 0.35:
+        return text
+    match = re.search(r"\$-?[\d,]+\.\d{2}|\b\d+ days\b", text)
+    if not match:
+        return text
+    return f"{text[:match.start()]}**{match.group(0)}**{text[match.end():]}"
 
-        elif archetype == "growth_cash_trap":
-            growth = random.choice([75, 100, 125, 150])
-            rev = Decimal(str(random.randint(1500000, 7500000)))
-            prompts = [
-                f"Our revenue grew {growth}% this year to ${_fmt_dec(rev)}, but we are completely out of cash. Why does rapid growth cause cash crises?",
-                f"How can our company be growing at {growth}% year-over-year yet be facing an immediate working capital shortage?",
-                f"Explain why growing revenue to ${_fmt_dec(rev)} accelerated our monthly cash burn rather than improving liquidity.",
-            ]
-            thought = (
-                f"<thought>\n"
-                f"1. Growth Paradox Inspection: User experienced rapid revenue growth ({growth}% YoY to ${_fmt_dec(rev)}), accompanied by acute liquidity depletion.\n"
-                f"2. Working Capital Growth Dynamics:\n"
-                f"   - Operating Working Capital Requirement (WCR) scales linearly with sales (A/R + Inventory - A/P).\n"
-                f"   - Inventory and payroll must be disbursed upfront, while customer receivable collections lag by 60-90 days.\n"
-                f"   - Self-Financing Growth Rate (SFGR) ceiling exceeded.\n"
-                f"3. Action Strategy: Explain the Working Capital Growth Trap and propose credit facilities or advance deposits.\n"
-                f"</thought>\n\n"
-            )
-            answer = (
-                f"### The Rapid Growth Working Capital Trap ({growth}% YoY Growth)\n\n"
-                f"Fast growth consumes cash before generating it. Growing to **${_fmt_dec(rev)}** drains liquidity through three mechanical channels:\n\n"
-                f"1. **Working Capital Expansion**: For every $1.00 of new sales, you must tie up ~20–30¢ in Accounts Receivable and Inventory.\n"
-                f"2. **Payroll & Supply Lead Time Lag**: You must purchase raw inputs and pay staff on Day 1, but customers do not pay until Day 60–90.\n"
-                f"3. **Exceeding the Self-Financing Growth Rate**: When sales growth ({growth}%) exceeds your operational return on equity, the cash deficit must be financed externally.\n\n"
-                f"**CFO Remedy**: Secure a revolving line of credit or invoice factoring facility *before* accepting large new purchase orders."
-            )
-            user_msg = random.choice(prompts)
 
-        elif archetype == "trade_credit_apr":
-            disc = Decimal(str(random.choice([1.5, 2.0, 3.0])))
-            net_d = random.choice([30, 45, 60])
-            effective_apr = ((disc / (Decimal("100") - disc)) * (Decimal("365") / Decimal(str(net_d - 10))) * Decimal("100")).quantize(Decimal("0.01"))
-            prompts = [
-                f"Our suppliers offer terms of {disc}/10 net {net_d}. Is it worth paying early, or should we keep cash in our account?",
-                f"What is the effective annual cost of missing the {disc}% early payment discount on net {net_d} terms?",
-                f"Should an SME forgo a {disc}/10 net {net_d} supplier discount to preserve operating cash balance?",
-            ]
-            thought = (
-                f"<thought>\n"
-                f"1. Trade Credit Opportunity Cost: Supplier terms {disc}/10 net {net_d}.\n"
-                f"2. Formula: APR = [Discount% / (100 - Discount%)] * [365 / (Net Days - Discount Days)].\n"
-                f"   - Forgoing {disc}% discount for {net_d - 10} days yields an effective APR of {effective_apr}%.\n"
-                f"3. Underwriting Guidance: If bank line costs 8%-10% APR, borrowing to capture a {effective_apr}% trade discount generates immediate profit.\n"
-                f"</thought>\n\n"
-            )
-            answer = (
-                f"### Trade Credit Analysis: {disc}/10 Net {net_d}\n\n"
-                f"Forgoing the early payment discount is extraordinarily expensive:\n"
-                f"- **Effective Annualized Borrowing Cost**: **{effective_apr}% APR**\n\n"
-                f"**Treasury Verdict**: If your commercial bank line of credit costs **8.00% to 10.50% APR**, drawing on the line to take the supplier discount yields an immediate annualized net interest arbitrage of **{round(float(effective_apr) - 9.5, 2)}%**."
-            )
-            user_msg = random.choice(prompts)
+def cash_reply(rng: random.Random, cash: Dict[str, Any], branch: str) -> Optional[str]:
+    f = cash_facts(cash)
+    sit = f["situation"]
+    if f["has_def"] and not (f["ddate"] and f["ddays"] is not None):
+        return None
+    finite = f["runway"] is not None and sit not in ("no_burn", "nonpositive")
+    action = pick(rng, ACTIONS[sit], **f)
+    fc, hz = forecast_sentence(rng, f), horizon_sentence(rng, f)
 
-        elif archetype == "ebitda_vs_fcff":
-            prompts = [
-                "Why do institutional lenders say EBITDA is not the same as operating cash flow?",
-                "Can a company have healthy EBITDA but still experience severe cash flow deficits?",
-                "What are the major items that separate EBITDA from actual cash deposited in the bank?",
-            ]
-            thought = (
-                "<thought>\n"
-                "1. User Query Analysis: Relationship between EBITDA and Free Cash Flow to Firm (FCFF).\n"
-                "2. Financial Principles: EBITDA adds back Depreciation & Amortization, but completely ignores Working Capital investments (A/R, Inventory), Capital Expenditures (CapEx), Cash Taxes, and Debt Service.\n"
-                "3. Strategic Underwriting: Warren Buffett: 'Does management think the tooth fairy pays for CapEx?'\n"
-                "</thought>\n\n"
-            )
-            answer = (
-                "### Why EBITDA Does Not Equal Cash Flow\n\n"
-                "EBITDA is an operational metric that ignores 4 major cash outflows:\n\n"
-                "1. **Working Capital Expansion**: Increases in A/R and Inventory drain cash that EBITDA ignores.\n"
-                "2. **Capital Expenditures (CapEx)**: Replacing equipment and software requires real cash.\n"
-                "3. **Cash Taxes**: Corporate income taxes must be paid in cash to the treasury.\n"
-                "4. **Debt Service**: Principal debt repayments reduce cash dollar-for-dollar without affecting EBITDA.\n\n"
-                "**Underwriter Rule**: Always evaluate **Operating Cash Flow (OCF)** and **FCFF**, not just EBITDA."
-            )
-            user_msg = random.choice(prompts)
+    if branch == "RUNWAY":
+        if finite:
+            first = pick(rng, [
+                "You have {runway} days of runway left at the current burn of {burn} a day.",
+                "At {burn} of average daily burn, your {bal} balance lasts {runway} days.",
+                "Cash lasts {runway} more days on the current pattern.",
+                "Runway stands at {runway} days, with {bal} in the account and {burn} going out each day on average.",
+                "Your current balance buys you {runway} days at today's burn rate.",
+                "On today's numbers the money runs out in {runway} days.",
+            ], **f)
+            support = pick(rng, [
+                "That is based on {bal} in the bank and an average burn of {burn} per day.",
+                "The calculation divides your {bal} balance by the {burn} daily burn.",
+            ], **f) if f["bal"] not in first else None
+        elif sit == "no_burn":
+            first = pick(rng, [
+                "There is no runway limit right now because inflows covered outflows, so average daily burn is $0.00.",
+                "Runway is open-ended: the business is cash positive, with {bal} in the account and no net daily burn.",
+                "You are not burning cash, so runway is not the constraint; the balance sits at {bal}.",
+            ], **f)
+            support = None
+        else:
+            first = pick(rng, [
+                "There is effectively no runway left: the balance is {bal} and the account is burning {burn} a day.",
+                "Runway is gone for now, with the balance at {bal} against a daily burn of {burn}.",
+            ], **f)
+            support = None
+        return bold_first_figure(rng, finish(rng, first, [support, status_sentence(rng, f), fc, hz], action))
 
-        elif archetype == "personal_guarantees":
-            prompts = [
-                "Why do commercial banks require personal guarantees and UCC-1 blanket liens for small business loans?",
-                "Can an SME get a commercial bank loan without a personal guarantee from the founders?",
-                "What is a UCC-1 blanket lien and how does it affect our company's borrowing capacity?",
-            ]
-            thought = (
-                "<thought>\n"
-                "1. Commercial Banking Underwriting: Personal Guarantees (PG) and UCC-1 blanket liens.\n"
-                "2. Institutional Standards: Traditional banks require PGs for any owner with >= 20% equity (standard SBA and commercial policy) to mitigate moral hazard.\n"
-                "3. UCC-1 Priority: Establishes perfected first-lien security interest over all business assets.\n"
-                "</thought>\n\n"
-            )
-            answer = (
-                "### Commercial Credit Covenants: Personal Guarantees & UCC-1 Liens\n\n"
-                "Commercial banks enforce two primary security mechanisms:\n\n"
-                "1. **Personal Guarantee (PG)**:\n"
-                "   - Required for any owner with **≥ 20% equity stake** (mandatory for SBA 7a facilities).\n"
-                "   - Ensures business owners cannot abandon the debt obligations during financial distress.\n\n"
-                "2. **UCC-1 Blanket Lien**:\n"
-                "   - Filed with the Secretary of State to secure a senior claim over all business assets (A/R, inventory, equipment).\n"
-                "   - Subordinates any subsequent lenders, preventing unauthorized junior debt."
-            )
-            user_msg = random.choice(prompts)
+    if branch == "BALANCE":
+        first = pick(rng, [
+            "You have {bal} {cur} in the account right now.",
+            "Current balance is {bal}.",
+            "The statement closes at {bal} {cur}.",
+            "Cash on hand is {bal}.",
+            "Your balance stands at {bal} as of the last transaction.",
+        ], **f)
+        net = pick(rng, [
+            "Over the reviewed period the balance moved by {net}, so more cash left than came in.",
+            "That reflects a net change of {net} across the statement, a net outflow.",
+            "The account fell by {net} over the period you uploaded.",
+        ] if f["net_negative"] else [
+            "Over the reviewed period the balance moved by {net}, so the account grew.",
+            "That includes a net gain of {net} across the statement.",
+            "The account added {net} over the period you uploaded.",
+        ], **f)
+        return bold_first_figure(rng, finish(rng, first, [net, fc, hz], action, min_middle=1))
 
-        else: # deferred_revenue
-            prompts = [
-                "How does deferred revenue affect cash flow in an annual subscription business?",
-                "Why does our SaaS bank balance look so high when our recognized GAAP revenue is much lower?",
-                "What is the difference between billings cash float and GAAP revenue recognition?",
-            ]
-            thought = (
-                "<thought>\n"
-                "1. Subscription Accounting: Deferred revenue and cash collection float.\n"
-                "2. Accounting Standard (ASC 606): Cash is collected upfront upon annual invoicing, but revenue is recognized ratably over 12 months.\n"
-                "3. Working Capital Implication: Generates negative working capital float (customer-funded growth).\n"
-                "</thought>\n\n"
-            )
-            answer = (
-                "### Deferred Revenue & The Working Capital Float\n\n"
-                "In subscription and recurring revenue businesses, cash leads GAAP accounting:\n\n"
-                "- **Cash Collections (Billings)**: Collected 100% upfront on Day 1.\n"
-                "- **GAAP Revenue (ASC 606)**: Recognized ratably at 1/12th per month as services are delivered.\n\n"
-                "**Treasury Risk**: This upfront cash float must not be mistaken for unencumbered profit. If customer churn rises, future operational costs must still be fulfilled from this deferred revenue pool."
-            )
-            user_msg = random.choice(prompts)
+    if branch == "BURN":
+        if f["status"] == "NO_BURN":
+            first = pick(rng, [
+                "There is no net burn: inflows of {infl} exceeded outflows of {outf}, so average daily burn is $0.00.",
+                "Average daily burn is $0.00, because the {infl} coming in beat the {outf} going out.",
+            ], **f)
+            support = None
+        else:
+            first = pick(rng, [
+                "You are burning {burn} a day on average.",
+                "Average daily burn is {burn}, from {outf} of outflows against {infl} of inflows.",
+                "Net burn runs at {burn} per day.",
+                "The business spends {burn} more than it takes in on an average day.",
+            ], **f)
+            support = pick(rng, [
+                "Outflows totalled {outf} against inflows of {infl} over the period.",
+                "That comes from {outf} going out versus {infl} coming in.",
+            ], **f) if f["outf"] not in first else None
+        runway_s = pick(rng, [
+            "At that pace the runway is {runway} days.",
+            "That burn leaves {runway} days of runway.",
+        ], **f) if finite else None
+        return bold_first_figure(rng, finish(rng, first, [support, runway_s, status_sentence(rng, f), fc, hz], action))
 
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_msg},
-                {"role": "assistant", "content": thought + answer},
-            ]
-        })
-    return records
+    if branch == "ADVICE":
+        if f["has_def"]:
+            first = pick(rng, [
+                "Stage a working capital bridge of {bridge} now; the forecast shows a {short} shortfall on {ddate}.",
+                "Your priority is closing a projected {short} gap before {ddate}.",
+                "Protect the next few weeks first: the account is heading for a {short} shortfall on {ddate}.",
+                "The recommendation is a {bridge} bridge facility, because cash falls {short} short on {ddate}.",
+            ], **f)
+            trig = rng.choice(TRIGGER_PHRASES.get(f["trigger"], TRIGGER_PHRASES["OPERATING_BURN"]))
+            why = pick(rng, [
+                "The main driver is {trig}.",
+                "The gap comes from {trig}, not a one-off payment.",
+            ], trig=trig)
+            action = pick(rng, [
+                "Request staging for the {bridge} bridge now, and pair it with a push on overdue invoices.",
+                "Ask me to stage the {bridge} facility; it only executes after your explicit approval.",
+                "Chase receivables this week and stage the {bridge} bridge as a backstop.",
+            ], **f)
+            return bold_first_figure(rng, finish(rng, first, [why, status_sentence(rng, f), hz], action))
+        if f["status"] == "WATCH":
+            first = pick(rng, [
+                "Speed up collections and line up a working capital line while you still have {runway} days of runway.",
+                "Act on the burn now: {burn} a day leaves {runway} days of runway on {bal}.",
+                "Your cash covers near-term needs, but at {burn} a day the {bal} balance only lasts {runway} days.",
+            ], **f)
+            return bold_first_figure(rng, finish(rng, first, [status_sentence(rng, f), fc, hz], pick(rng, ACTIONS["watch"], **f)))
+        if f["status"] != "NO_BURN":
+            return None
+        first = pick(rng, [
+            "Your position is healthy: {bal} in the bank and no net burn.",
+            "There is no cash pressure to fix; the balance is {bal} and the business is cash positive.",
+            "Cash is in good shape, with {bal} on hand and inflows covering outflows.",
+        ], **f)
+        return bold_first_figure(rng, finish(rng, first, [status_sentence(rng, f), fc, hz], action, min_middle=1))
+
+    if branch == "DEFICIT":
+        if f["has_def"]:
+            first = pick(rng, [
+                "Yes. The forecast shows a {short} shortfall in {ddays} days, on {ddate}.",
+                "A deficit is coming: the account runs {short} short by {ddate}.",
+                "You are on track to go negative in {ddays} days ({ddate}), with a projected shortfall of {short}.",
+                "The early warning is live, with a {short} gap projected for {ddate}.",
+            ], **f)
+            sev = pick(rng, [
+                "Severity is {sev}, and {trig} is the primary driver.",
+                "The engine rates it {sev}; the cause is {trig}.",
+            ], sev=f["sev"], trig=rng.choice(TRIGGER_PHRASES.get(f["trigger"], TRIGGER_PHRASES["OPERATING_BURN"])))
+            return bold_first_figure(rng, finish(rng, first, [sev, hz], action, min_middle=1))
+        first = pick(rng, [
+            "No. No deficit shows up over the projected horizon.",
+            "No immediate overdraft risk shows up in the forecast.",
+            "The projection stays positive, so no shortfall is expected in the forecast window.",
+        ], **f)
+        if fc:
+            first, fc = f"{first} {fc}", None
+        runway_s = pick(rng, [
+            "Runway stands at {runway} days with a {status} status.",
+            "You have {runway} days of runway on the current pattern.",
+        ], **f) if finite else rng.choice([
+            "The business is cash positive, so runway is open-ended.",
+            "With no net burn, runway is not a constraint.",
+        ])
+        return bold_first_figure(rng, finish(rng, first, [runway_s, fc, hz], action, min_middle=1))
+
+    # SUMMARY: the only branch that shows the alert threshold, which the model previously misread as a buffer.
+    if finite:
+        first = pick(rng, [
+            "You have {bal} in the bank and burn {burn} a day, which gives {runway} days of runway.",
+            "Runway is {runway} days: {bal} on hand against an average daily burn of {burn}.",
+            "The statement shows {bal} in cash, {burn} of daily burn and {runway} days of runway.",
+            "At {burn} a day, your {bal} balance covers {runway} days.",
+        ], **f)
+    elif sit == "no_burn":
+        first = pick(rng, [
+            "You have {bal} in the bank and no net burn, so runway is open-ended.",
+            "The business is cash positive: {bal} on hand and an average daily burn of $0.00.",
+        ], **f)
+    else:
+        first = pick(rng, [
+            "The account is at {bal} with {burn} of average daily burn, so there is no runway left.",
+            "Cash is exhausted: the balance reads {bal} while the business burns {burn} a day.",
+        ], **f)
+    thr_def = pick(rng, [
+        "The {thr}-day figure is the alert threshold, the minimum runway before a warning fires, not cash held in reserve.",
+        "Read the {thr}-day threshold as a tripwire: it marks the shortest runway considered safe, not a buffer you hold.",
+        "The {thr}-day alert threshold is a warning line for runway, not an amount of money set aside.",
+    ], **f)
+    if f["status"] == "LOW_RUNWAY":
+        thr_rel = "Your runway is below that line, which is why the status reads LOW_RUNWAY."
+    elif f["status"] == "WATCH":
+        thr_rel = rng.choice([
+            "Your runway clears that line, so the status is WATCH rather than LOW_RUNWAY.",
+            "You are above it for now, hence the WATCH status.",
+        ])
+    elif f["status"] == "NO_BURN":
+        thr_rel = "With no burn, that threshold does not come into play."
+    else:
+        thr_rel = "The CASH_NONPOSITIVE status overrides it, because the balance is already at or below zero."
+    body = [f"{thr_def} {thr_rel}"] if rng.random() < 0.7 else []
+    text = finish(rng, first, [*body, fc, hz], action, min_middle=1)
+    return bold_first_figure(rng, text)
+
+
+CASH_QUESTIONS = {
+    "RUNWAY": [
+        "How long will my cash last?", "How many days of runway do we have left?", "When do we run out of money?",
+        "How much runway is left at this burn?", "How long can we keep operating before cash runs out?",
+        "How many days until the money runs out?", "How long will our cash runway last?", "What's our cash runway looking like?",
+        "how long does my cash last", "When will we run out of cash at this rate?", "How many days of cash do we have?",
+    ],
+    "BALANCE": [
+        "What's my current balance?", "How much cash do we have right now?", "What is our cash balance?",
+        "How much money is in the account?", "Show me where our cash position stands.", "What's the closing balance on the statement?",
+        "how much cash is in the bank", "What's our balance today?", "Tell me our current cash balance.",
+    ],
+    "BURN": [
+        "What's our burn rate?", "What is our average daily burn?", "How much are we burning each day?",
+        "Are our outflows bigger than inflows?", "What's the daily burn rate?", "How much cash are we burning?",
+        "what is my burn", "Show me our burn rate.", "How bad is our cash burn?",
+    ],
+    "ADVICE": [
+        "Any advice on our cash position?", "How do I improve our liquidity?", "What's your advice on our cash flow?",
+        "Give me advice on managing our cash.", "How can I improve cash flow?", "What should we do to improve liquidity?",
+        "Any recommendations to improve our cash position?", "advice on our finances please",
+    ],
+    "DEFICIT": [
+        "Are we heading for a cash shortfall?", "Will we go negative in the next few months?", "When could we hit a cash deficit?",
+        "Is a cash deficit coming?", "Will we have a cash shortfall?", "Are we going to run a deficit?",
+        "Do we face a shortfall this quarter?", "Is there a deficit coming?", "Will we go into overdraft?",
+    ],
+    "SUMMARY": [
+        "Give me a financial health check.", "Review my statement and tell me how we're doing.", "Can you audit this statement?",
+        "How are we doing financially?", "Give me the big picture on our cash.", "Summarize our financial position.",
+        "Check our financial health.", "What does this statement tell you?",
+    ],
+}
+HORIZON_SUFFIXES = [
+    " And where will we be in {d} days?", " Also, what does the balance look like in {d} days?",
+    " Include a {d}-day forecast.", " What about {d} days from now?",
+]
+
+
+def build_cash_rows(rng: random.Random, statements: int) -> List[Dict[str, Any]]:
+    rows = []
+    usable = {b: [q for q in qs if cash_branch(q) == b] for b, qs in CASH_QUESTIONS.items()}
+    for _ in range(statements):
+        csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
+        horizon = rng.choice([None, None, rng.choice([14, 21, 30, 45, 60, 75])])
+        for branch in rng.sample(list(usable), 2):
+            if not usable[branch]:
+                continue
+            question = rng.choice(usable[branch])
+            if horizon:
+                candidate = question + rng.choice(HORIZON_SUFFIXES).format(d=horizon)
+                if cash_branch(candidate) == branch:
+                    question = candidate
+            day_match = re.search(r"\b(\d{1,4})\s*[- ]*(?:day|days)\b", question, re.IGNORECASE)
+            cash = tool_analyze_cash_flow(csv, target_horizon_days=int(day_match.group(1)) if day_match else None)
+            reply = cash_reply(rng, cash, branch)
+            if reply:
+                base = cash_base_reply(cash, branch)
+                rows.append(make_row(get_cash_diagnostic_prompt(base), question, reply, base, f"cash:{branch}"))
+    return rows
 
 
 # ==============================================================================
-# 4. Skeptical Underwriting & Missing Parameter Guidance (Category D)
+# Credit underwriting prose (statement-based)
 # ==============================================================================
 
-def generate_missing_parameter_records(count: int = 350) -> List[Dict[str, Any]]:
-    """Teaches the model to NEVER guess when vital financial inputs are missing across 12 core metrics."""
-    metrics_spec = [
-        {
-            "metric": "Debt Service Coverage Ratio (DSCR)",
-            "prompts": [
-                "Can you calculate our Debt Service Coverage Ratio?",
-                "What is our DSCR for the bank loan application?",
-                "Calculate our debt service coverage, please.",
-                "Can you tell us if our debt service coverage ratio is acceptable?",
-                "Evaluate our business debt coverage ratio.",
-            ],
-            "required": ["Net Operating Income (NOI)", "Annual Principal & Interest Debt Service"],
-            "example": "'Our annual NOI is $180,000 and total debt service is $120,000.'",
-        },
-        {
-            "metric": "Altman Z'-Score",
-            "prompts": [
-                "What is our company's Altman Z-Score?",
-                "Calculate our Altman Z insolvency risk score.",
-                "Can you run an Altman Z bankruptcy test on our SME?",
-                "Check our financial distress zone using the Altman Z-score.",
-                "Is our business at risk of insolvency under the Altman Z model?",
-            ],
-            "required": [
-                "Working Capital", "Retained Earnings", "Operating Income (EBIT)",
-                "Book Value of Equity", "Total Liabilities", "Annual Revenue", "Total Assets"
-            ],
-            "example": "'Assets: $2.5M, WC: $450k, Retained Earnings: $600k, EBIT: $350k, Equity: $1.8M, Liabilities: $700k, Sales: $3.2M.'",
-        },
-        {
-            "metric": "Weighted Average Cost of Capital (WACC)",
-            "prompts": [
-                "Evaluate our WACC and enterprise value.",
-                "Can you calculate our company's WACC?",
-                "What is our weighted average cost of capital?",
-                "Help us calculate our blended cost of capital for a new project.",
-            ],
-            "required": [
-                "Market/Book Value of Equity", "Total Debt Outstanding",
-                "Cost of Equity / Hurdle Rate (%)", "Pre-Tax Borrowing Rate (%)", "Corporate Tax Rate (%)"
-            ],
-            "example": "'Equity: $3M, Debt: $1M, Cost of Equity: 12%, Borrowing Rate: 8%, Tax Rate: 21%.'",
-        },
-        {
-            "metric": "Cash Conversion Cycle (CCC)",
-            "prompts": [
-                "What is our Cash Conversion Cycle?",
-                "Can you calculate our CCC to see how fast we turn inventory into cash?",
-                "How many days is our working capital cash cycle?",
-                "Calculate our net operating cycle and cash conversion days.",
-            ],
-            "required": [
-                "Days Sales Outstanding (DSO) or Accounts Receivable & Revenue",
-                "Days Inventory Outstanding (DIO) or Inventory & COGS",
-                "Days Payable Outstanding (DPO) or Accounts Payable"
-            ],
-            "example": "'DSO: 45 days, DIO: 30 days, DPO: 25 days.'",
-        },
-        {
-            "metric": "SaaS LTV to CAC Ratio",
-            "prompts": [
-                "What is our SaaS LTV/CAC ratio?",
-                "Calculate our Customer Lifetime Value to Acquisition Cost ratio.",
-                "Is our SaaS unit economics sustainable? Check our LTV to CAC.",
-                "Can you compute our customer acquisition payback and LTV/CAC?",
-            ],
-            "required": [
-                "Average Revenue Per Account (ARPU)", "Gross Margin Percentage (%)",
-                "Monthly or Annual Churn Rate (%)", "Customer Acquisition Cost (CAC)"
-            ],
-            "example": "'ARPU: $500/mo, Gross Margin: 80%, Churn: 1.5%/mo, CAC: $6,000.'",
-        },
-        {
-            "metric": "DuPont ROE Decomposition",
-            "prompts": [
-                "Can you decompose our Return on Equity using DuPont analysis?",
-                "What is driving our ROE? Run a DuPont breakdown.",
-                "Evaluate our 3-tier DuPont ROE.",
-            ],
-            "required": [
-                "Net Profit Margin (%)", "Asset Turnover Ratio (Sales / Assets)",
-                "Financial Leverage Multiplier (Assets / Equity)"
-            ],
-            "example": "'Net Margin: 8.5%, Asset Turnover: 1.6x, Financial Leverage: 2.1x.'",
-        },
-        {
-            "metric": "Cost-Volume-Profit Break-Even Turnover",
-            "prompts": [
-                "What is our break-even revenue?",
-                "How much sales do we need to break even this year?",
-                "Can you calculate our break-even revenue point?",
-            ],
-            "required": ["Annual Fixed Operating Costs ($)", "Contribution Margin Ratio (%)"],
-            "example": "'Fixed costs: $250,000, Contribution margin ratio: 35%.'",
-        },
-        {
-            "metric": "Net Debt to EBITDA Leverage",
-            "prompts": [
-                "What is our Net Debt to EBITDA ratio?",
-                "Can you calculate our leverage multiple for the lender?",
-                "Check if our Net Debt/EBITDA complies with standard bank covenants.",
-            ],
-            "required": ["Total Outstanding Debt ($)", "Cash & Liquid Equivalents ($)", "Annual EBITDA ($)"],
-            "example": "'Total Debt: $1,200,000, Cash: $300,000, Annual EBITDA: $400,000.'",
-        },
-        {
-            "metric": "Return on Invested Capital (ROIC)",
-            "prompts": [
-                "What is our Return on Invested Capital?",
-                "Can you calculate our ROIC vs our cost of capital?",
-                "Evaluate our capital efficiency using ROIC.",
-            ],
-            "required": ["Net Operating Profit After Tax (NOPAT) ($)", "Total Invested Capital ($)"],
-            "example": "'NOPAT: $320,000, Invested Capital: $2,000,000.'",
-        },
-        {
-            "metric": "Commercial Loan Amortization Schedule",
-            "prompts": [
-                "Can you calculate our monthly loan payment?",
-                "What will our loan amortization schedule look like?",
-                "Calculate our monthly debt service on a new commercial loan.",
-            ],
-            "required": ["Principal Loan Amount ($)", "Annual Interest Rate (%)", "Term Length in Months"],
-            "example": "'Principal: $500,000, Interest Rate: 7.5%, Term: 60 months.'",
-        },
+UW_QUESTIONS = [
+    "Can we qualify for a loan?", "How much can we borrow?", "What financing options do we have?", "What credit line can we get?",
+    "Do we qualify for working capital financing?", "Can I get a business loan?", "What loan options are available to us?",
+    "Are we eligible for financing?", "What kind of credit can we access?", "How much financing could we get?",
+    "Show me our financing options.", "can we get a credit line", "What funding can we qualify for?",
+]
+TIER_MEANING = {
+    "PRIME": ["PRIME means lenders see steady balances and low default risk.", "A PRIME rating gets you the cheapest facilities on offer."],
+    "NEAR_PRIME": ["NEAR_PRIME means you qualify, but with tighter limits than a prime borrower.", "At NEAR_PRIME, lenders will lend but price in more caution."],
+    "HIGH_RISK": ["HIGH_RISK reflects thin or volatile balances, so terms will be limited.", "A HIGH_RISK rating means most lenders will want stronger balances first."],
+}
+
+
+def underwriting_reply(rng: random.Random, uw: Dict[str, Any]) -> str:
+    d, options = uw["dossier"], uw["matched_options"]
+    f = {"tier": d["risk_tier"], "limit": money(d["max_qualified_limit"]), "dab": money(d["daily_average_balance"])}
+    if Decimal(str(d["max_qualified_limit"])) == 0:
+        first = pick(rng, [
+            "Classification is {tier} and the maximum qualified limit is {limit}, so no lender will extend credit on this statement.",
+            "The underwriting comes back {tier} with a qualified limit of {limit}, which means no facility is available yet.",
+            "Right now the statement supports no borrowing: the limit is {limit} at a {tier} rating.",
+            "A {limit} qualified limit and a {tier} rating mean lenders would decline today.",
+        ], **f)
+    else:
+        first = pick(rng, [
+            "You qualify as {tier}, with a maximum qualified limit of {limit}.",
+            "The underwriting puts you in the {tier} tier, with up to {limit} available.",
+            "Your statement supports a {tier} rating and a borrowing ceiling of {limit}.",
+            "You can borrow up to {limit}, and the risk classification is {tier}.",
+            "Classification is {tier} and the maximum qualified limit is {limit}.",
+            "Up to {limit} is available to you at a {tier} risk rating.",
+            "Lenders would see you as {tier}, good for a limit of up to {limit}.",
+        ], **f)
+    dab = pick(rng, [
+        "That limit is sized from your Daily Average Balance of {dab}.",
+        "Lenders size the line off your DAB, which is {dab} on this statement.",
+        "Your Daily Average Balance (DAB) of {dab} is what drives that ceiling.",
+    ], **f)
+    meaning = rng.choice(TIER_MEANING.get(f["tier"], TIER_MEANING["NEAR_PRIME"]))
+    if options:
+        top = options[0]
+        f.update(name=top["facility_name"], provider=top["provider"], apr=top["apr_percent"], max=money(top["max_amount"]))
+        facility = pick(rng, [
+            "The best match is the {name} from {provider} at {apr}% APR, up to {max}.",
+            "{provider} offers the top-matched {name} at {apr}% APR.",
+            "Top of the list is the {name} at {apr}% APR from {provider}.",
+        ], **f)
+        apr_note = None if top["is_predatory"] else rng.choice([
+            "That APR passes the non-predatory check.",
+            "The rate sits within non-predatory lending limits.",
+            "That pricing is non-predatory.",
+        ])
+        action = pick(rng, [
+            "If you want to proceed, ask me to stage the {name} application; nothing executes until you approve it.",
+            "Proposals are staged for your review first and only go ahead with your explicit approval.",
+            "Say the word and I will stage a proposal for the {name}; it waits for your sign-off.",
+            "Request staging for the {name} when ready, and it will sit in draft until you approve it.",
+        ], **f)
+    else:
+        facility = "No non-predatory facility meets the underwriting criteria right now."
+        apr_note = None
+        action = rng.choice([
+            "Build a few months of steadier balances, then rerun the underwriting before applying.",
+            "Focus on lifting your average balance first; I can rerun the check once the next statement is in.",
+        ])
+    closing = f"{facility} {apr_note}" if apr_note else facility
+    return bold_first_figure(rng, finish(rng, first, [dab, meaning], f"{closing} {action}", min_middle=1))
+
+
+def build_underwriting_rows(rng: random.Random, statements: int) -> List[Dict[str, Any]]:
+    usable = [q for q in UW_QUESTIONS if route(q, True)[0] == "CREDIT_UNDERWRITING" and not route(q, True)[2]]
+    rows = []
+    for _ in range(statements):
+        csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
+        uw = tool_underwrite_credit(csv, nsf_count=rng.choice([0, 0, 0, 1, 2, 3, 5]))
+        base = underwriting_base_reply(uw)
+        rows.append(make_row(get_credit_underwriting_prompt(base), rng.choice(usable), underwriting_reply(rng, uw), base, "underwriting"))
+    return rows
+
+
+# ==============================================================================
+# Quantitative calculations (base_reply captured from the real subagent handlers)
+# ==============================================================================
+
+
+def k(rng: random.Random, lo: int, hi: int, step: int = 1000) -> int:
+    return rng.randrange(lo, hi, step)
+
+
+def usd(n: int) -> str:
+    return f"${n:,}"
+
+
+QUANT_SPECS: List[Dict[str, Any]] = [
+    {
+        "sub": "DSCR", "name": "your DSCR", "head": "DSCR Metric", "tier": "Underwriting Status",
+        "support": [("Net Operating Income (NOI)", "net operating income"), ("Annual Debt Service", "annual debt service")],
+        "params": lambda r: {"noi": usd(k(r, 60_000, 600_000)), "ds": usd(k(r, 30_000, 400_000))},
+        "questions": ["What is our DSCR if annual NOI is {noi} and debt payments are {ds}?", "Calculate DSCR with NOI {noi} and annual debt service {ds}.", "Our net operating income is {noi} and debt service is {ds}. What's the DSCR?"],
+        "meaning": {"good": "Lenders read that as comfortable cover for principal and interest.", "mid": "That clears the bar, but there is little room if income dips.", "bad": "Lenders will see that cover as too thin for new debt."},
+        "action": {"good": ["You can approach lenders with confidence; keep NOI steady through the application.", "Use this cover to negotiate better pricing on your next facility."], "bad": ["Pay down the most expensive debt or lift operating income before taking on more borrowing.", "Hold off on new debt until operating income or the repayment schedule improves."]},
+    },
+    {
+        "sub": "FCCR", "name": "your fixed charge coverage", "head": "FCCR Metric", "tier": "Covenant Approval Tier",
+        "support": [("Annual EBITDA", "EBITDA"), ("Fixed Operational Charges", "fixed charges"), ("Total Annual Debt Service", "debt service")],
+        "params": lambda r: {"e": usd(k(r, 80_000, 800_000)), "fc": usd(k(r, 10_000, 120_000)), "ds": usd(k(r, 20_000, 300_000))},
+        "questions": ["Calculate FCCR for EBITDA {e}, fixed charges {fc}, and debt service {ds}", "What's our fixed charge coverage ratio with EBITDA {e}, fixed charges {fc} and debt service {ds}?"],
+        "meaning": {"good": "Leases and debt are both covered with room to spare.", "mid": "Coverage is adequate, but a weak quarter would squeeze it.", "bad": "Fixed charges and debt eat too much of EBITDA for lenders to be comfortable."},
+        "action": {"good": ["Keep fixed commitments flat while EBITDA grows, and the covenant stays safe.", "You have room to take on a modest facility if needed."], "bad": ["Renegotiate leases or stretch debt terms before adding any new fixed commitment.", "Cut fixed charges first; that improves the ratio fastest."]},
+    },
+    {
+        "sub": "DEBT_CAPACITY", "name": "your maximum prudent debt capacity", "head": "Maximum Prudent Debt Capacity",
+        "support": [("Net Operating Income (NOI)", "net operating income"), ("Target DSCR Covenant", "target DSCR"), ("Assumed Facility APR", "assumed APR")],
+        "params": lambda r: {"noi": usd(k(r, 50_000, 500_000)), "dscr": r.choice(["1.25x", "1.35x", "1.5x"])},
+        "questions": ["What is our maximum prudent borrowing capacity with {noi} NOI at {dscr} DSCR?", "How much can we safely borrow with NOI of {noi} and a {dscr} DSCR target?"],
+        "meaning": {"any": "Borrowing above that ceiling would push coverage below the covenant you set."},
+        "action": {"any": ["Treat that figure as the ceiling and size any facility comfortably below it.", "Ask me to match facilities within that limit when you are ready to borrow."]},
+    },
+    {
+        "sub": "AMORTIZATION", "name": "the monthly payment", "head": "Fixed Monthly Payment", "unit": " a month",
+        "support": [("Total Interest Cost", "total interest"), ("Total Loan Obligation", "total repayment")],
+        "params": lambda r: {"p": usd(k(r, 20_000, 400_000)), "rate": r.choice([6, 7, 8, 9, 10, 11, 12]), "m": r.choice([12, 24, 36, 48, 60])},
+        "questions": ["Calculate monthly payment for a {p} commercial loan at {rate}% interest over {m} months", "What's the monthly repayment on a {p} loan at {rate}% for {m} months?"],
+        "meaning": {"any": "Make sure that payment fits inside your monthly operating cash flow before signing."},
+        "action": {"any": ["Compare the payment with your average monthly net inflow, then request staging if it fits.", "If the payment feels tight, test a longer term to lower it."]},
+    },
+    {
+        "sub": "FACTORING", "name": "your net cash proceeds", "head": "Net Immediate Cash Proceeds",
+        "support": [("Invoice Face Value", "invoice value"), ("Factoring Discount Fee", "fee"), ("True Annualized APR", "true APR")],
+        "params": lambda r: {"inv": usd(k(r, 10_000, 250_000)), "adv": r.choice([75, 80, 85, 90]), "fee": r.choice([1, 2, 3, 4]), "d": r.choice([30, 45, 60, 90])},
+        "questions": ["Factor a {inv} invoice with {adv}% advance, {fee}% discount fee, and {d} days collection", "What do we net if we factor a {inv} invoice at {adv}% advance with a {fee}% fee over {d} days?"],
+        "meaning": {"any": "The annualized APR is the number to compare against a bank line, not the headline fee."},
+        "action": {"any": ["Compare that APR with a working capital line before you commit.", "Request staging if the APR beats your other options; it waits for your approval."]},
+    },
+    {
+        "sub": "WCR", "name": "your working capital requirement", "head": "Net Working Capital Requirement", "tier": "Liquidity Posture",
+        "support": [("Accounts Receivable (AR)", "receivables"), ("Inventory", "inventory"), ("Accounts Payable (AP)", "payables")],
+        "params": lambda r: {"ar": usd(k(r, 10_000, 300_000)), "inv": usd(k(r, 5_000, 200_000)), "ap": usd(k(r, 5_000, 200_000))},
+        "questions": ["What is our working capital requirement if receivables are {ar}, inventory {inv}, and payables {ap}?", "Calculate WCR with receivables {ar}, inventory {inv} and payables {ap}."],
+        "meaning": {"any": "That is the cash tied up in running the business before customers pay you."},
+        "action": {"any": ["Shorten collection terms or carry less stock to free part of that cash.", "Negotiate longer supplier terms to offset the amount tied up."]},
+    },
+    {
+        "sub": "OCF_RATIO", "name": "your operating cash flow ratio", "head": "Operating Cash Flow Ratio", "tier": "Solvency Classification",
+        "support": [("Operating Cash Flow", "operating cash flow"), ("Current Liabilities", "current liabilities")],
+        "params": lambda r: {"ocf": usd(k(r, 20_000, 400_000)), "cl": usd(k(r, 20_000, 300_000))},
+        "questions": ["Calculate our operating cash flow ratio for OCF {ocf} and current liabilities {cl}", "What's the OCF ratio if operating cash flow is {ocf} and current liabilities are {cl}?"],
+        "meaning": {"good": "Operations alone cover short-term obligations.", "mid": "Operations roughly cover short-term debts, with little slack.", "bad": "Operating cash does not cover short-term debts, so you depend on reserves or credit."},
+        "action": {"good": ["Keep this cushion as you plan any new short-term borrowing."], "bad": ["Bring receivables in faster and push out non-urgent payables to close the gap."]},
+    },
+    {
+        "sub": "BREAK_EVEN", "name": "your break-even revenue", "head": "Break-Even Revenue Requirement",
+        "support": [("Fixed Operating Overhead", "fixed costs"), ("Contribution Margin Ratio", "contribution margin")],
+        "params": lambda r: {"fc": usd(k(r, 10_000, 200_000)), "m": r.choice([20, 25, 30, 35, 40, 45, 50, 60])},
+        "questions": ["What is our break-even if fixed costs are {fc} and margin is {m}%?", "Calculate break-even revenue for fixed costs {fc} at a {m}% contribution margin."],
+        "meaning": {"any": "Every sale above that line adds to operating profit; below it, you lose money."},
+        "action": {"any": ["Track monthly revenue against that line and cut fixed costs if you keep falling short.", "Lifting the margin even slightly lowers that threshold faster than cutting volume targets."]},
+    },
+    {
+        "sub": "BREAK_EVEN_UNITS", "name": "your break-even volume", "head": "Required Sales Volume to Break Even",
+        "support": [("Fixed Operating Overhead", "fixed overhead"), ("Unit Contribution Margin", "unit contribution margin")],
+        "params": lambda r: (lambda price: {"fc": usd(k(r, 10_000, 200_000)), "p": usd(price), "v": usd(r.randrange(price // 5, price * 4 // 5))})(r.randrange(20, 500, 5)),
+        "questions": ["How many units must we sell to break even if fixed costs are {fc}, price {p}, and variable cost {v}?", "Break-even units for fixed costs {fc}, selling price {p} and variable cost {v}?"],
+        "meaning": {"any": "Units sold beyond that volume turn into profit."},
+        "action": {"any": ["Compare that volume with last quarter's sales to see how close you are.", "Raise the price or cut unit costs if that volume is out of reach."]},
+    },
+    {
+        "sub": "ATTRITION", "name": "the projected net deficit if that client leaves", "head": "Projected Net Deficit Under Loss", "unit": " a year", "tier": "Risk Classification",
+        "support": [("Current Annual Inflows", "current revenue"), ("Lost Client Annual Share", "the client's revenue")],
+        "params": lambda r: (lambda rev: {"rev": usd(rev), "c": usd(k(r, rev // 10, rev // 2)), "exp": usd(k(r, rev * 6 // 10, rev))})(k(r, 150_000, 900_000)),
+        "questions": ["What is the cash flow impact if we lose our largest client who pays {c} out of {rev} revenue with {exp} annual expenses?"],
+        "meaning": {"any": "That gap would have to be covered by cuts, new clients or credit."},
+        "action": {"any": ["Diversify now: start replacing part of that client's revenue before it is at risk.", "Build a cost-cut plan you can trigger the day that client gives notice."]},
+    },
+    {
+        "sub": "CURRENT_RATIO", "name": "your current ratio", "head": "Current Ratio", "tier": "Working Capital Solvency",
+        "support": [("Current Assets", "current assets"), ("Current Liabilities", "current liabilities")],
+        "params": lambda r: {"a": usd(k(r, 30_000, 600_000)), "l": usd(k(r, 30_000, 400_000))},
+        "questions": ["What is our current ratio for assets {a} and liabilities {l}?", "Calculate the current ratio with current assets {a} and current liabilities {l}."],
+        "meaning": {"good": "Short-term assets comfortably cover what is due within a year.", "mid": "Assets cover obligations, but the buffer is thin.", "bad": "Short-term obligations exceed liquid assets, which lenders flag quickly."},
+        "action": {"good": ["Keep idle current assets from piling up; surplus cash could earn yield."], "bad": ["Convert receivables to cash faster and avoid new short-term debt until the ratio recovers."]},
+    },
+    {
+        "sub": "QUICK_RATIO", "name": "your quick ratio", "head": "Quick Ratio", "tier": "Immediate Liquidity Tier",
+        "support": [("Quick Liquid Assets", "quick assets"), ("Current Liabilities", "current liabilities")],
+        "params": lambda r: {"a": usd(k(r, 50_000, 600_000)), "i": usd(k(r, 5_000, 150_000)), "l": usd(k(r, 30_000, 400_000))},
+        "questions": ["Calculate quick ratio with assets {a}, inventory {i}, and liabilities {l}", "What's our acid test ratio with current assets {a}, inventory {i} and liabilities {l}?"],
+        "meaning": {"good": "You can meet immediate bills without selling inventory.", "mid": "You can just about cover bills without selling stock.", "bad": "Paying immediate bills would depend on selling inventory."},
+        "action": {"good": ["Hold this level of liquidity through your slow season."], "bad": ["Build cash or cut short-term liabilities so bills do not depend on stock sales."]},
+    },
+    {
+        "sub": "DEBT_TO_EQUITY", "name": "your debt-to-equity ratio", "head": "Debt-to-Equity Ratio", "tier": "Leverage Profile",
+        "support": [("Total Debt Obligations", "total debt"), ("Total Shareholder Equity", "equity")],
+        "params": lambda r: {"d": usd(k(r, 20_000, 900_000)), "e": usd(k(r, 50_000, 900_000))},
+        "questions": ["Calculate debt to equity for debt {d} and equity {e}", "What's our D/E ratio with total debt {d} and shareholder equity {e}?"],
+        "meaning": {"good": "Debt is modest next to equity, which leaves borrowing room.", "mid": "Debt is moderate next to equity; much more would start to worry lenders.", "bad": "Debt is heavy relative to equity, so lenders will price new credit higher."},
+        "action": {"good": ["Use that headroom selectively for growth that pays back quickly."], "bad": ["Prioritise paying down debt or adding equity before new borrowing."]},
+    },
+    {
+        "sub": "INTEREST_COVERAGE", "name": "your interest coverage", "head": "Interest Coverage Ratio", "tier": "Covenant Health Tier",
+        "support": [("Operating Income (EBIT)", "EBIT"), ("Annual Interest Expense", "interest expense")],
+        "params": lambda r: {"ebit": usd(k(r, 20_000, 500_000)), "i": usd(k(r, 5_000, 120_000))},
+        "questions": ["What is our interest coverage with EBIT {ebit} and interest expense {i}?", "Calculate times interest earned for EBIT {ebit} and interest of {i}."],
+        "meaning": {"good": "Operating income covers interest many times over.", "mid": "Interest is covered, though a dip in EBIT would tighten it.", "bad": "Interest takes too large a bite of operating income."},
+        "action": {"good": ["Use this strength when negotiating rates on your next facility."], "bad": ["Refinance the most expensive debt or lift EBIT before borrowing more."]},
+    },
+    {
+        "sub": "TRADE_CREDIT", "name": "the implied APR of skipping the discount", "head": "Annualized Implied APR", "tier": "Working Capital Recommendation Tier",
+        "support": [("Gross Early Payment Savings", "early payment savings"), ("Net Financial Benefit", "net benefit")],
+        "params": lambda r: {"t": r.choice(["2/10 net 30", "1/10 net 30", "2/10 net 45", "3/15 net 60", "1/15 net 45"]), "inv": usd(k(r, 10_000, 200_000)), "line": r.choice([7, 8, 9, 10, 12, 14])},
+        "questions": ["Evaluate trade terms {t} for a {inv} invoice with a {line}% credit line"],
+        "meaning": {"any": "Compare that implied APR with what your credit line costs to decide whether paying early wins."},
+        "action": {"any": ["If the net benefit is positive, pay early using the cheaper credit line.", "Apply the same test to every supplier offering early-payment terms."]},
+    },
+    {
+        "sub": "CASH_DRAG", "name": "your annual cash drag", "head": "Annual Cash Drag / Yield Loss", "unit": " a year", "tier": "Allocation Status",
+        "support": [("Current Cash Balance", "cash balance"), ("Idle Surplus Cash", "idle surplus")],
+        "params": lambda r: {"c": usd(k(r, 100_000, 2_000_000, 10_000)), "b": usd(k(r, 10_000, 150_000)), "y": r.choice(["3.5", "4", "4.5", "5"])},
+        "questions": ["Calculate cash drag for cash balance {c} with monthly burn {b} at {y}% yield"],
+        "meaning": {"any": "That is income you give up by leaving surplus cash idle."},
+        "action": {"any": ["Sweep the surplus above your operating reserve into a money market account.", "Keep the reserve liquid and move only the idle surplus into yield."]},
+    },
+    {
+        "sub": "LEASE_VS_BUY", "name": "the net advantage", "head": "Net Financial Advantage", "tier": "Decision Policy",
+        "support": [("Present Value Cost (Leasing)", "present value cost of leasing"), ("Present Value Cost (Buying)", "present value cost of buying")],
+        "params": lambda r: (lambda cost: {"cost": usd(cost), "lease": usd(k(r, cost // 6, cost // 3)), "y": r.choice([3, 4, 5]), "dr": r.choice([6, 7, 8, 9, 10])})(k(r, 40_000, 400_000)),
+        "questions": ["Should we lease or buy equipment costing {cost} with lease payments of {lease} for {y} years at {dr}% discount rate?"],
+        "meaning": {"any": "The cheaper option on a present value basis is the one the engine recommends."},
+        "action": {"any": ["Go with the recommended option unless you need the equipment beyond the term.", "Check the lease terms for buyout clauses before you sign."]},
+    },
+    {
+        "sub": "ALTMAN_Z_SCORE", "name": "your Altman Z'-Score", "head": "Altman Z'-Score", "tier": "Credit Distress Tier",
+        "support": [("Working Capital", "working capital"), ("Total Liabilities", "total liabilities")],
+        "params": lambda r: {"wc": usd(k(r, 10_000, 150_000)), "re": usd(k(r, 10_000, 200_000)), "ebit": usd(k(r, 5_000, 120_000)), "eq": usd(k(r, 40_000, 300_000)), "li": usd(k(r, 50_000, 400_000)), "rev": usd(k(r, 150_000, 1_200_000)), "as": usd(k(r, 120_000, 700_000))},
+        "questions": ["Calculate Altman Z score: working capital {wc}, retained earnings {re}, EBIT {ebit}, equity {eq}, liabilities {li}, revenue {rev}, assets {as}"],
+        "meaning": {"good": "That sits in the safe zone, so insolvency risk is low.", "mid": "That is the grey zone: viable, but exposed to a revenue drop.", "bad": "That is the distress zone, which lenders treat as high insolvency risk."},
+        "action": {"good": ["Recheck the score each year-end to catch any drift."], "bad": ["Shore up working capital and retained earnings before seeking new credit."]},
+    },
+    {
+        "sub": "NET_DEBT_TO_EBITDA", "name": "your net debt to EBITDA", "head": "Net Debt to EBITDA Multiple", "tier": "Institutional Leverage Tier",
+        "support": [("Net Debt", "net debt"), ("Annual Operating EBITDA", "EBITDA")],
+        "params": lambda r: {"d": usd(k(r, 50_000, 900_000)), "c": usd(k(r, 5_000, 200_000)), "e": usd(k(r, 40_000, 400_000))},
+        "questions": ["What is our Net Debt to EBITDA with debt {d}, cash {c}, and EBITDA {e}?"],
+        "meaning": {"good": "Debt is low against earnings, leaving plenty of borrowing room.", "mid": "Debt is manageable against earnings, but close to where banks get cautious.", "bad": "Debt is high against earnings, so new borrowing will be hard to place."},
+        "action": {"good": ["You can approach banks for growth capital from a strong position."], "bad": ["Pay debt down or grow EBITDA before asking for more credit."]},
+    },
+    {
+        "sub": "DEBT_SERVICE_BURDEN", "name": "your debt service burden", "head": "Debt Service Burden", "tier": "Debt Service Tier",
+        "support": [("Annual Debt Service Obligations", "annual debt payments"), ("Gross Commercial Revenue", "revenue")],
+        "params": lambda r: {"ds": usd(k(r, 10_000, 200_000)), "rev": usd(k(r, 150_000, 1_500_000))},
+        "questions": ["What is our debt service burden if annual debt payments are {ds} and revenue is {rev}?"],
+        "meaning": {"good": "Debt payments take a small share of revenue.", "mid": "Debt payments are manageable but meaningful.", "bad": "Debt payments take too much of revenue for comfort."},
+        "action": {"good": ["Keep new borrowing in proportion to revenue growth."], "bad": ["Refinance onto longer terms to lower annual payments."]},
+    },
+    {
+        "sub": "ROIC", "name": "your return on invested capital", "head": "Return on Invested Capital (ROIC)", "tier": "Capital Efficiency Tier",
+        "support": [("Net Operating Profit After Tax (NOPAT)", "NOPAT"), ("Total Invested Capital", "invested capital")],
+        "params": lambda r: {"ebit": usd(k(r, 20_000, 400_000)), "d": usd(k(r, 20_000, 500_000)), "e": usd(k(r, 50_000, 600_000)), "c": usd(k(r, 5_000, 100_000))},
+        "questions": ["Calculate ROIC for EBIT {ebit}, debt {d}, equity {e}, and cash {c}"],
+        "meaning": {"good": "The business earns well above a typical cost of capital.", "mid": "Returns roughly match the cost of capital.", "bad": "Returns fall short of what the capital costs."},
+        "action": {"good": ["Reinvest in the activities driving these returns."], "bad": ["Cut underused assets or lift margins before investing more capital."]},
+    },
+    {
+        "sub": "ROA", "name": "your return on assets", "head": "Return on Assets (ROA)", "tier": "Asset Productivity Tier",
+        "support": [("Annual Net Income", "net income"), ("Total Balance Sheet Assets", "total assets")],
+        "params": lambda r: {"ni": usd(k(r, 5_000, 200_000)), "a": usd(k(r, 100_000, 1_500_000))},
+        "questions": ["What is our ROA if net income is {ni} and total assets are {a}?", "Calculate return on assets with net income {ni} and total assets {a}."],
+        "meaning": {"good": "Assets are working hard for the business.", "mid": "Asset returns are in a normal range.", "bad": "Assets are not producing much profit."},
+        "action": {"good": ["Keep asset growth in line with profit growth."], "bad": ["Sell or repurpose idle assets to lift the return."]},
+    },
+    {
+        "sub": "EVA", "name": "your economic value added", "head": "Economic Value Added (EVA)", "tier": "Economic Profit Status",
+        "support": [("Net Operating Profit After Tax (NOPAT)", "NOPAT"), ("Capital Charge", "capital charge")],
+        "params": lambda r: {"ebit": usd(k(r, 30_000, 400_000)), "ic": usd(k(r, 100_000, 2_000_000, 10_000)), "w": r.choice([7, 8, 9, 10, 11, 12])},
+        "questions": ["Calculate EVA for EBIT {ebit}, invested capital {ic}, and {w}% WACC"],
+        "meaning": {"good": "Operations earn more than the full cost of the capital they use.", "bad": "Operations do not yet cover the full cost of capital."},
+        "action": {"good": ["Direct new capital to the units generating this surplus."], "bad": ["Shrink the capital base or improve margins until EVA turns positive."]},
+    },
+    {
+        "sub": "FCFF", "name": "your free cash flow to the firm", "head": "Free Cash Flow to Firm (FCFF)", "tier": "Cash Flow Quality Status",
+        "support": [("Operating Cash Flow (OCF)", "operating cash flow"), ("Capital Expenditures (CapEx)", "capital expenditure")],
+        "params": lambda r: {"ocf": usd(k(r, 30_000, 500_000)), "cx": usd(k(r, 5_000, 200_000)), "i": usd(k(r, 2_000, 40_000))},
+        "questions": ["Calculate free cash flow for OCF {ocf} and CapEx {cx} with {i} interest"],
+        "meaning": {"good": "Operations fund investment with cash left over.", "bad": "Investment is consuming more cash than operations generate."},
+        "action": {"good": ["Decide whether surplus cash goes to debt paydown, reserves or growth."], "bad": ["Phase capital spending until operating cash flow catches up."]},
+    },
+    {
+        "sub": "WACC", "name": "your WACC", "head": "Weighted Average Cost of Capital (WACC)",
+        "support": [("Equity Capital Value", "equity"), ("Total Debt Obligations", "debt")],
+        "params": lambda r: {"e": usd(k(r, 100_000, 2_000_000, 10_000)), "ke": r.choice([10, 11, 12, 14, 15]), "d": usd(k(r, 50_000, 1_000_000, 10_000)), "kd": r.choice([5, 6, 7, 8, 9]), "t": r.choice([21, 25, 30])},
+        "questions": ["Calculate WACC with equity {e} at {ke}%, debt {d} at {kd}%, and {t}% tax rate"],
+        "meaning": {"any": "Any project needs to return more than that to create value."},
+        "action": {"any": ["Use that rate as the hurdle when you compare investment options.", "Screen your next capital project against that hurdle before committing."]},
+    },
+    {
+        "sub": "LTV_CAC", "name": "your LTV to CAC ratio", "head": "LTV to CAC Ratio", "tier": "Unit Economics Tier",
+        "support": [("Customer Lifetime Value (LTV)", "lifetime value"), ("Customer Acquisition Cost (CAC)", "acquisition cost")],
+        "params": lambda r: {"arpu": usd(k(r, 200, 5_000, 50)), "gm": r.choice([50, 60, 70, 75, 80, 85]), "ch": r.choice([5, 10, 15, 20, 25, 30]), "cac": usd(k(r, 100, 3_000, 50))},
+        "questions": ["Calculate LTV/CAC for ARPU {arpu}, gross margin {gm}%, churn {ch}%, and CAC {cac}"],
+        "meaning": {"good": "Each customer returns several times what it costs to win them.", "mid": "Unit economics work, though with modest headroom.", "bad": "You spend too much to acquire customers relative to what they return."},
+        "action": {"good": ["Scale acquisition spend while watching that churn holds."], "bad": ["Cut acquisition spend or reduce churn before scaling marketing."]},
+    },
+    {
+        "sub": "CAC_PAYBACK", "name": "your CAC payback period", "head": "CAC Payback Period", "tier": "Payback Velocity Tier",
+        "support": [("Customer Acquisition Cost (CAC)", "acquisition cost"), ("Monthly Gross Profit per Account", "monthly gross profit per account")],
+        "params": lambda r: {"arpu": usd(k(r, 20, 500, 5)), "gm": r.choice([50, 60, 70, 75, 80]), "cac": usd(k(r, 100, 4_000, 50))},
+        "questions": ["Calculate CAC payback for monthly ARPU {arpu}, gross margin {gm}%, and CAC {cac}"],
+        "meaning": {"good": "Sales spend comes back quickly, so growth does not strain cash.", "mid": "Payback is acceptable but ties up cash for a while.", "bad": "Sales spend takes too long to come back, which strains cash."},
+        "action": {"good": ["You can fund growth from operating cash rather than credit."], "bad": ["Raise prices or lower acquisition cost to shorten the payback."]},
+    },
+    {
+        "sub": "NRR", "name": "your net revenue retention", "head": "Net Revenue Retention (NRR)", "tier": "Retention Health Tier",
+        "support": [("Starting Revenue Base", "starting revenue"), ("Ending Cohort Revenue", "ending cohort revenue")],
+        "params": lambda r: {"s": usd(k(r, 100_000, 2_000_000, 10_000)), "x": usd(k(r, 5_000, 200_000)), "c": usd(k(r, 2_000, 80_000)), "ch": usd(k(r, 2_000, 120_000))},
+        "questions": ["Calculate NRR for starting ARR {s}, expansion {x}, contraction {c}, and churn {ch}"],
+        "meaning": {"good": "Existing customers grow revenue on their own.", "mid": "Retention is steady, without much expansion.", "bad": "The customer base is shrinking before new sales."},
+        "action": {"good": ["Invest in account expansion; it is your cheapest growth."], "bad": ["Find out why accounts churn or downgrade before spending more on acquisition."]},
+    },
+]
+
+GOOD_TIER = re.compile(r"PRIME|HEALTHY|STRONG|EXCEPTIONAL|APPROVED|CONSERVATIVE|POSITIVE|RAPID|EFFICIENT|SELF_FUNDING|SAFE|LOW_BURDEN|NET_EXPANSION")
+BAD_TIER = re.compile(r"ELEVATED|CRITICAL|DISTRESS|WEAK|DECLIN|HIGH_RISK|NEGATIVE|SEVERE|HIGH_BURDEN|SUBPRIME|AGGRESSIVE_LEVERAGE|DEFICIT|INSUFFICIENT|INADEQUATE|SLOW|CONTRACTION|BREACH|EXCESSIVE_LEVERAGE|STRETCHED|UNPROFITABLE|DESTRUCTION")
+VALUE_TOKEN = re.compile(r"[+-]?[$€]?-?\d[\d,]*(?:\.\d+)?(?:%|x| units| months| days| years)?")
+
+
+def parse_bullets(base: str) -> Dict[str, str]:
+    fields = {}
+    for label, value in re.findall(r"^(?:[-\d.]+\s*)?\*\*([^*]+)\*\*:\s*(.+)$", base, re.MULTILINE):
+        fields[label.strip()] = value.replace("**", "").replace("`", "").strip()
+    return fields
+
+
+def figure(value: str) -> str:
+    match = VALUE_TOKEN.match(value)
+    return match.group(0) if match else value
+
+
+def quant_reply(rng: random.Random, spec: Dict[str, Any], fields: Dict[str, str]) -> Optional[str]:
+    if spec["head"] not in fields:
+        return None
+    head = figure(fields[spec["head"]]) + spec.get("unit", "")
+    name = spec["name"]
+    tier = fields.get(spec.get("tier", ""), "")
+    tier = tier.split()[0] if tier else ""
+    sentiment = "good" if GOOD_TIER.search(tier) else "bad" if BAD_TIER.search(tier) else "mid"
+    cap = name[0].upper() + name[1:]
+    first = rng.choice([
+        f"{cap} comes out at {head}.",
+        f"{cap} works out to {head}.",
+        f"{cap} is {head} on the figures you gave.",
+        f"{cap} lands at {head}.",
+        f"{head} is {name} on these inputs.",
+    ])
+    supports = [(phrase, figure(fields[label])) for label, phrase in spec["support"] if label in fields]
+    support = None
+    if supports:
+        parts = [f"{p} of {v}" for p, v in supports]
+        joined = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+        support = rng.choice([f"That rests on {joined}.", f"The inputs were {joined}.", f"This uses {joined}."])
+    tier_s = rng.choice([f"The engine classifies this as {tier}.", f"That lands in the {tier} tier.", f"It is rated {tier}."]) if tier else None
+    meanings = spec["meaning"]
+    meaning = meanings.get(sentiment) or meanings.get("mid") or meanings.get("any") or meanings.get("bad")
+    actions = spec["action"]
+    action_pool = actions.get("any") or actions.get("good" if sentiment == "good" else "bad")
+    return bold_first_figure(rng, finish(rng, first, [support, tier_s, meaning], rng.choice(action_pool)))
+
+
+def build_quant_rows(rng: random.Random, per_spec: int) -> List[Dict[str, Any]]:
+    rows = []
+    for spec in QUANT_SPECS:
+        made, attempts = 0, 0
+        while made < per_spec and attempts < per_spec * 4:
+            attempts += 1
+            question = rng.choice(spec["questions"]).format(**spec["params"](rng))
+            intent, sub, quant = route(question, False)
+            if sub != spec["sub"] or not quant:
+                continue
+            captured: Dict[str, str] = {}
+
+            def capture(base_reply: str, prompt_type: str = "diagnostic") -> str:
+                captured.update(base=base_reply, prompt_type=prompt_type)
+                return base_reply
+
+            handler = next(s for s in SUBAGENTS if s.can_handle(sub))
+            try:
+                handler.handle_sub_intent(sub_intent=sub, request=AgentChatRequest(message=question), effective_csv=None, enrich_fn=capture)
+            except Exception:
+                continue
+            if "base" not in captured:
+                continue
+            reply = quant_reply(rng, spec, parse_bullets(captured["base"]))
+            if not reply:
+                continue
+            base = captured["base"]
+            system = get_credit_underwriting_prompt(base) if captured["prompt_type"] == "underwriting" else get_cash_diagnostic_prompt(base)
+            rows.append(make_row(system, question, reply, base, f"quant:{sub}"))
+            made += 1
+    return rows
+
+
+# ==============================================================================
+# Conversational and missing-statement rows
+# ==============================================================================
+
+CONVERSATION = {
+    "greeting": {
+        "questions": ["hi", "hello", "hey", "good morning", "hi there", "hey copilot", "good afternoon", "hello there", "morning", "hiya"],
+        "no_statement": [
+            "I'm the Autonomous SME Finance Copilot, your AI CFO for cash runway, burn rate, overdraft forecasting and credit matching. Upload your bank statement CSV and I will run a full liquidity diagnosis.",
+            "Good to meet you; I'm the Autonomous SME Finance Copilot. Drop your bank statement CSV into the upload area so I can calculate your runway and flag any cash gaps.",
+            "Welcome. I'm the Autonomous SME Finance Copilot, built to audit cash flow and working capital for small businesses. Share your bank statement CSV to get started.",
+            "This is the Autonomous SME Finance Copilot, ready to look at your cash position. Upload a bank statement CSV and I will work out your runway, burn and borrowing capacity.",
+        ],
+        "statement_loaded": [
+            "Your statement is loaded and ready. Ask me about runway, daily burn, upcoming shortfalls or what credit you qualify for.",
+            "Good to see you. With your statement already loaded, I can check runway, burn rate, deficit risk or financing options; just ask.",
+            "Welcome back. Your bank statement is in session, so pick a question: cash runway, burn, overdraft risk or borrowing capacity.",
+        ],
+    },
+    "capabilities": {
+        "questions": ["what can you do?", "who are you?", "what do you do", "tell me about yourself", "what are you capable of?", "what can you help me with?", "what is this app?", "introduce yourself"],
+        "no_statement": [
+            "I'm the Autonomous SME Finance Copilot: I audit cash runway, forecast overdrafts, review working capital and match you with non-predatory credit. Upload your bank statement CSV and I will start with a liquidity diagnosis.",
+            "I act as a fractional CFO for small businesses, covering runway, burn rate, deficit early warnings and financing options. Share your bank statement CSV so I can work from your real numbers.",
+            "I'm the Autonomous SME Finance Copilot, focused on cash flow, working capital and credit underwriting for SMEs. Upload a bank statement CSV to see where your cash stands.",
+        ],
+        "statement_loaded": [
+            "I audit cash runway, forecast shortfalls, review working capital and match you with non-predatory credit. Your statement is already loaded, so ask about any of those and I will answer from your numbers.",
+            "Think of me as a fractional CFO: runway, burn, deficit warnings and financing. Your statement is loaded, so a good first question is how long your cash will last.",
+        ],
+    },
+    "how_to_start": {
+        "questions": ["how does this work?", "how do I get started?", "where do I start?", "how do I use this?", "what should I do first?", "how do I begin?", "walk me through how this works"],
+        "no_statement": [
+            "First, upload your bank statement CSV or paste the transactions. The engine then computes your Daily Average Balance, burn velocity, runway and any deficit warning, and any proposal it drafts waits for your explicit approval. Upload your statement to begin.",
+            "Start by uploading a bank statement CSV in the dropzone. I run a deterministic liquidity audit on it, then stage any recommended action for your review and approval. Go ahead and upload when ready.",
+            "It works in three steps: upload your statement, get an instant liquidity audit, then review any staged proposals before anything executes. Upload your bank statement CSV to start.",
+        ],
+        "statement_loaded": [
+            "Your statement is already loaded, so you can skip straight to questions. Ask about runway, burn, deficits or financing, and any action I propose is staged for your approval first.",
+            "You are past the first step since the statement is loaded. Ask me how long your cash lasts or what you can borrow, and I will answer from the verified numbers.",
+        ],
+    },
+    "thanks": {
+        "questions": ["thanks", "thank you", "thanks, that helps", "great, thanks", "cheers", "ok thanks", "perfect, thank you"],
+        "no_statement": [
+            "Glad to help. When you're ready, upload your bank statement CSV and I will run the full cash diagnosis.",
+            "Anytime. Upload a bank statement CSV whenever you want me to look at your runway and burn.",
+        ],
+        "statement_loaded": [
+            "Glad that helped. Ask whenever you want to look at runway, deficits or financing again.",
+            "Anytime. Your statement stays loaded, so follow-up questions on cash or credit are quick.",
+            "You're welcome. If anything changes, upload a fresh statement and I will rerun the numbers.",
+        ],
+    },
+    "privacy": {
+        "questions": ["is my data safe?", "do you store my bank data?", "who can see my statement?", "can you move money from my account?"],
+        "no_statement": [
+            "Calculations run on deterministic rules, and nothing that moves money happens without your explicit approval and passkey verification. Upload your bank statement CSV when you're comfortable and I will start the analysis.",
+            "I only draft actions; anything that moves money needs your explicit approval and biometric passkey confirmation. When you're ready, upload a bank statement CSV to begin.",
+        ],
+        "statement_loaded": [
+            "Your statement is used for the analysis in this session, and nothing that moves money happens without your explicit approval and passkey verification. Ask me about runway or financing whenever you're ready.",
+            "I can draft proposals, but execution always needs your approval and a passkey check. With the statement loaded, ask any cash or credit question.",
+        ],
+    },
+}
+SPANISH = [
+    ("hola", "Soy el Autonomous SME Finance Copilot, tu CFO digital para flujo de caja y crédito. Sube el CSV de tu extracto bancario y calcularé tu runway y riesgos de liquidez."),
+    ("hola, ¿qué puedes hacer?", "Soy el Autonomous SME Finance Copilot: analizo tu runway de caja, el ritmo de gasto, riesgos de sobregiro y opciones de crédito no abusivas. Sube el CSV de tu extracto bancario para empezar."),
+    ("buenos días", "Soy el Autonomous SME Finance Copilot. Comparte el CSV de tu extracto bancario y revisaré tu posición de caja."),
+]
+MISSING_STATEMENT = {
+    "diagnostic": {
+        "questions": ["How long will my cash last?", "What's our burn rate?", "What is our cash balance?", "Are we heading for a cash shortfall?", "How many days of runway do we have left?", "What's the daily burn rate?", "Will we have a cash shortfall?"],
+        "replies": [
+            "No bank statement CSV is loaded in this session yet, so there are no figures to work from. Upload your recent bank statement CSV, ideally covering the last three months, and I will calculate your Daily Average Balance, net burn and runway.",
+            "There is no statement loaded right now, so I can't compute that yet. Upload your bank statement CSV and I will work out your DAB, burn rate and cash runway from it.",
+            "I don't have a bank statement for this session yet. Share your transaction CSV, ideally the last three months, and I will answer with your exact runway and burn.",
+        ],
+    },
+    "underwriting": {
+        "questions": ["Can we qualify for a loan?", "How much can we borrow?", "What financing options do we have?", "What credit line can we get?", "Can I get a business loan?", "Are we eligible for financing?"],
+        "replies": [
+            "No bank statement CSV is loaded yet, so I can't assess borrowing capacity. Upload your recent bank statement CSV and I will evaluate your Daily Average Balance and inflow volatility to match facilities with true APR disclosures.",
+            "There is no statement in this session yet, which underwriting needs. Upload your bank statement CSV, ideally the last three months, and I will size your qualified limit and show matching facilities.",
+            "I need your transaction history before I can underwrite. Share your bank statement CSV and I will work out your DAB, risk tier and non-predatory financing options.",
+        ],
+    },
+}
+
+
+def build_conversational_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
+    rows = []
+    base_prompt = get_conversational_system_prompt()
+    pool = []
+    for category, spec in CONVERSATION.items():
+        for question in spec["questions"]:
+            for loaded in (False, True):
+                intent, _, quant = route(question, loaded)
+                if intent == "GENERAL_ASSISTANCE" and not quant:
+                    pool.append((category, question, loaded))
+    for _ in range(count):
+        category, question, loaded = rng.choice(pool)
+        reply = rng.choice(CONVERSATION[category]["statement_loaded" if loaded else "no_statement"])
+        system = base_prompt + (STATEMENT_LOADED_NOTE if loaded else NO_STATEMENT_DIRECTIVE)
+        rows.append(make_row(system, question, reply, "", f"chat:{category}:{'loaded' if loaded else 'none'}"))
+    for question, reply in SPANISH:
+        if route(question, False)[0] == "GENERAL_ASSISTANCE":
+            for _ in range(4):
+                rows.append(make_row(base_prompt + NO_STATEMENT_DIRECTIVE, question, reply, "", "chat:spanish:none"))
+    return rows
+
+
+def build_missing_statement_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
+    rows = []
+    wanted = {"diagnostic": "CASH_DIAGNOSTIC", "underwriting": "CREDIT_UNDERWRITING"}
+    pool = [
+        (context, q)
+        for context, spec in MISSING_STATEMENT.items()
+        for q in spec["questions"]
+        if route(q, False)[0] == wanted[context] and not route(q, False)[2]
     ]
-
-    records = []
     for _ in range(count):
-        spec = random.choice(metrics_spec)
-        user_prompt = random.choice(spec["prompts"])
-
-        req_items = "\n".join([f"{idx}. **{item}**" for idx, item in enumerate(spec["required"], 1)])
-        thought = (
-            f"<thought>\n"
-            f"1. Request Inspection: User requested calculation of {spec['metric']} without providing mandatory input parameters.\n"
-            f"2. Skeptical Underwriting Mandate: Estimating or hallucinating financial metrics leads to severe credit underwriting failures.\n"
-            f"3. Action Strategy: List the exact required variables, provide a clear numeric example, and invite statement upload.\n"
-            f"</thought>\n\n"
-        )
-        answer = (
-            f"To calculate your **{spec['metric']}** with deterministic accuracy, I need the following financial parameters:\n\n"
-            f"{req_items}\n\n"
-            f"*Example Input*: {spec['example']}\n\n"
-            f"Alternatively, upload your latest financial statements or bank CSV, and I will extract the figures and calculate the metric automatically."
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-                {"role": "assistant", "content": thought + answer},
-            ]
-        })
-    return records
+        context, question = rng.choice(pool)
+        reply = rng.choice(MISSING_STATEMENT[context]["replies"])
+        rows.append(make_row(get_missing_statement_prompt(context), question, reply, "", f"missing:{context}"))
+    return rows
 
 
+def build_concept_card_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
+    cards = load_cards()
+    if not cards:
+        return []
 
-# ==============================================================================
-# 5. Multi-Turn Clarification Follow-Ups (Category F)
-# ==============================================================================
+    base_concept_prompt = get_concept_prompt()
+    pool = []
 
-def generate_multiturn_dialogue_records(count: int = 150) -> List[Dict[str, Any]]:
-    """Teaches conversational state tracking: Turn 1 asks for missing inputs, Turn 2 receives them and dispatches tool."""
-    records = []
+    for card in cards:
+        lines = card.text.splitlines()
+        sections = {}
+        for line in lines:
+            m = re.match(r"\*\*(.+?):\*\*\s*(.*)", line.strip())
+            if m:
+                sections[m.group(1).lower()] = m.group(2).strip()
+
+        what = sections.get("what it is", "")
+        why = sections.get("why it matters", "")
+        health = sections.get("healthy vs warning", "")
+        todo = sections.get("what to do", "")
+
+        if not (what and why):
+            continue
+
+        title_clean = re.sub(r"\s*\(.*?\)", "", card.title).strip()
+        acronym_match = re.search(r"\((.*?)\)", card.title)
+        acronym = acronym_match.group(1).strip() if acronym_match else ""
+
+        questions = [
+            f"What is {card.title}?",
+            f"Why does {title_clean} matter for my business?",
+            f"What is a healthy {title_clean}?",
+            f"How do commercial lenders evaluate {title_clean}?",
+        ]
+        if acronym:
+            questions.extend([
+                f"What is {acronym}?",
+                f"How is {acronym} evaluated?",
+            ])
+
+        replies = []
+        if health and todo:
+            replies.append(f"{what} {why} In our analysis, {health.lower()} {todo}")
+        if health:
+            replies.append(f"{what} For small and medium enterprises, {health.lower()} {why}")
+        if todo:
+            replies.append(f"{what} {why} {todo}")
+        if not replies:
+            replies.append(f"{what} {why}")
+
+        system = format_reference_cards(base_concept_prompt, [card])
+
+        for q in questions:
+            for rep in replies:
+                cleaned_reply = sanitize_cfo_reply(rep.strip())
+                if cleaned_reply and len(cleaned_reply) > 40:
+                    pool.append((system, q, cleaned_reply, card.area))
+
+    if not pool:
+        return []
+
+    rng.shuffle(pool)
+    rows = []
     for _ in range(count):
-        metric_choice = random.choice(["dscr", "wcr", "break_even", "dir"])
-
-        if metric_choice == "dscr":
-            noi = Decimal(str(random.randint(120000, 750000)))
-            ads = Decimal(str(random.randint(60000, 450000)))
-            dscr_val, status, rationale = calculate_dscr(net_operating_income=noi, total_debt_service=ads)
-
-            res_payload = {
-                "net_operating_income": _fmt_dec(noi),
-                "annual_debt_service": _fmt_dec(ads),
-                "dscr": str(dscr_val),
-                "underwriting_status": status,
-                "rationale": rationale,
-            }
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "Can you evaluate our debt service coverage ratio?"},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. Request Inspection: User requested DSCR evaluation without providing operating figures.\n"
-                            "2. Skeptical Underwriting Mandate: Ask for Net Operating Income (NOI) and Annual Debt Service.\n"
-                            "</thought>\n\n"
-                            "To calculate your **Debt Service Coverage Ratio (DSCR)** deterministically, please provide:\n"
-                            "1. **Net Operating Income (NOI)**\n"
-                            "2. **Total Annual Debt Service** (Principal + Interest payments across all loans)\n\n"
-                            "*Example*: 'Our NOI is $180,000 and annual debt service is $120,000.'"
-                        ),
-                    },
-                    {"role": "user", "content": f"Our Net Operating Income is ${_fmt_dec(noi)} and our annual debt payments total ${_fmt_dec(ads)}."},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"<thought>\n"
-                            f"1. Follow-Up Processing: User supplied NOI ${_fmt_dec(noi)} and Annual Debt Service ${_fmt_dec(ads)}.\n"
-                            f"2. Tool Execution Strategy: Strictly dispatching `tool_calculate_dscr` (0% mental math).\n"
-                            f"</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_dscr",
-                            "arguments": {
-                                "net_operating_income": _fmt_dec(noi),
-                                "total_debt_service": _fmt_dec(ads),
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_dscr", "content": json.dumps(res_payload)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"### Debt Service Coverage Ratio (DSCR) Audit\n\n"
-                            f"- **Net Operating Income (NOI)**: ${_fmt_dec(noi)}\n"
-                            f"- **Annual Debt Service**: ${_fmt_dec(ads)}\n"
-                            f"- **Calculated DSCR**: **{dscr_val}x**\n"
-                            f"- **Underwriting Covenant Tier**: `{status}`\n\n"
-                            f"**Underwriting Verdict**: Commercial banking standard requires a minimum **1.25x** coverage ratio. With {dscr_val}x, your business {'exceeds institutional safety thresholds' if dscr_val >= Decimal('1.25') else 'faces elevated debt service stress and covenant risk'}."
-                        ),
-                    },
-                ]
-            })
-
-        elif metric_choice == "wcr":
-            rev = Decimal(str(random.randint(1000000, 6000000)))
-            ar = (rev * Decimal(str(round(random.uniform(0.10, 0.25), 2)))).quantize(Decimal("0.01"))
-            inv = (rev * Decimal(str(round(random.uniform(0.08, 0.20), 2)))).quantize(Decimal("0.01"))
-            ap = (rev * Decimal(str(round(random.uniform(0.06, 0.15), 2)))).quantize(Decimal("0.01"))
-
-            wcr_amt, wcr_pct, status = calculate_wcr(accounts_receivable=ar, inventory=inv, accounts_payable=ap, annual_revenue=rev)
-            res_wcr = {
-                "wcr_amount": _fmt_dec(wcr_amt),
-                "wcr_pct_of_revenue": str(wcr_pct) if wcr_pct else "0.0",
-                "working_capital_status": status,
-                "rationale": f"Operating working capital of ${_fmt_dec(wcr_amt)} representing {wcr_pct}% of annual turnover.",
-            }
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "What is our operational working capital requirement?"},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. User Query: Working capital requirement calculation requested without balance sheet inputs.\n"
-                            "2. Action Strategy: Request Accounts Receivable, Inventory, and Accounts Payable.\n"
-                            "</thought>\n\n"
-                            "To calculate your **Operating Working Capital Requirement (WCR)**, please provide:\n"
-                            "1. **Accounts Receivable (A/R)**\n"
-                            "2. **Current Inventory Value**\n"
-                            "3. **Accounts Payable (A/P)**\n"
-                            "4. **Annual Revenue** (Optional, to calculate WCR as % of sales)"
-                        ),
-                    },
-                    {"role": "user", "content": f"Accounts receivable is ${_fmt_dec(ar)}, inventory is ${_fmt_dec(inv)}, accounts payable is ${_fmt_dec(ap)}, and annual turnover is ${_fmt_dec(rev)}."},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"<thought>\n"
-                            f"1. Follow-Up Processing: User supplied A/R ${_fmt_dec(ar)}, Inventory ${_fmt_dec(inv)}, A/P ${_fmt_dec(ap)}, Sales ${_fmt_dec(rev)}.\n"
-                            f"2. Tool Execution Strategy: Strictly dispatching `tool_calculate_wcr`.\n"
-                            f"</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_wcr",
-                            "arguments": {
-                                "accounts_receivable": _fmt_dec(ar),
-                                "inventory": _fmt_dec(inv),
-                                "accounts_payable": _fmt_dec(ap),
-                                "annual_revenue": _fmt_dec(rev),
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_wcr", "content": json.dumps(res_wcr)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"### Operating Working Capital Requirement (WCR) Schedule\n\n"
-                            f"- **Accounts Receivable**: ${_fmt_dec(ar)}\n"
-                            f"- **Inventory Stock**: ${_fmt_dec(inv)}\n"
-                            f"- **Accounts Payable**: ${_fmt_dec(ap)}\n"
-                            f"- **Net Operating WCR**: **${res_wcr['wcr_amount']}** ({res_wcr['wcr_pct_of_revenue']}% of sales)\n"
-                            f"- **Working Capital Status**: `{res_wcr['working_capital_status']}`\n\n"
-                            f"**Treasury Guidance**: Your operating cycle ties up ${res_wcr['wcr_amount']} in operational cash before customer funds are collected."
-                        ),
-                    },
-                ]
-            })
-
-        elif metric_choice == "break_even":
-            fc = Decimal(str(random.randint(150000, 600000)))
-            cm = Decimal(str(random.choice([20, 25, 30, 35, 40]))) / Decimal("100")
-            be_rev = calculate_break_even(fixed_costs=fc, cm_ratio=cm)
-
-            res_be = {
-                "fixed_costs": _fmt_dec(fc),
-                "contribution_margin_ratio": str(cm),
-                "break_even_sales_revenue": _fmt_dec(be_rev),
-            }
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "How much turnover do we need to break even?"},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. Request Inspection: Break-even turnover requested without fixed overhead or margin ratio.\n"
-                            "2. Strategy: Ask for Annual Fixed Costs and Contribution Margin (CM) percentage.\n"
-                            "</thought>\n\n"
-                            "To calculate your exact **Break-Even Revenue**, please provide:\n"
-                            "1. **Annual Fixed Operating Costs** (Rent, full-time salaries, insurance, depreciation)\n"
-                            "2. **Contribution Margin Ratio (%)** (Gross margin minus variable selling expenses as % of sales)"
-                        ),
-                    },
-                    {"role": "user", "content": f"Our fixed costs are ${_fmt_dec(fc)} per year and our average contribution margin is {int(cm * 100)}%."},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"<thought>\n"
-                            f"1. Follow-Up Processing: User supplied Fixed Costs ${_fmt_dec(fc)} and CM Ratio {int(cm * 100)}%.\n"
-                            f"2. Tool Execution Strategy: Strictly dispatching `tool_calculate_break_even`.\n"
-                            f"</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_break_even",
-                            "arguments": {
-                                "fixed_costs": _fmt_dec(fc),
-                                "cm_ratio": str(cm),
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_break_even", "content": json.dumps(res_be)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"### Cost-Volume-Profit Break-Even Revenue Target\n\n"
-                            f"- **Annual Fixed Overhead**: ${_fmt_dec(fc)}\n"
-                            f"- **Contribution Margin Ratio**: {int(cm * 100)}%\n"
-                            f"- **Required Break-Even Turnover**: **${_fmt_dec(be_rev)}**\n\n"
-                            f"**Operating Assessment**: Your business must generate at least **${_fmt_dec(be_rev)}** in revenue each year to cover fixed operating expenses before producing net operating income."
-                        ),
-                    },
-                ]
-            })
-
-        else: # dir
-            qa = Decimal(str(random.randint(80000, 800000)))
-            burn = Decimal(str(random.randint(1500, 10000)))
-            days, tier, rat = calculate_defensive_interval(qa, burn)
-
-            res_dir = {
-                "quick_assets": _fmt_dec(qa),
-                "daily_operating_expenses": _fmt_dec(burn),
-                "defensive_interval_days": str(days),
-                "liquidity_tier": tier,
-                "rationale": rat,
-            }
-
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "How many days of liquid cash runway do we have if revenue drops to zero?"},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. Request Inspection: User requested defensive survival runway without asset or expense figures.\n"
-                            "2. Strategy: Request Quick Liquid Assets and Average Daily Operating Cash Burn.\n"
-                            "</thought>\n\n"
-                            "To compute your **Defensive Interval Ratio (DIR)** in days, please provide:\n"
-                            "1. **Quick Liquid Assets** (Cash on deposit + liquid Accounts Receivable)\n"
-                            "2. **Average Daily Operating Expenses** (Daily cash burn for payroll, rent, utilities)"
-                        ),
-                    },
-                    {"role": "user", "content": f"We have ${_fmt_dec(qa)} in quick liquid assets, and our daily operating expense burn is ${_fmt_dec(burn)}."},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"<thought>\n"
-                            f"1. Follow-Up Processing: Quick Assets ${_fmt_dec(qa)}, Daily Burn ${_fmt_dec(burn)}.\n"
-                            f"2. Tool Execution Strategy: Strictly dispatching `tool_calculate_defensive_interval`.\n"
-                            f"</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_defensive_interval",
-                            "arguments": {
-                                "quick_assets": _fmt_dec(qa),
-                                "daily_operating_expenses": _fmt_dec(burn),
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_defensive_interval", "content": json.dumps(res_dir)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"### Defensive Interval Ratio (DIR) Zero-Revenue Survival Analysis\n\n"
-                            f"- **Quick Liquid Assets**: ${_fmt_dec(qa)}\n"
-                            f"- **Daily Operating Cash Burn**: ${_fmt_dec(burn)} / day\n"
-                            f"- **Defensive Survival Interval**: **{days} Days**\n"
-                            f"- **Liquidity Resilience Tier**: `{tier}`\n\n"
-                            f"**Treasury Guidance**: {rat} You have {days} days of operational cushion to navigate unexpected revenue interruptions."
-                        ),
-                    },
-                ]
-            })
-
-    return records
+        system, q, reply, area = rng.choice(pool)
+        rows.append(make_row(system, q, reply, "", f"concept:{area}"))
+    return rows
 
 
 # ==============================================================================
-# 6. Tool Error & Edge-Case Recovery (Category G)
+# Validation and assembly
 # ==============================================================================
 
-def generate_tool_error_recovery_records(count: int = 100) -> List[Dict[str, Any]]:
-    """Teaches graceful handling of edge cases and calculation errors without crashing or hallucinating."""
-    records = []
-    for _ in range(count):
-        error_type = random.choice(["zero_debt_service", "negative_quick_assets", "unknown_currency", "excessive_advance"])
-
-        if error_type == "zero_debt_service":
-            noi = Decimal(str(random.randint(150000, 500000)))
-            err_payload = {
-                "error": "ANNUAL_DEBT_SERVICE_ZERO",
-                "message": "Annual debt service is zero; mathematical division by zero avoided.",
-            }
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": f"Calculate our DSCR. Our Net Operating Income is ${_fmt_dec(noi)} and our annual debt service is $0.00."},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"<thought>\n"
-                            f"1. Parameter Inspection: NOI ${_fmt_dec(noi)}, Debt Service $0.00.\n"
-                            f"2. Edge Case Warning: Division by zero. Invoking tool_calculate_dscr.\n"
-                            f"</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_dscr",
-                            "arguments": {
-                                "net_operating_income": _fmt_dec(noi),
-                                "total_debt_service": "0.00",
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_dscr", "content": json.dumps(err_payload)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"### Debt Service Coverage Ratio (DSCR): Debt-Free SME Assessment\n\n"
-                            f"- **Net Operating Income**: ${_fmt_dec(noi)}\n"
-                            f"- **Annual Debt Service**: $0.00\n"
-                            f"- **DSCR Status**: **Not Applicable (100% Equity-Financed)**\n\n"
-                            f"**Underwriting Analysis**: Because your business carries zero debt principal or interest obligations, a Debt Service Coverage Ratio cannot be calculated (division by zero). Your operating profit is unencumbered by loan repayments, positioning your company with pristine borrowing capacity for future credit facilities."
-                        ),
-                    },
-                ]
-            })
-
-        elif error_type == "negative_quick_assets":
-            err_payload = {
-                "error": "NEGATIVE_QUICK_ASSETS",
-                "message": "Quick assets cannot be negative. Value represents severe unbacked overdraft.",
-            }
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "What is our Defensive Interval Ratio if our quick assets are -$25,000 and daily burn is $2,000?"},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. Parameter Inspection: Negative quick assets (-$25k).\n"
-                            "2. Edge Case Warning: Liquid assets below zero represents acute balance sheet overdraft.\n"
-                            "</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_defensive_interval",
-                            "arguments": {
-                                "quick_assets": "-25000.00",
-                                "daily_operating_expenses": "2000.00",
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_defensive_interval", "content": json.dumps(err_payload)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "### Defensive Interval Ratio (DIR): Acute Insolvency Alert\n\n"
-                            "- **Reported Quick Assets**: -$25,000.00 (Overdraft State)\n"
-                            "- **Daily Operating Expenses**: $2,000.00 / day\n"
-                            "- **Defensive Survival Interval**: **0 Days (Immediate Liquidity Deficit)**\n\n"
-                            "⚠️ **Critical Treasury Warning**: Quick liquid assets cannot be negative in standard financial modeling. A negative figure indicates that existing bank accounts are severely overdrawn and exceed collectible receivables. Operating runway is currently zero. Immediate action is required to secure an emergency working capital bridge or equity infusion."
-                        ),
-                    },
-                ]
-            })
-
-        elif error_type == "unknown_currency":
-            err_payload = {
-                "error": "UNRESOLVED_CURRENCY_TOKEN",
-                "message": "Currency token 'FOOBAR' does not match any known ISO 4217 standard currency code or symbol.",
-            }
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "Convert 50000 FOOBAR to USD at the current market rate."},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. Currency Conversion Request: Unrecognized token 'FOOBAR'.\n"
-                            "2. Tool Invocation: Dispatching tool_convert_currency to resolve symbol.\n"
-                            "</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_convert_currency",
-                            "arguments": {
-                                "amount": "50000.00",
-                                "from_currency": "FOOBAR",
-                                "to_currency": "USD",
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_convert_currency", "content": json.dumps(err_payload)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "### Currency Conversion Notice: Unrecognized Currency Identifier\n\n"
-                            "I was unable to resolve `'FOOBAR'` to a recognized global currency in the ISO 4217 registry.\n\n"
-                            "Please provide the standard 3-letter currency code (e.g., **EUR**, **GBP**, **JPY**, **CAD**, **BDT**, **INR**, **AED**) or standard currency symbol (e.g. `€`, `£`, `¥`, `৳`), and I will retrieve the live market conversion immediately."
-                        ),
-                    },
-                ]
-            })
-
-        else: # excessive_advance
-            err_payload = {
-                "error": "INVALID_ADVANCE_RATE",
-                "message": "Advance rate exceeds 100%. Commercial invoice factoring cannot exceed face value.",
-            }
-            records.append({
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": "Can we factor our $100,000 invoice at a 120% advance rate?"},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "<thought>\n"
-                            "1. Factoring Inquiry: Advance rate requested is 120% (> 100%).\n"
-                            "2. Commercial Standards: Factor advances cannot exceed 100% of face value.\n"
-                            "</thought>"
-                        ),
-                        "tool_calls": [{
-                            "name": "tool_calculate_factoring_proceeds",
-                            "arguments": {
-                                "invoice_amount": "100000.00",
-                                "advance_rate_pct": "120.00",
-                                "fee_rate_pct": "3.00",
-                                "collection_days": 60,
-                            },
-                        }],
-                    },
-                    {"role": "tool", "name": "tool_calculate_factoring_proceeds", "content": json.dumps(err_payload)},
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "### Invoice Factoring Notice: Invalid Advance Rate\n\n"
-                            "Commercial factoring companies do not advance more than 100% of an invoice's face value.\n\n"
-                            "- **Standard Commercial Advance Range**: **75% to 90%** of invoice value upfront.\n"
-                            "- **Reserve Escrow (10% to 25%)**: Held by the factor until the customer pays in full, then remitted minus factoring fees.\n\n"
-                            "If you require more funding than your invoice total, you should evaluate an asset-based term loan or revenue-based financing facility rather than invoice factoring."
-                        ),
-                    },
-                ]
-            })
-
-    return records
+SENTENCE_END = re.compile(r"[.!?](?:\*\*)?(?=\s|$)")
+METRIC_BULLET = re.compile(r"(?m)^\s*[-*•]\s")
+DIGIT = re.compile(r"\d")
 
 
-# ==============================================================================
-# 7. Tier 2 Permission Gating & Staging Action Records (Category H)
-# ==============================================================================
+def make_row(system: str, user: str, assistant: str, base_reply: str, kind: str) -> Dict[str, Any]:
+    return {
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+            {"role": "assistant", "content": assistant},
+        ],
+        "_base_reply": base_reply,
+        "_kind": kind,
+    }
 
-def generate_action_staging_records(count: int = 100) -> List[Dict[str, Any]]:
-    """Teaches the Three-Tier Security Matrix: Autonomous staging in StagingLedger, NEVER direct execution."""
-    records = []
-    actions = [
-        {"type": "FACTOR_INVOICE", "id_prefix": "INV-2026-", "name": "Invoice Factoring Advance"},
-        {"type": "DRAW_CREDIT_LINE", "id_prefix": "LOC-2026-", "name": "Revolving Line of Credit Draw"},
-        {"type": "SUPPLIER_PAYMENT", "id_prefix": "PO-2026-", "name": "Trade Supplier Disbursement"},
+
+def rejection_reason(row: Dict[str, Any]) -> Optional[str]:
+    system, user, reply = (m["content"] for m in row["messages"])
+    kind, base = row["_kind"], row["_base_reply"]
+    if "###" in reply or "<thought" in reply or METRIC_BULLET.search(reply):
+        return "format"
+    if sanitize_cfo_reply(reply) != reply:
+        return "sanitizer_changes_reply"
+    if not numbers_are_grounded(reply, base, context=f"{system}\n{user}"):
+        return "ungrounded"
+    sentences = len(SENTENCE_END.findall(reply))
+    if base and not 3 <= sentences <= 6:
+        return "sentence_count"
+    if kind.startswith("concept:") and not 2 <= sentences <= 6:
+        return "sentence_count"
+    if kind.endswith(":none") or kind.startswith("missing:"):
+        if DIGIT.search(reply):
+            return "figure_without_statement"
+    return None
+
+
+def skeleton(reply: str) -> str:
+    return re.sub(r"\d[\d,]*(?:\.\d+)?", "#", reply)
+
+
+def opening(reply: str, words: int = 3) -> str:
+    return " ".join(re.sub(r"[*$]", "", reply).lower().split()[:words])
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--cash-statements", type=int, default=900, help="statements for cash rows (2 rows each)")
+    parser.add_argument("--underwriting-statements", type=int, default=500)
+    parser.add_argument("--quant-per-intent", type=int, default=50)
+    parser.add_argument("--concept-cards", type=int, default=450)
+    parser.add_argument("--conversational", type=int, default=300)
+    parser.add_argument("--missing-statement", type=int, default=120)
+    parser.add_argument("--output-dir", default=OUTPUT_DIR)
+    args = parser.parse_args()
+
+    rng = random.Random(args.seed)
+    builders: List[tuple] = [
+        ("cash diagnostic", lambda: build_cash_rows(rng, args.cash_statements)),
+        ("credit underwriting", lambda: build_underwriting_rows(rng, args.underwriting_statements)),
+        ("quantitative calculations", lambda: build_quant_rows(rng, args.quant_per_intent)),
+        ("concept knowledge", lambda: build_concept_card_rows(rng, args.concept_cards)),
+        ("conversational", lambda: build_conversational_rows(rng, args.conversational)),
+        ("missing statement", lambda: build_missing_statement_rows(rng, args.missing_statement)),
     ]
+    candidates: List[Dict[str, Any]] = []
+    for label, build in builders:
+        made = build()
+        print(f"  {label:28s} {len(made):5d} candidate rows", flush=True)
+        candidates.extend(made)
 
-    for _ in range(count):
-        act = random.choice(actions)
-        num = random.randint(100, 999)
-        identifier = f"{act['id_prefix']}{num}"
-        amount = Decimal(str(random.randint(15000, 250000)))
-        amount_cents = int(amount * 100)
-        intent_id = f"intent-{random.randint(10000, 99999)}x"
+    rejections: Counter = Counter()
+    kept = []
+    for row in candidates:
+        reason = rejection_reason(row)
+        if reason:
+            rejections[reason] += 1
+        else:
+            kept.append(row)
+    engine_rows = [r for r in candidates if r["_base_reply"]]
+    grounded = sum(1 for r in engine_rows if numbers_are_grounded(r["messages"][2]["content"], r["_base_reply"], context=f"{r['messages'][0]['content']}\n{r['messages'][1]['content']}"))
 
-        res_payload = {
-            "intent_id": intent_id,
-            "action_type": act["type"],
-            "amount_cents": amount_cents,
-            "target_identifier": identifier,
-            "status": "STAGED_PENDING_HITL",
-            "required_security_tier": "TIER_3_HITL_WEBAUTHN",
-            "message": "Financial intent placed in immutable staging ledger. Awaiting biometric confirmation.",
-        }
+    rng.shuffle(kept)
+    val_size = len(kept) // 10
+    splits = {"finetune_train.jsonl": kept[val_size:], "finetune_val.jsonl": kept[:val_size]}
+    os.makedirs(args.output_dir, exist_ok=True)
+    for name, data in splits.items():
+        with open(os.path.join(args.output_dir, name), "w", encoding="utf-8") as fh:
+            for row in data:
+                fh.write(json.dumps({"messages": row["messages"]}, ensure_ascii=False) + "\n")
 
-        user_msg = f"Please stage a proposal to execute {act['name']} for ${_fmt_dec(amount)} on reference {identifier}."
-
-        thought_content = (
-            f"<thought>\n"
-            f"1. Request Analysis: User requested staging of financial action '{act['type']}' for ${_fmt_dec(amount)}.\n"
-            f"2. Three-Tier Security Matrix Invariant:\n"
-            f"   - Tier 1: Observation (Autonomous).\n"
-            f"   - Tier 2: Staging (Queue proposal in immutable StagingLedger; zero funds move).\n"
-            f"   - Tier 3: Execution (Mandatory Human-in-the-Loop WebAuthn biometric 2FA signature).\n"
-            f"3. Security Mandate: Autonomous AI participants must NEVER disburse funds directly.\n"
-            f"4. Tool Execution Strategy: Dispatch `tool_stage_financial_action` to quarantine the intent in Tier 2.\n"
-            f"</thought>"
-        )
-
-        assistant_reply = (
-            f"### Tier 2 Financial Intent Staged Successfully\n\n"
-            f"- **Intent ID**: `{intent_id}`\n"
-            f"- **Action Type**: `{act['type']}` ({act['name']})\n"
-            f"- **Target Reference**: `{identifier}`\n"
-            f"- **Staged Amount**: **${_fmt_dec(amount)}**\n"
-            f"- **Security Gate Status**: `STAGED_PENDING_HITL`\n"
-            f"- **Required Authorization**: `TIER_3_HITL_WEBAUTHN` (FIDO2 Biometric / Passkey)\n\n"
-            f"🔒 **Zero Autonomous Fund Movement**: This action has been securely queued in the staging ledger. No money will be moved or contracts signed until you provide explicit biometric confirmation via your WebAuthn security key or mobile 2FA prompt."
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_msg},
-                {
-                    "role": "assistant",
-                    "content": thought_content,
-                    "tool_calls": [{
-                        "name": "tool_stage_financial_action",
-                        "arguments": {
-                            "action_type": act["type"],
-                            "amount_cents": amount_cents,
-                            "target_identifier": identifier,
-                            "rationale": f"Working capital liquidity staging for {identifier}",
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_stage_financial_action", "content": json.dumps(res_payload)},
-                {"role": "assistant", "content": assistant_reply},
-            ]
-        })
-    return records
-
-
-# ==============================================================================
-# 8. Multilingual Multi-Currency Records (Category I)
-# ==============================================================================
-
-def generate_multilingual_currency_records(count: int = 100) -> List[Dict[str, Any]]:
-    """Teaches handling queries in major world languages (Spanish, French, German, Mandarin, Bengali, Arabic, Hindi)."""
-    records = []
-    scenarios = [
-        {
-            "lang": "Spanish",
-            "prompt_template": "Recibimos un pago de {amt} {from_curr}. ¿Cuánto es en {to_curr} al tipo de cambio actual?",
-            "answer_template": "### Conversión de Moneda en Tiempo Real\n\n- **Monto Original**: **{amt} {from_curr}**\n- **Tipo de Cambio de Mercado**: `{rate}`\n- **Monto Convertido**: **{net} {to_curr}**\n\n*Nota*: Las tasas de cambio fluctúan continuamente durante el horario de mercado.",
-        },
-        {
-            "lang": "French",
-            "prompt_template": "Nous avons reçu une facture de {amt} {from_curr}. Combien cela représente-t-il en {to_curr} aujourd'hui?",
-            "answer_template": "### Conversion de Devises en Direct\n\n- **Montant Initial**: **{amt} {from_curr}**\n- **Taux de Change Spot**: `{rate}`\n- **Montant Net Converti**: **{net} {to_curr}**\n\n*Remarque*: Les taux de change fluctuent en continu pendant les heures de négociation.",
-        },
-        {
-            "lang": "German",
-            "prompt_template": "Wir haben eine Zahlung von {amt} {from_curr} erhalten. Wie viel ist das heute in {to_curr} wert?",
-            "answer_template": "### Live-Währungsumrechnung\n\n- **Ursprünglicher Betrag**: **{amt} {from_curr}**\n- **Aktueller Marktkurs**: `{rate}`\n- **Umgerechneter Betrag**: **{net} {to_curr}**\n\n*Hinweis*: Wechselkurse schwanken während der Handelszeiten kontinuierlich.",
-        },
-        {
-            "lang": "Mandarin",
-            "prompt_template": "我们收到了一笔 {amt} {from_curr} 的账单。按今日实时汇率换算成 {to_curr} 是多少？",
-            "answer_template": "### 实时外汇汇率换算\n\n- **原始金额**: **{amt} {from_curr}**\n- **实时市场汇率**: `{rate}`\n- **折算后净额**: **{net} {to_curr}**\n\n*外汇波动提示*: 国际外汇市场汇率实时波动，请在最终结算时确认银行报价。",
-        },
-        {
-            "lang": "Bengali",
-            "prompt_template": "আমরা {amt} {from_curr} এর একটি পেমেন্ট পেয়েছি। বর্তমান এক্সচেঞ্জ রেটে {to_curr} এ কত হবে?",
-            "answer_template": "### লাইভ বৈদেশিক মুদ্রা বিনিময় হিসাব\n\n- **মূল পরিমাণ**: **{amt} {from_curr}**\n- **বর্তমান স্পট এক্সচেঞ্জ রেট**: `{rate}`\n- **রূপান্তরিত পরিমাণ**: **{net} {to_curr}**\n\n*মার্কেট নোট*: আন্তর্জাতিক বৈদেশিক মুদ্রার বিনিময় হার ক্রমাগত পরিবর্তিত হয়।",
-        },
-        {
-            "lang": "Arabic",
-            "prompt_template": "استلمنا دفعة قدرها {amt} {from_curr}. كم تبلغ قيمتها بالـ {to_curr} بسعر الصرف اليوم؟",
-            "answer_template": "### تحويل العملات الأجنبية بالأسعار الحية\n\n- **المبلغ الأصلي**: **{amt} {from_curr}**\n- **سعر الصرف الفوري**: `{rate}`\n- **المبلغ الصافي بعد التحويل**: **{net} {to_curr}**\n\n*ملاحظة سوق الصرف*: تتقلب أسعار الصرف باستمرار خلال ساعات التداول الرسمية.",
-        },
-    ]
-
-    currency_pairs = [
-        ("EUR", "USD"), ("GBP", "USD"), ("USD", "EUR"), ("USD", "BDT"),
-        ("USD", "INR"), ("USD", "AED"), ("USD", "SAR"), ("USD", "JPY"),
-    ]
-
-    for _ in range(count):
-        s = random.choice(scenarios)
-        from_code, to_code = random.choice(currency_pairs)
-        amt = Decimal(str(random.randint(15000, 250000)))
-
-        rate_info = get_live_exchange_rate(from_code, to_code)
-        spot_rate = Decimal(str(rate_info["spot_rate"]))
-        conv = calculate_currency_conversion(amt, spot_rate, from_code, to_code)
-
-        user_prompt = s["prompt_template"].format(amt=_fmt_dec(amt), from_curr=from_code, to_curr=to_code)
-        answer = s["answer_template"].format(amt=_fmt_dec(amt), from_curr=from_code, to_curr=to_code, rate=spot_rate, net=conv["net_converted_amount"])
-
-        thought = (
-            f"<thought>\n"
-            f"1. Multilingual Query Analysis ({s['lang']}): Converting {_fmt_dec(amt)} {from_code} to {to_code}.\n"
-            f"2. Strict Tool Calling: Dispatch `tool_convert_currency` (zero mental math).\n"
-            f"3. Language Compliance: Respond in the user's language ({s['lang']}) while maintaining deterministic Decimal accuracy.\n"
-            f"</thought>\n\n"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-                {
-                    "role": "assistant",
-                    "content": thought,
-                    "tool_calls": [{
-                        "name": "tool_convert_currency",
-                        "arguments": {
-                            "amount": _fmt_dec(amt),
-                            "from_currency": from_code,
-                            "to_currency": to_code,
-                        },
-                    }],
-                },
-                {"role": "tool", "name": "tool_convert_currency", "content": json.dumps(conv)},
-                {"role": "assistant", "content": answer},
-            ]
-        })
-def generate_conversational_onboarding_records(count: int = 400) -> List[Dict[str, Any]]:
-    """Generates balanced conversational onboarding, greetings, and missing-data dialogues.
-
-    Crucial for preventing catastrophic forgetting and ensuring the model does not
-    emit hallucinated metric bullet points when a user simply greets or asks questions.
-    """
-    records = []
-
-    greeting_scenarios = [
-        # Pure greetings (English)
-        ("hi", "Hello! I am your Autonomous SME Finance Copilot. I analyze transactional bank statements to compute deterministic cash runway, audit working capital, detect overdraft risks, and evaluate credit facility eligibility. To begin, please upload your bank statement CSV or ask any strategic cash flow question."),
-        ("hello", "Hello! I am your Autonomous SME Finance Copilot. How can I assist with your business finances today? You can upload a transactional bank statement CSV to run an instant financial health diagnosis or inquire about your cash flow."),
-        ("hey", "Hello! I am your Autonomous SME Finance Copilot. I am ready to assist with your business cash flow, burn rate auditing, and financing options. Please upload your bank statement CSV to begin."),
-        ("good morning", "Good morning! I am your Autonomous SME Finance Copilot. I help business owners safeguard cash runway, forecast liquidity deficits, and evaluate non-predatory credit options. How can I assist your business today?"),
-        ("greetings", "Greetings! I am your Autonomous SME Finance Copilot. I specialize in commercial working capital analysis, Daily Average Balance (DAB) underwriting, and predictive deficit alerts. Upload your bank statement CSV to run a complete diagnostic."),
-        ("hi there", "Hello! I am your Autonomous SME Finance Copilot. How can I help you manage your business finances today? Upload your bank statement CSV to get started."),
-
-        # Identity & Capabilities
-        ("who are you?", "I am the Autonomous SME Finance Copilot, an institutional AI Chief Financial Officer (CFO) and financial participant engineered specifically for small and medium enterprises. I provide deterministic cash runway auditing, predictive cash deficit forecasting, working capital optimization, and digital credit underwriting with truth-in-lending APR disclosures."),
-        ("what can you do for my business?", "I provide three core capabilities: 1) Deterministic liquidity diagnostics (calculating Daily Average Balance, daily burn velocity, and exact cash runway); 2) 30/60/90-day predictive deficit early-warning to prevent payroll shortfalls; and 3) Pre-qualified financing matching with transparent APR disclosures. All financial calculations use deterministic mathematics, and financial proposals require your explicit approval before execution."),
-        ("how does this work?", "The process is straightforward: 1) Upload your 90-day bank statement CSV; 2) The deterministic financial engine computes your Daily Average Balance (DAB), net burn rate, and cash runway; 3) The copilot provides strategic CFO recommendations and evaluates borrowing capacity. You can upload your statement CSV in the dropzone to begin."),
-        ("tell me about yourself", "I am an autonomous financial copilot designed to act as a trusted fractional CFO for SME founders. I audit working capital, detect hidden cash crunches, and ensure you access non-predatory financing. To start diagnosing your cash flow, simply upload your bank statement CSV."),
-        ("how do I get started?", "To get started, please upload your transactional bank statement CSV. Once uploaded, I will automatically compute your cash runway, Daily Average Balance, and flag any upcoming cash flow deficits."),
-
-        # Inquiries without statement loaded
-        ("what is my cash runway?", "To calculate your cash runway, I need your transactional bank statement. No bank statement is currently loaded in this session. Please upload your 90-day bank statement CSV so I can calculate your Daily Average Balance and net burn rate."),
-        ("how much can I borrow?", "To evaluate your borrowing capacity and determine qualified credit tiers, I need to analyze your Daily Average Balance (DAB) and revenue volatility. Please upload your bank statement CSV to run a digital underwriting evaluation."),
-        ("check my burn rate", "I am unable to calculate your burn rate because no bank statement has been uploaded yet. Please provide your bank statement CSV to compute your exact daily and monthly cash burn."),
-        ("am I in danger of an overdraft?", "To forecast cash crunches and overdraft risks, I require your bank transaction history. Please upload your bank statement CSV to generate a 30/60/90-day predictive liquidity forecast."),
-        ("is my business profitable?", "To assess your business profitability and cash generation, please upload your bank statement CSV or provide your recent income statement metrics. No financial records are loaded yet in this session."),
-
-        # Educational & domain explanations (without fake client numbers)
-        ("what is cash conversion cycle?", "The Cash Conversion Cycle (CCC) measures the time in days it takes for a business to convert cash invested in operations into cash received from sales. It is calculated as Days Sales Outstanding (DSO) plus Days Inventory Outstanding (DIO) minus Days Payables Outstanding (DPO). A shorter or negative CCC means your business generates cash rapidly without relying on external working capital."),
-        ("what is debt service coverage ratio?", "The Debt Service Coverage Ratio (DSCR) measures a company's ability to service its debt obligations with its operating income. It is calculated as Net Operating Income (or EBITDA) divided by Total Debt Service (principal plus interest). Commercial lenders generally look for a DSCR of 1.25x or higher to confirm safe debt capacity."),
-        ("how does invoice factoring work?", "Invoice factoring allows a business to sell its unpaid customer invoices to a financing company at a discount in exchange for immediate cash. The factor advances 80% to 90% of the invoice value upfront, and pays the remaining balance minus their fee once the customer pays. When evaluating factoring, always review the effective Annual Percentage Rate (APR) rather than just the advance discount rate."),
-        ("why do growing businesses run out of cash?", "Growing businesses frequently experience a working capital trap: rapid revenue growth requires immediate upfront cash for inventory, materials, and payroll, while customer receivables (DSO) take 30 to 60 days to collect. Even if the business is profitable on an accrual basis, operating cash flow turns negative, leading to sudden liquidity crises if unmanaged."),
-
-        # Multilingual greetings
-        ("নমস্কার, আপনি কে?", "নমস্কার! আমি আপনার অটোনোমাস এসএমই ফাইন্যান্স কোপাইলট (Autonomous SME Finance Copilot)। আমি আপনার ব্যবসায়িক ব্যাংক স্টেটমেন্ট বিশ্লেষণ করে ক্যাশ রানওয়ে, দৈনিক খরচ এবং ঋণ পাওয়ার যোগ্যতা নির্ধারণ করি। শুরু করতে অনুগ্রহ করে আপনার ব্যাংক স্টেটমেন্ট CSV আপলোড করুন।"),
-        ("hola, cómo estás?", "¡Hola! Soy tu Copiloto Financiero para PYMEs (SME Finance Copilot). Te ayudo a auditar tu flujo de caja, calcular la duración de tus reservas y evaluar opciones de financiamiento comercial. Para comenzar, por favor sube el archivo CSV de tu extracto bancario."),
-        ("你好", "您好！我是您的中小企业智能财务副驾驶（SME Finance Copilot）。我专注于帮助企业评估现金跑道、监测现金赤字并匹配商业融资方案。请上传您的银行流水 CSV 文件以开始实时财务分析。"),
-        ("नमस्ते", "नमस्ते! मैं आपका ऑटोनॉमस एसएमई फाइनेंस कोपायलट हूँ। मैं आपके बैंक स्टेटमेंट का विश्लेषण करके कैश रनवे, दैनिक खर्च और कार्यशील पूंजी का मूल्यांकन करता हूँ। शुरू करने के लिए कृपया अपना बैंक स्टेटमेंट CSV अपलोड करें।"),
-        ("مرحبا", "مرحباً! أنا مساعدك المالي الذكي للشركات الصغيرة والمتوسطة (SME Finance Copilot). أساعدك في تدقيق السيولة النقدية، والتنبؤ بالعجز المالي، ومطابقة التسهيلات الائتمانية. لبدء التحليل، يرجى تحميل كشف الحساب المصرفي بصيغة CSV."),
-    ]
-
-    for _ in range(count):
-        user_msg, assistant_reply = random.choice(greeting_scenarios)
-        thought_content = (
-            f"<thought>\n"
-            f"1. Conversational Query Analysis: User inquired with '{user_msg}'.\n"
-            f"2. Persona Directives: Boardroom-level institutional CFO greeting and guidance.\n"
-            f"3. Strict Safety Protocol: Zero mental math, zero hallucinated dollar figures, zero fake metric bullet points.\n"
-            f"4. Next Action Guidance: Politely invite the SME owner to upload their bank statement CSV to run deterministic calculations.\n"
-            f"</thought>"
-        )
-
-        records.append({
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_msg},
-                {"role": "assistant", "content": f"{thought_content}\n\n{assistant_reply}"},
-            ]
-        })
-
-    return records
-
-
-
-# ==============================================================================
-# Main Generation Pipeline
-# ==============================================================================
-
-
-def main():
+    replies = [r["messages"][2]["content"] for r in kept]
+    openers = Counter(opening(r) for r in replies)
+    skeletons = Counter(skeleton(r) for r in replies)
+    kinds = Counter(r["_kind"].split(":")[0] for r in kept)
     print("=" * 70)
-    print("SME Finance Copilot — Financial Training Dataset Generator")
-    print("=" * 70)
-
-    all_records: List[Dict[str, Any]] = []
-
-    print("[1/4] Generating Category A: Deterministic Calculation Tool Records...")
-    all_records.extend(generate_altman_z_records(200))
-    all_records.extend(generate_net_debt_ebitda_records(200))
-    all_records.extend(generate_roic_eva_records(200))
-    all_records.extend(generate_dcf_wacc_records(200))
-    all_records.extend(generate_saas_unit_economics_records(200))
-    all_records.extend(generate_dscr_amortization_records(200))
-    all_records.extend(generate_trade_credit_records(200))
-    all_records.extend(generate_factoring_proceeds_records(100))
-    all_records.extend(generate_wcr_records(200))
-    all_records.extend(generate_client_concentration_records(100))
-    all_records.extend(generate_defensive_interval_records(100))
-    all_records.extend(generate_cash_conversion_cycle_records(200))
-    all_records.extend(generate_dupont_roe_records(200))
-    all_records.extend(generate_prudent_debt_capacity_records(200))
-    all_records.extend(generate_break_even_records(200))
-    print(f"      -> Category A completed: {len(all_records)} calculation tool records.")
-
-    print("[2/4] Generating Category B: Live Market Intelligence & Search Records...")
-    cat_b = generate_live_market_search_records(300)
-    all_records.extend(cat_b)
-    print(f"      -> Category B completed: {len(cat_b)} search records.")
-
-    print("[3/4] Generating Category C: Deep Accounting & Financial Concepts...")
-    cat_c = generate_financial_reasoning_records(350)
-    all_records.extend(cat_c)
-    print(f"      -> Category C completed: {len(cat_c)} financial reasoning records.")
-
-    print("[4/9] Generating Category D: Skeptical Underwriting & Clarification Records...")
-    cat_d = generate_missing_parameter_records(350)
-    all_records.extend(cat_d)
-    print(f"      -> Category D completed: {len(cat_d)} clarification records.")
-
-    print("[5/9] Generating Category E: Universal Multi-Currency & Dynamic Live Rates (160+ Currencies)...")
-    cat_e = generate_multi_currency_and_fx_records(350)
-    all_records.extend(cat_e)
-    print(f"      -> Category E completed: {len(cat_e)} universal multi-currency records.")
-
-    print("[6/9] Generating Category F: Multi-Turn Parameter Clarification Dialogues...")
-    cat_f = generate_multiturn_dialogue_records(350)
-    all_records.extend(cat_f)
-    print(f"      -> Category F completed: {len(cat_f)} multi-turn dialogue records.")
-
-    print("[7/9] Generating Category G: Tool Error & Edge-Case Recovery Records...")
-    cat_g = generate_tool_error_recovery_records(150)
-    all_records.extend(cat_g)
-    print(f"      -> Category G completed: {len(cat_g)} tool error recovery records.")
-
-    print("[8/9] Generating Category H: Tier 2 Action Staging & HITL 2FA Governance...")
-    cat_h = generate_action_staging_records(150)
-    all_records.extend(cat_h)
-    print(f"      -> Category H completed: {len(cat_h)} action staging records.")
-
-    print("[9/10] Generating Category I: Multilingual Financial Analysis & Currency Records...")
-    cat_i = generate_multilingual_currency_records(150)
-    all_records.extend(cat_i)
-    print(f"      -> Category I completed: {len(cat_i)} multilingual records.")
-
-    print("[10/10] Generating Category J: Conversational Onboarding, Institutional Greeting & Safe Guidance Records...")
-    cat_j = generate_conversational_onboarding_records(400)
-    all_records.extend(cat_j)
-    print(f"      -> Category J completed: {len(cat_j)} conversational onboarding records.")
-
-    # Shuffle dataset
-    random.seed(42)
-    random.shuffle(all_records)
-
-    total_count = len(all_records)
-    val_size = int(total_count * 0.10)
-    train_size = total_count - val_size
-
-    train_data = all_records[:train_size]
-    val_data = all_records[train_size:]
-
-    train_path = os.path.join(OUTPUT_DIR, "finetune_train.jsonl")
-    val_path = os.path.join(OUTPUT_DIR, "finetune_val.jsonl")
-
-    print(f"\nWriting {train_size} training examples to: {train_path}")
-    with open(train_path, "w", encoding="utf-8") as f:
-        for r in train_data:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-
-    print(f"Writing {val_size} validation examples to: {val_path}")
-    with open(val_path, "w", encoding="utf-8") as f:
-        for r in val_data:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-
-    print("=" * 70)
-    print(f"DATASET GENERATION COMPLETE: {total_count} verified examples.")
-    print(f"- Training set:   {train_size} records")
-    print(f"- Validation set: {val_size} records")
-    print("=" * 70)
+    print(f"Kept {len(kept)} of {len(candidates)} rows ({dict(rejections) or 'no rejections'})")
+    print(f"Grounding pass rate (engine rows): {grounded}/{len(engine_rows)} = {grounded / max(1, len(engine_rows)):.1%}")
+    print(f"Row mix: {dict(kinds)}")
+    print(f"Top 10 opening phrases cover {sum(c for _, c in openers.most_common(10)) / len(replies):.1%} of replies")
+    print(f"Largest reply skeleton: {skeletons.most_common(1)[0][1] / len(replies):.2%} of replies")
+    for name, data in splits.items():
+        print(f"Wrote {len(data)} rows to {os.path.join(args.output_dir, name)}")
 
 
 if __name__ == "__main__":

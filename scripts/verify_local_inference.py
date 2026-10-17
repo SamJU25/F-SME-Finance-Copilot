@@ -20,35 +20,58 @@ except ImportError:
     sys.exit(1)
 
 
-SYSTEM_PROMPT = """You are the SME Finance Copilot, an autonomous financial participant AI engineered for commercial underwriting, working capital analysis, and treasury advisory.
+# Ensure repo root is on sys.path
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
-STRICT OPERATIONAL DIRECTIVES:
-1. ZERO MENTAL MATH: You are strictly forbidden from performing arithmetic or calculating financial ratios in your response text. You must invoke the designated Python calculation tool with typed arguments.
-2. LIVE MARKET RETRIEVAL: For questions regarding real-time benchmark interest rates (SOFR, Fed Funds, Prime Rate), recent government regulations, or live competitor metrics, invoke `tool_search_market_intelligence`. Never fabricate interest rates or regulatory guidelines from memory.
-3. UNDERWRITING SKEPTICISM: If user-provided financial figures are incomplete or ambiguous, do NOT guess. Ask targeted clarifying questions specifying the missing parameters before offering an underwriting verdict.
-4. INSTITUTIONAL ACCURACY: Distinguish strictly between accounting profit (Net Income) and operating cash liquidity (FCFF/FCFE). Warn users proactively about working capital traps, predatory APRs (>36%), and debt covenant breaches.
-"""
+from services.agent.prompts import (
+    get_cash_diagnostic_prompt,
+    get_concept_prompt,
+    get_credit_underwriting_prompt,
+    get_missing_statement_prompt,
+    get_conversational_system_prompt,
+    numbers_are_grounded,
+    sanitize_cfo_reply,
+)
 
 TEST_CASES = [
     {
-        "name": "Altman Z'-Score Tool Calling",
-        "prompt": "Calculate the Altman Z'-Score for our business. Total assets are $2,500,000, working capital is $450,000, retained earnings $600,000, EBIT $350,000, equity $1,800,000, liabilities $700,000, and annual sales $3,200,000.",
+        "name": "Cash Runway Diagnostic (Grounding Verification)",
+        "prompt": "What is our current cash runway?",
+        "system": get_cash_diagnostic_prompt(
+            "RUNWAY",
+            "Your current cash runway is 42.5 days based on net monthly burn of $18,450.00 and closing cash balance of $26,137.50.",
+        ),
     },
     {
-        "name": "Live Benchmark Interest Rate Search",
-        "prompt": "What is the current SOFR rate today for commercial floating-rate debt?",
+        "name": "Credit Underwriting Qualification",
+        "prompt": "Do we qualify for a credit line?",
+        "system": get_credit_underwriting_prompt(
+            "PRE_QUALIFIED",
+            "Based on your 90-day transactions, you pre-qualify for a $50,000 working capital line of credit at 14.5% APR.",
+        ),
     },
     {
-        "name": "Accrual Profit vs Cash Drain Reasoning",
+        "name": "Accrual Profit vs Cash Drain (Concept Explainer)",
         "prompt": "Our net income is positive ($150,000 net profit), but our bank account balance is shrinking every month. Why are we running out of cash if we are profitable?",
+        "system": get_concept_prompt(
+            "Accrual profit records revenue when earned, while cash only increases when collected. Working capital tied up in accounts receivable or inventory can cause cash drain despite positive net income.",
+        ),
     },
     {
-        "name": "Skeptical Underwriting (Missing Parameters)",
+        "name": "Skeptical Underwriting (Missing Statement Guard)",
         "prompt": "Can you calculate our Debt Service Coverage Ratio?",
+        "system": get_missing_statement_prompt(
+            "No bank statement has been uploaded. You must upload a statement CSV or PDF before a Debt Service Coverage Ratio can be calculated.",
+        ),
     },
     {
-        "name": "Multi-Currency & Continuous Rate Change",
-        "prompt": "We received an invoice of €200,000 EUR. Our reporting currency is USD. If the bank quotes a spot exchange rate of 1.0850 EUR/USD with a 25 bps spread, how much net USD will be credited?",
+        "name": "Prudent Debt Capacity (Quantitative Routine)",
+        "prompt": "How much additional debt can we safely take on?",
+        "system": get_conversational_system_prompt(
+            "Based on annual EBITDA of $180,000.00 and existing debt service of $35,000.00, your prudent additional debt capacity is $145,000.00 at a 1.25x minimum DSCR floor.",
+        ),
     },
 ]
 
@@ -146,8 +169,9 @@ def main():
         print(f"User Query: {test['prompt']}")
         print(f"----------------------------------------------------------------------")
 
+        system_prompt = test["system"]
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": test["prompt"]},
         ]
 
@@ -175,6 +199,12 @@ def main():
 
         response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
         print(f"\nModel Output:\n{response}\n")
+
+        grounded = numbers_are_grounded(system_prompt, response)
+        sanitized = sanitize_cfo_reply(response)
+        clean = (sanitized == response)
+        print(f"Grounding Audit: {'PASS' if grounded else 'FAIL (unsupported numbers detected)'}")
+        print(f"Sanitizer Audit: {'PASS' if clean else 'FAIL (slop/formatting violations detected)'}\n")
 
     print("=" * 70)
     print("ALL NATIVE INFERENCE TESTS COMPLETED.")
