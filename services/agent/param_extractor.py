@@ -596,11 +596,15 @@ def extract_attrition_params(text: str, history: Optional[List[Any]] = None) -> 
 
 
 def extract_invoice_hash_params(text: str) -> Dict[str, Any]:
-    """Extracts tax ID, buyer ID, invoice number, and amount cents for invoice verification."""
-    tax_id: str = "12-3456789"
-    buyer_id: str = "BUYER-CORP"
-    invoice_num: str = "INV-001"
-    amount_cents: int = 500000
+    """Extracts tax ID, buyer ID, invoice number, and amount cents for invoice verification.
+
+    Missing fields stay None: hashing placeholder values would report a fabricated invoice
+    as verified and unencumbered.
+    """
+    tax_id: Optional[str] = None
+    buyer_id: Optional[str] = None
+    invoice_num: Optional[str] = None
+    amount_cents: Optional[int] = None
 
     tax_m = re.search(r"(?:tax\s*(?:id|number)?|ein)\s*[:= ]*\s*([A-Za-z0-9\-]+)", text, re.IGNORECASE)
     if tax_m:

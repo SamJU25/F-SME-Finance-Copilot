@@ -121,7 +121,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("FCCR"),
+                reply=enrich_fn(get_missing_param_guidance("FCCR"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -167,7 +167,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("DEBT_CAPACITY"),
+                reply=enrich_fn(get_missing_param_guidance("DEBT_CAPACITY"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -207,7 +207,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("DSCR"),
+                reply=enrich_fn(get_missing_param_guidance("DSCR"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -239,7 +239,7 @@ class CreditSubagent:
                     requires_biometric_hitl=False,
                 )
             return CopilotResponse(
-                reply=get_missing_param_guidance("AMORTIZATION"),
+                reply=enrich_fn(get_missing_param_guidance("AMORTIZATION"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -277,7 +277,7 @@ class CreditSubagent:
                     requires_biometric_hitl=False,
                 )
             return CopilotResponse(
-                reply=get_missing_param_guidance("FACTORING"),
+                reply=enrich_fn(get_missing_param_guidance("FACTORING"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -285,6 +285,12 @@ class CreditSubagent:
         # 6. Blockchain Invoice Hash Verification
         if sub_intent == "INVOICE_HASH":
             p_dict = extract_invoice_hash_params(request.message)
+            if any(v is None for v in p_dict.values()):
+                return CopilotResponse(
+                    reply=enrich_fn(get_missing_param_guidance("INVOICE_HASH"), prompt_type="concept"),
+                    intent_detected="CREDIT_UNDERWRITING",
+                    requires_biometric_hitl=False,
+                )
             res = tool_verify_invoice_hash(
                 tax_id=p_dict["tax_id"],
                 buyer_id=p_dict["buyer_id"],
@@ -336,7 +342,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("DEBT_TO_EQUITY"),
+                reply=enrich_fn(get_missing_param_guidance("DEBT_TO_EQUITY"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -374,7 +380,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("INTEREST_COVERAGE"),
+                reply=enrich_fn(get_missing_param_guidance("INTEREST_COVERAGE"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -418,7 +424,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("LEASE_VS_BUY"),
+                reply=enrich_fn(get_missing_param_guidance("LEASE_VS_BUY"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -469,7 +475,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("ALTMAN_Z_SCORE"),
+                reply=enrich_fn(get_missing_param_guidance("ALTMAN_Z_SCORE"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -509,7 +515,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("NET_DEBT_TO_EBITDA"),
+                reply=enrich_fn(get_missing_param_guidance("NET_DEBT_TO_EBITDA"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -555,7 +561,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("DEBT_SERVICE_BURDEN"),
+                reply=enrich_fn(get_missing_param_guidance("DEBT_SERVICE_BURDEN"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -597,7 +603,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("WACC"),
+                reply=enrich_fn(get_missing_param_guidance("WACC"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -643,7 +649,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("ENTERPRISE_VALUE"),
+                reply=enrich_fn(get_missing_param_guidance("ENTERPRISE_VALUE"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -689,7 +695,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=get_missing_param_guidance("DCF_VALUATION"),
+                reply=enrich_fn(get_missing_param_guidance("DCF_VALUATION"), prompt_type="concept"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )

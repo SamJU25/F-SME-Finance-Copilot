@@ -36,16 +36,23 @@ from services.agent.param_extractor import (
     extract_ocf_ratio_params,
     extract_wcr_params,
 )
-from services.agent.knowledge import append_reference_cards
+from services.agent.knowledge import (
+    append_reference_cards,
+    card_summary,
+    format_reference_cards,
+    retrieve_cards,
+)
 from services.agent.prompts import (
     COPILOT_PERSONA_BASE,
     evaluate_persona_policy,
     get_cash_diagnostic_prompt,
+    get_concept_prompt,
     get_conversational_system_prompt,
     get_credit_underwriting_prompt,
     get_missing_statement_guidance,
     get_missing_statement_prompt,
     get_off_topic_reply,
+    is_question,
     numbers_are_grounded,
     sanitize_cfo_reply,
 )
@@ -166,12 +173,17 @@ def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMC
         eval_message = message
 
     # 3. Dynamic LLM Intent Routing (without hardcoded sentence catalogs)
-    return classify_intent_dynamic(
+    intent = classify_intent_dynamic(
         message=eval_message,
         history=request.history,
         has_csv=has_statement,
         config=config,
     )
+    # A question asks for information; staging a financial proposal requires an instruction
+    # in chat or an explicit staged_action_type from the UI (checked above).
+    if intent == "ACTION_STAGING" and is_question(eval_message):
+        return "GENERAL_ASSISTANCE"
+    return intent
 
 
 def _handle_quantitative_calculation(
@@ -330,6 +342,10 @@ def run_copilot_supervisor(
         Has the model write the whole reply from the verified engine output (base_reply).
         base_reply is returned unchanged when no model is configured or answers, when the
         answer is a refusal, or when it states a figure the engine did not produce.
+
+        prompt_type "concept": base_reply is the "how to calculate" guidance for a question
+        whose inputs are missing. The reply becomes a card-grounded explanation followed by
+        that guidance; without a usable model answer, the top card's own text is used.
         """
         is_explicit_local = (
             effective_config
@@ -339,18 +355,34 @@ def run_copilot_supervisor(
                 or (effective_config.model_name or "").lower() in LOCAL_MODELS
             )
         )
-        if not is_explicit_local and (
-            not effective_config or (effective_config.provider or "offline").lower() == "offline"
-        ):
-            return base_reply
-
-        sys_directive = (
-            get_credit_underwriting_prompt(base_reply)
-            if prompt_type == "underwriting"
-            else get_cash_diagnostic_prompt(base_reply)
+        has_model = is_explicit_local or (
+            effective_config is not None and (effective_config.provider or "offline").lower() != "offline"
         )
-        sys_directive = _append_session_context(sys_directive, session_rec)
-        sys_directive = append_reference_cards(sys_directive, request.message)
+
+        if prompt_type == "concept":
+            cards = retrieve_cards(request.message)
+            if not cards:
+                return base_reply
+            fallback = f"{card_summary(cards[0])}\n\n{base_reply}"
+            if not has_model:
+                return fallback
+            sys_directive = format_reference_cards(
+                _append_session_context(get_concept_prompt(), session_rec), cards
+            )
+            # Concept answers restate no engine result, so only invented figures are checked.
+            grounding_source = ""
+        else:
+            if not has_model:
+                return base_reply
+            fallback = base_reply
+            sys_directive = (
+                get_credit_underwriting_prompt(base_reply)
+                if prompt_type == "underwriting"
+                else get_cash_diagnostic_prompt(base_reply)
+            )
+            sys_directive = _append_session_context(sys_directive, session_rec)
+            sys_directive = append_reference_cards(sys_directive, request.message)
+            grounding_source = base_reply
 
         if is_explicit_local:
             raw_reply = generate_local_reply(
@@ -372,20 +404,20 @@ def run_copilot_supervisor(
         if (
             len(written) > 20
             and not is_ai_disclaimer(written)
-            and numbers_are_grounded(written, base_reply, context=f"{sys_directive}\n{request.message}")
+            and numbers_are_grounded(written, grounding_source, context=f"{sys_directive}\n{request.message}")
         ):
-            return written
+            return f"{written}\n\n{base_reply}" if prompt_type == "concept" else written
 
         if is_explicit_local and "PYTEST_CURRENT_TEST" not in os.environ:
             from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS
             any_local = any(trans_engine.is_available(m) for m in SUPPORTED_LOCAL_MODELS.keys()) or slm_engine.is_available()
             if not any_local:
                 return (
-                    f"{base_reply}\n\n"
+                    f"{fallback}\n\n"
                     f"> ℹ️ *Strategic CFO recommendations require an on-device AI model. No local AI model was detected on disk. "
                     f"Please download a model first using the **Download Model** button below or in AI Provider Settings.*"
                 )
-        return base_reply
+        return fallback
 
     # 0. Prompt Injection Defense Barrier
     if intent == "SECURITY_DEFENSE_TRIGGERED":

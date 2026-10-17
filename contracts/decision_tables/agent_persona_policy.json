@@ -262,6 +262,17 @@
             "out_guidance": "\"To calculate your Fixed Charge Coverage Ratio (FCCR), please provide your annual EBITDA, fixed charges (e.g. equipment/property leases), and annual debt service.\\n\\nExample format: 'Calculate FCCR for EBITDA $200,000, fixed charges $40,000, and debt service $60,000'.\\n\\nInstitutional Threshold: FCCR >= 1.25x signifies adequate coverage of fixed operational debt covenants.\""
           },
           {
+            "_id": "rule_missing_param_invoice_hash",
+            "_description": "Missing parameter prompt for consortium invoice hash verification",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'INVOICE_HASH'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To verify an invoice on the consortium registry, please provide the supplier tax ID, buyer ID, invoice number, and invoice amount.\\n\\nExample format: 'Verify invoice hash for tax ID 12-3456789, buyer BUYER-CORP, invoice INV-001 for $5,000'.\\n\\nVerification checks whether the invoice is already pledged to another lender before it is financed.\""
+          },
+          {
             "_id": "rule_missing_param_debt_capacity",
             "_description": "Missing parameter prompt for Prudent Debt Capacity calculation",
             "in_pt": "'MISSING_PARAM'",

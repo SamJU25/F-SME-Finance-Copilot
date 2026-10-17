@@ -1394,6 +1394,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         )
 
         missing_params = {
+            "INVOICE_HASH": "To verify an invoice on the consortium registry, please provide the supplier tax ID, buyer ID, invoice number, and invoice amount.\n\nExample format: 'Verify invoice hash for tax ID 12-3456789, buyer BUYER-CORP, invoice INV-001 for $5,000'.\n\nVerification checks whether the invoice is already pledged to another lender before it is financed.",
             "FCCR": "To calculate your Fixed Charge Coverage Ratio (FCCR), please provide your annual EBITDA, fixed charges (e.g. equipment/property leases), and annual debt service.\n\nExample format: 'Calculate FCCR for EBITDA $200,000, fixed charges $40,000, and debt service $60,000'.\n\nInstitutional Threshold: FCCR >= 1.25x signifies adequate coverage of fixed operational debt covenants.",
             "DEBT_CAPACITY": "To evaluate your maximum prudent debt capacity, please upload your bank statement CSV or specify your annual Net Operating Income (NOI).\n\nExample format: 'What is our maximum prudent borrowing capacity with $120,000 NOI at 1.25x DSCR?'",
             "DSCR": "To calculate your Debt Service Coverage Ratio (DSCR), please provide your annual Net Operating Income (NOI) and total annual debt service.\n\nExample format: 'What is our DSCR if annual NOI is $150,000 and debt payments are $100,000?'\n\nBenchmark: DSCR >= 1.25x represents institutional prime underwriting threshold.",

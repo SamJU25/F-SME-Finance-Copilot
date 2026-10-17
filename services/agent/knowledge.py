@@ -84,8 +84,7 @@ def retrieve_cards(query: str, k: int = TOP_K, min_similarity: float = MIN_SIMIL
         return []
 
 
-def append_reference_cards(sys_directive: str, query: str) -> str:
-    cards = retrieve_cards(query)
+def format_reference_cards(sys_directive: str, cards: list[Card]) -> str:
     if not cards:
         return sys_directive
     notes = "\n\n".join(f"### {c.title}\n{c.text}" for c in cards)
@@ -95,3 +94,17 @@ def append_reference_cards(sys_directive: str, query: str) -> str:
         "only from the verified engine outputs or the owner's message):\n\n"
         f"{notes}"
     )
+
+
+def append_reference_cards(sys_directive: str, query: str) -> str:
+    return format_reference_cards(sys_directive, retrieve_cards(query))
+
+
+def card_summary(card: Card) -> str:
+    """The card's definition and importance as plain prose, used when no model is available."""
+    parts = []
+    for label in ("What it is:", "Why it matters:"):
+        match = re.search(rf"\*\*{re.escape(label)}\*\*\s*(.+)", card.text)
+        if match:
+            parts.append(match.group(1).strip())
+    return " ".join(parts)

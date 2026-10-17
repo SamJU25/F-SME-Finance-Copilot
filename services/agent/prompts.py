@@ -128,6 +128,41 @@ def get_missing_param_guidance(sub_intent: str) -> str:
     return payload.get("guidance_text") or ""
 
 
+CONCEPT_GUIDELINES = (
+    "Concept Explanation Guidelines:\n"
+    "The business owner asked about a financial concept but has not given the figures needed to calculate it.\n"
+    "1. Explain the concept in 2 to 4 sentences of plain prose, using the Reference notes below as your source.\n"
+    "2. Say why it matters for a small business and what a healthy versus a warning value looks like.\n"
+    "3. Do not calculate anything or invent figures about this business; only quote thresholds that appear in the notes.\n"
+    "4. Do not repeat the calculation instructions; they are shown to the owner separately.\n\n"
+    "STRICT PROHIBITIONS:\n"
+    "- DO NOT output '###' headings, bullet lists, or <thought> blocks.\n"
+    "- DO NOT use corporate fluff or slop buzzwords."
+)
+
+
+def get_concept_prompt() -> str:
+    """System prompt for explaining a concept when the inputs for its calculation are missing."""
+    return f"{get_base_persona()}\n\n{CONCEPT_GUIDELINES}"
+
+
+# Interrogative and auxiliary openers. A message phrased as a question asks for information,
+# so the supervisor never turns it into a staged financial action.
+_QUESTION_OPENERS = (
+    "what", "why", "how", "when", "where", "who", "which", "whose",
+    "is", "are", "was", "were", "do", "does", "did", "can", "could",
+    "should", "would", "will", "may", "might", "explain",
+)
+
+
+def is_question(text: str) -> bool:
+    stripped = (text or "").strip()
+    if stripped.endswith("?"):
+        return True
+    first = re.split(r"[\s,]+", stripped.lower(), maxsplit=1)[0] if stripped else ""
+    return first in _QUESTION_OPENERS
+
+
 def resolve_subagent_routing(sub_intent: str) -> str:
     """Resolves target specialist subagent for a financial sub-intent by reference via JDM decision table."""
     payload = evaluate_persona_policy(prompt_type="SUBAGENT_ROUTING", sub_intent=sub_intent)
