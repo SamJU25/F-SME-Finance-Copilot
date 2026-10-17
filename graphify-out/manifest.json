@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792249057.0044377,
-    "seen": 1792249072.752961,
-    "ast_hash": "b25a85c8e0f6ba60248e3c90bbfd9aec",
+    "mtime": 1792262271.6436405,
+    "seen": 1792262480.8699014,
+    "ast_hash": "a28b177c11f2d77f04cc281ec37a1efc",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -1086,9 +1086,9 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1792229643.6603582,
-    "seen": 1792229779.8428974,
-    "ast_hash": "6442820e77b47053c42da4a102932dc0",
+    "mtime": 1792262309.9369822,
+    "seen": 1792262480.871827,
+    "ast_hash": "49a343cefe135963fc83f601308f8513",
     "semantic_hash": ""
   },
   "docs/archive/SME_Finance_Copilot_Complete_Architectural_Plan.md": {
@@ -1104,15 +1104,15 @@
     "semantic_hash": ""
   },
   "docs/security.md": {
-    "mtime": 1792229713.5978532,
-    "seen": 1792229779.843699,
-    "ast_hash": "4435f523bbb245ff071f264c8f6b61d8",
+    "mtime": 1792262319.8690915,
+    "seen": 1792262480.8726926,
+    "ast_hash": "40a1a6b50e7614e860c2b84460154946",
     "semantic_hash": ""
   },
   "docs/system.md": {
-    "mtime": 1792229687.7130485,
-    "seen": 1792229779.8437014,
-    "ast_hash": "93d310cb6490269f575ede72399a8e5a",
+    "mtime": 1792262349.9534774,
+    "seen": 1792262480.8726943,
+    "ast_hash": "e34af03354950d4827067d69c7ed95f9",
     "semantic_hash": ""
   },
   ".agent/workflows/sprint-workflow.md": {
@@ -1230,9 +1230,9 @@
     "semantic_hash": ""
   },
   "docs/team_execution_plan.md": {
-    "mtime": 1792229248.8171601,
-    "seen": 1792229779.8437057,
-    "ast_hash": "68063fc49bab6d2d0b5de60f50b2a284",
+    "mtime": 1792262287.0775373,
+    "seen": 1792262480.8728063,
+    "ast_hash": "c6927333a89c1e826ddecb7d0e1eafe5",
     "semantic_hash": ""
   },
   "api/routes/analyze.py": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792252354.1918612,
-    "seen": 1792252487.5194566,
-    "ast_hash": "6948ce1263c0cfe6f882eef97911b2f4",
+    "mtime": 1792262251.7794974,
+    "seen": 1792262480.832348,
+    "ast_hash": "0b043be6227791903c7741796c876dae",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1316,7 +1316,7 @@
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
     "seen": 1792259713.4986596,
-    "ast_hash": "571b58b08346dc437d70e4123ec7925c",
+    "ast_hash": "",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -1452,9 +1452,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792255013.3395953,
-    "seen": 1792255093.9335139,
-    "ast_hash": "822001e2fd15d363460a2a935fe2a403",
+    "mtime": 1792262188.513564,
+    "seen": 1792262480.8367946,
+    "ast_hash": "1437b4ca03b44d3d749545450566cb46",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -1860,9 +1860,9 @@
     "semantic_hash": ""
   },
   "services/agent/local_transformers.py": {
-    "mtime": 1792252304.238427,
-    "seen": 1792252487.5210226,
-    "ast_hash": "e4d57fc95beff2f2d87f8a4a7ac4dfb5",
+    "mtime": 1792262178.421885,
+    "seen": 1792262480.8356898,
+    "ast_hash": "07c8e2f4d247fc1248da89ba7f5eb6b7",
     "semantic_hash": ""
   },
   "services/calculations/currency.py": {
@@ -1908,9 +1908,9 @@
     "semantic_hash": ""
   },
   "tests/unit/test_download_model.py": {
-    "mtime": 1792252386.2197711,
-    "seen": 1792252487.528826,
-    "ast_hash": "348f3b5bdb766d5660cb017a505bec85",
+    "mtime": 1792262222.094848,
+    "seen": 1792262480.846507,
+    "ast_hash": "30cc7129f59669ddb902788a8ad87247",
     "semantic_hash": ""
   },
   "contracts/decision_tables/bank_statement_profile_policy.json": {
@@ -1998,9 +1998,9 @@
     "semantic_hash": ""
   },
   "docs/PROJECT_REPORT_AND_POSTMORTEM.md": {
-    "mtime": 1792231424.724647,
-    "seen": 1792231459.9002976,
-    "ast_hash": "4541e93bff2f517b95ff5fbe5536dd19",
+    "mtime": 1792262398.7946837,
+    "seen": 1792262480.870694,
+    "ast_hash": "12534c4ddeae6caf483a34b8efd3e3a2",
     "semantic_hash": ""
   },
   "services/security/passkeys.py": {

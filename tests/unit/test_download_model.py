@@ -41,11 +41,6 @@ def test_canonical_model_resolution():
     assert resolve_canonical_model_name("offline") == "sme-finance-lora"
     assert resolve_canonical_model_name("local") == "sme-finance-lora"
     assert resolve_canonical_model_name("sme-finance-lora") == "sme-finance-lora"
-    # Retired 0.5B IDs from saved browser settings migrate to the 3B adapter
-    assert resolve_canonical_model_name("sme-finance-mobile-lora") == "sme-finance-lora"
-    assert resolve_canonical_model_name("qwen-0.5b-mobile") == "sme-finance-lora"
-    assert "sme-finance-mobile-lora" not in SUPPORTED_LOCAL_MODELS
-    assert "qwen2.5-0.5b-instruct" not in SUPPORTED_LOCAL_MODELS
 
 
 def test_download_model_invalid_identifier():
@@ -99,7 +94,7 @@ def test_api_download_model_route(client):
 
 
 def test_fetch_remote_models_reports_only_flagship_adapter():
-    """Ensures discovery endpoint lists only the fine-tuned 3B adapter, omitting base and retired 0.5B models."""
+    """Ensures discovery endpoint lists only the fine-tuned 3B adapter, omitting base foundation models."""
     resp = fetch_remote_models(FetchModelsRequest(provider="offline"))
     assert resp.success is True
     ids = [m.id for m in resp.models]

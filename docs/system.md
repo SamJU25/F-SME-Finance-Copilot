@@ -137,7 +137,7 @@ Evaluates continuous score across weighted sub-components (DAB stability 35%, Ru
   }
   ```
 - **Motion Physics**: Emil Kowalski spring transitions ($\le 280\text{ms}$ duration, tension: 170, friction: 26).
-- **In-App AI Provider Settings Modal**: Allows configuration of active provider (Local LoRA 3B/0.5B, Gemini, Claude, OpenAI, DeepSeek, Groq, Ollama), base URL, API keys with client-side `localStorage` encryption, and live connection test.
+- **In-App AI Provider Settings Modal**: Allows configuration of active provider (Local LoRA 3B, Gemini, Claude, OpenAI, DeepSeek, Groq, Ollama), base URL, API keys with client-side `localStorage` encryption, and live connection test.
 - **Dynamic Model Discovery**: Fetches available models live from provider endpoint.
 
 ### 3.2 Four-State Component Protocol
@@ -221,10 +221,9 @@ Intent classification uses FastEmbed ONNX (`BAAI/bge-small-en-v1.5`) vector embe
 - Eliminates hardcoded keyword intercepts and brittle regex matching.
 - Dispatches query to corresponding deterministic engine before invoking LLM synthesis.
 
-### 5.2 Dual Local SLM Inference Engine
-`LocalTransformersEngine` (`services/agent/local_transformers_engine.py`) provides local, air-gapped inference via PyTorch CUDA/CPU:
-- **Flagship 3B Model**: `models/sme-finance-lora` (Qwen2.5-3B-Instruct base + LoRA adapter) for deep financial analysis.
-- **Edge 0.5B Model**: `models/sme-finance-mobile-lora` (Qwen2.5-0.5B-Instruct base + LoRA adapter) for low-latency edge deployment.
+### 5.2 Local SLM Inference Engine
+`LocalTransformersEngine` (`services/agent/local_transformers.py`) provides local, air-gapped inference via PyTorch CUDA:
+- **Flagship 3B Model**: `models/sme-finance-lora` (Qwen2.5-3B-Instruct base + LoRA adapter) for deep financial analysis and tool calling.
 
 ### 5.3 Universal LLM Bridge
 `services/agent/llm_bridge.py` routes prompts to cloud or local providers:

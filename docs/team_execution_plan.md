@@ -2,7 +2,7 @@
 
 **Purpose:** The central technical contract and verified operational plan for the SME Finance Copilot. It defines current verified capabilities, API/data schemas, architecture domains, and acceptance criteria. [`AGENTS.md`](../AGENTS.md) tracks repository-wide operational protocols.
 
-> **Status checked 2026-10-17:** All core endpoints and services are implemented, verified by **416 passing automated tests** in `pytest -q`. Implemented subsystems include multi-format bank statement ingestion (CSV and PDF with balance tie-out), 25+ deterministic financial calculation engines, ZenEngine JSON policy decision tables, dual local SLM inference (Flagship 3B and Edge 0.5B LoRA adapters), Universal LLM Bridge with dynamic model discovery, FastEmbed ONNX semantic intent routing, continuous liquidity scoring, 3-tier security gate with WebAuthn biometric passkey confirmation, and multi-stage Docker containerization.
+> **Status checked 2026-10-18:** All core endpoints and services are implemented, verified by **668 passing automated tests** in `pytest -q`. Implemented subsystems include multi-format bank statement ingestion (CSV and PDF with balance tie-out), 25+ deterministic financial calculation engines, ZenEngine JSON policy decision tables, local SLM inference (Flagship 3B LoRA adapter), Universal LLM Bridge with dynamic model discovery, FastEmbed ONNX semantic intent routing, 92 concept cards with semantic retrieval, continuous liquidity scoring, 3-tier security gate with WebAuthn biometric passkey confirmation, and multi-stage Docker containerization.
 
 ---
 
@@ -27,8 +27,8 @@ The SME Finance Copilot operates as an autonomous financial participant providin
 4. **Continuous Liquidity Scoring &gray-zone Underwriting**:
    - Objective 0–100 liquidity score with gray-zone triage for Prime, Near-Prime, and Subprime categories (`services/matcher/liquidity_matcher.py`).
    - Truth-in-Lending factor-rate to APR conversion with automated flags for predatory facilities (>36.00% APR).
-5. **Dual Local SLM & Universal Cloud LLM Bridge**:
-   - On-device local inference via `LocalTransformersEngine` for Qwen2.5 3B (`models/sme-finance-lora`) and 0.5B (`models/sme-finance-mobile-lora`) LoRA models on PyTorch CUDA/CPU.
+5. **Local SLM & Universal Cloud LLM Bridge**:
+   - On-device local inference via `LocalTransformersEngine` for Qwen2.5 3B (`models/sme-finance-lora`) LoRA model on PyTorch CUDA.
    - Universal LLM bridge supporting Gemini 2.0 Flash, Claude 3.5 Sonnet, GPT-4o, DeepSeek, Groq, Ollama, and custom endpoints.
    - Dynamic live model discovery via `POST /api/v1/agent/fetch-models` and connection testing via `POST /api/v1/agent/test-connection`.
    - Pre-flight PII redaction and prompt injection defense.

@@ -50,8 +50,8 @@ The architecture decouples **Untrusted Conversational Reasoning** from **Determi
 ┌────────────────────────────────────────────────────────────────────────┐
 │ LAYER 3: AGENTIC SUPERVISOR & UNIVERSAL LLM BRIDGE                     │
 │ • Dynamic Semantic Routing: FastEmbed ONNX (BAAI/bge-small-en-v1.5)    │
-│ • Dual Local SLM Inference Engine: LocalTransformersEngine             │
-│   - Flagship 3B (models/sme-finance-lora) & Edge 0.5B (mobile-lora)    │
+│ • Local SLM Inference Engine: LocalTransformersEngine                  │
+│   - Flagship 3B (models/sme-finance-lora)                              │
 │ • Universal LLM Bridge (services/agent/llm_bridge.py):                 │
 │   - Gemini 2.0 Flash, Claude 3.5 Sonnet, GPT-4o, DeepSeek, Groq, Ollama│
 │ • Dynamic Model Discovery (POST /api/v1/agent/fetch-models)            │
@@ -212,6 +212,6 @@ Sprint 5: Consortium Blockchain Anchor (contracts/ & services/blockchain/) — V
 
 Sprint 6: Next.js Executive Dashboard & Universal LLM Bridge (frontend/ & services/agent/) — VERIFIED
   • Scope: Next.js 14 App Router, In-App AI Provider Settings Modal, dynamic model discovery,
-    FastEmbed ONNX semantic router, Dual Local SLM (3B/0.5B LoRA), and live connection testing.
+    FastEmbed ONNX semantic router, Local SLM (Flagship 3B LoRA), and live connection testing.
   • Status: Responsive dashboard, live WebSocket alerts, tabular-nums typography, 4-state components.
 ```

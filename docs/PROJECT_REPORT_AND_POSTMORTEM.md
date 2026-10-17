@@ -55,11 +55,10 @@ ZenEngine declarative JSON decision tables decoupled from procedural code:
 - `working_capital.json`: Evaluates CCC, inventory turnover, and DSO health.
 - `persona_risk_policy.json`: Tunes underwriting appetite per business persona.
 
-### 2.4 Dual Local SLM Inference Engine (`services/agent/`)
+### 2.4 Local SLM Inference Engine (`services/agent/`)
 - `LocalTransformersEngine` (`local_transformers.py`):
   - **Flagship 3B Model**: `models/sme-finance-lora` (Qwen2.5-3B-Instruct base + LoRA adapter) for deep financial analysis on CUDA GPUs.
-  - **Edge 0.5B Model**: `models/sme-finance-mobile-lora` (Qwen2.5-0.5B-Instruct base + LoRA adapter) for low-latency CPU and mobile edge execution.
-- Auto-detects device hardware: selects 0.5B on CPU environments to prevent token generation stalls, reserving 3B for CUDA devices.
+  - (Smaller edge models were fully retired and removed due to lower reasoning quality and slow CPU generation; CPU environments fall back to deterministic responses and semantic concept card retrieval).
 
 ### 2.5 Universal LLM Bridge (`services/agent/llm_bridge.py`)
 - Multi-provider gateway supporting Gemini 2.0 Flash, Claude 3.5 Sonnet, GPT-4o, DeepSeek, Groq, Ollama, Local LoRA, and Custom OpenAI endpoints.
@@ -89,12 +88,12 @@ ZenEngine declarative JSON decision tables decoupled from procedural code:
 - **Root Cause**: `agent_chat` in `api/routes/agent.py` was defined as `async def`, but executed synchronous, CPU-intensive PyTorch matrix multiplication (`generate_local_reply`) directly on the main thread. This starved the asyncio event loop. Furthermore, `resolve_canonical_model_name(None)` defaulted to the 3B parameter model, which takes ~60-90s on CPU without CUDA.
 - **Permanent Fix**:
   1. Wrapped all synchronous model execution and network probe calls in `api/routes/agent.py` with Starlette's `run_in_threadpool`.
-  2. Implemented dynamic CPU fallback in `generate_local_reply`: if `torch.cuda.is_available()` is False and no explicit model is specified, it auto-selects the 0.5B mobile model (`sme-finance-mobile-lora`), reducing CPU generation time from 90s to under 1.5s.
+  2. Standardized on the 3B flagship adapter for CUDA environments, while CPU environments rely on deterministic calculation engines and FastEmbed concept card retrieval instead of low-capability mobile models.
 
 ### Mistake 2: Test Suite Breakage from Modifying Model Alias Normalizer
-- **Symptom**: `tests/unit/test_download_model.py::test_canonical_model_resolution` failed with `AssertionError: assert 'sme-finance-mobile-lora' == 'sme-finance-lora'`.
-- **Root Cause**: Attempted to place the hardware-aware CPU fallback inside the string normalizer `resolve_canonical_model_name`, violating its pure contract.
-- **Permanent Fix**: Preserved `resolve_canonical_model_name` as an alias normalizer returning `"sme-finance-lora"`, and placed the CPU fallback logic inside the execution dispatcher (`generate_local_reply`) where runtime hardware decisions belong.
+- **Symptom**: `tests/unit/test_download_model.py::test_canonical_model_resolution` failed with unexpected model ID mappings.
+- **Root Cause**: Attempted to place dynamic hardware-aware fallback inside the string normalizer `resolve_canonical_model_name`, violating its pure contract.
+- **Permanent Fix**: Preserved `resolve_canonical_model_name` as a pure alias normalizer returning `"sme-finance-lora"`, and placed hardware runtime decisions in the execution dispatcher where they belong.
 
 ### Mistake 3: Pydantic v2 `extra="forbid"` Strictness Dropping Requests
 - **Symptom**: Client tests received HTTP 422 Unprocessable Content on `POST /api/v1/agent/test-connection`.

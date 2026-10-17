@@ -61,9 +61,6 @@ def resolve_canonical_model_name(name: Optional[str]) -> str:
         "sme-finance-lora",
         "lora",
         "3b",
-        # Retired 0.5B IDs still saved in browser settings resolve to the flagship model.
-        "sme-finance-mobile-lora",
-        "qwen-0.5b-mobile",
     ):
         return "sme-finance-lora"
     if n in (

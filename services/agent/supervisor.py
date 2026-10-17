@@ -297,8 +297,6 @@ def run_copilot_supervisor(
     LOCAL_PROVIDERS = ("offline", "local", "local_native")
     LOCAL_MODELS = (
         "sme-finance-lora",
-        "sme-finance-mobile-lora",
-        "qwen-0.5b-mobile",
         "sme-finance-copilot-merged",
         "local",
         "offline",
