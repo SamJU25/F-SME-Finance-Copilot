@@ -13,3 +13,6 @@ pytest>=8.2.0
 
 # Deterministic JSON Decision Model (JDM) Rule Engine
 zen-engine>=2.1.3
+
+# PDF bank statement text & table extraction
+pypdf>=5.1.0

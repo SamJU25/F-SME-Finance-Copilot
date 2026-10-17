@@ -52,15 +52,26 @@ temp/
 *.lock
 .freebuff/
 graphify-out/cache/ast/
+graphify-out/cache/*.tmp
 
 # Internal Team Notes & Informal Materials
 TEAM_CHEAT_SHEET*
 *_cheat_sheet*
 *.scratch.*
 
-# Local Model Weights
+# Local Model Weights, Checkpoints & Archives
 models/
+checkpoint-*/
+*.zip
+*.tar
+*.tar.gz
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
 
 # Local Session Store Cache
 .sessions/
+
 
