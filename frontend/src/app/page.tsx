@@ -484,7 +484,6 @@ const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defau
 
 const SUPPORTED_OFFLINE_MODELS: ModelItem[] = [
   { id: 'sme-finance-lora', name: 'SME Finance Copilot 3B (Flagship LoRA 4-Bit)' },
-  { id: 'sme-finance-mobile-lora', name: 'SME Finance Copilot Mobile 0.5B (Edge LoRA)' },
 ];
 
 function money(value: string, currency: string): string {
@@ -504,9 +503,6 @@ function money(value: string, currency: string): string {
 
 function getEngineDisplayName(config: LLMConfig): string {
   if (config.provider === 'offline') {
-    if (config.model_name === 'sme-finance-mobile-lora') {
-      return 'SME Finance Mobile LoRA (Offline)';
-    }
     return 'SME Finance LoRA (Offline)';
   }
   if (config.model_name && !config.model_name.startsWith('http')) {
@@ -871,11 +867,11 @@ export default function HomePage() {
   // Multi-Provider AI Settings State
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
     provider: 'offline',
-    model_name: 'sme-finance-mobile-lora',
+    model_name: 'sme-finance-lora',
   });
   const [draftConfig, setDraftConfig] = useState<LLMConfig>({
     provider: 'offline',
-    model_name: 'sme-finance-mobile-lora',
+    model_name: 'sme-finance-lora',
   });
   const [showSettings, setShowSettings] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -971,8 +967,8 @@ export default function HomePage() {
       const saved = localStorage.getItem('sme_copilot_llm_config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.provider === 'offline' && (!parsed.model_name || parsed.model_name === 'deterministic-v1' || parsed.model_name.includes('llama') || parsed.model_name === 'sme-finance-lora')) {
-          parsed.model_name = 'sme-finance-mobile-lora';
+        if (parsed.provider === 'offline' && (!parsed.model_name || parsed.model_name === 'deterministic-v1' || parsed.model_name.includes('llama') || parsed.model_name === 'sme-finance-mobile-lora')) {
+          parsed.model_name = 'sme-finance-lora';
           try {
             localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
           } catch {
@@ -981,7 +977,7 @@ export default function HomePage() {
         }
         if (parsed.provider === 'ollama') {
           parsed.provider = 'offline';
-          parsed.model_name = 'sme-finance-mobile-lora';
+          parsed.model_name = 'sme-finance-lora';
           try {
             localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
           } catch {

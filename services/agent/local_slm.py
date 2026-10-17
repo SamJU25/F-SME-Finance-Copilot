@@ -155,21 +155,11 @@ def generate_local_reply(
     temperature: float = 0.1,
     model_name: Optional[str] = None,
 ) -> Optional[str]:
-    """Generates an offline response using fine-tuned LoRA or mobile model with local engine."""
+    """Generates an offline response using the fine-tuned 3B LoRA adapter via the local engine."""
     from services.agent.local_transformers import LocalTransformersEngine
     trans_engine = LocalTransformersEngine.get_instance()
 
     target_model = model_name
-    if not target_model:
-        has_cuda = False
-        try:
-            import torch
-            has_cuda = torch.cuda.is_available()
-        except Exception:
-            pass
-        if not has_cuda and trans_engine.is_available("sme-finance-mobile-lora"):
-            target_model = "sme-finance-mobile-lora"
-
     if trans_engine.is_available(target_model):
         return trans_engine.generate(
             prompt=prompt,

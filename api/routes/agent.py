@@ -65,7 +65,7 @@ async def agent_fetch_models(
     response_model=DownloadModelResponse,
     status_code=status.HTTP_200_OK,
     summary="Download Local Model Weights on Demand",
-    description="Explicitly downloads weights for supported local models (sme-finance-lora or qwen-0.5b-mobile) with robust exception handling.",
+    description="Explicitly downloads weights for supported local models (sme-finance-lora or qwen2.5-3b-instruct) with robust exception handling.",
 )
 async def agent_download_model(
     request: DownloadModelRequest,

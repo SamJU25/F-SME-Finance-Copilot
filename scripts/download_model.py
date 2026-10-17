@@ -71,7 +71,7 @@ def main() -> None:
         "--model",
         type=str,
         default=None,
-        help="Target model to download ('sme-finance-mobile-lora', 'sme-finance-lora', or 'all')",
+        help="Target model to download ('sme-finance-lora', 'qwen2.5-3b-instruct', or 'all')",
     )
     parser.add_argument(
         "--delete",
@@ -103,10 +103,8 @@ def main() -> None:
         list_models(engine)
         if not args.model:
             print("To download or verify a model, run:")
-            print("  python scripts/download_model.py --model sme-finance-mobile-lora")
             print("  python scripts/download_model.py --model sme-finance-lora")
             print("\nTo delete downloaded base weights to reclaim disk space:")
-            print("  python scripts/download_model.py --delete sme-finance-mobile-lora")
             print("  python scripts/download_model.py --delete sme-finance-lora\n")
         return
 

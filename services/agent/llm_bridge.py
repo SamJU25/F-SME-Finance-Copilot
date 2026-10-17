@@ -407,15 +407,12 @@ def query_external_llm(
 FALLBACK_CATALOG: dict[str, list[ModelItem]] = {
     "offline": [
         ModelItem(id="sme-finance-lora", name="SME Finance Copilot 3B (Flagship LoRA 4-Bit)"),
-        ModelItem(id="sme-finance-mobile-lora", name="SME Finance Copilot Mobile 0.5B (Edge LoRA)"),
     ],
     "local": [
         ModelItem(id="sme-finance-lora", name="SME Finance Copilot 3B (Flagship LoRA 4-Bit)"),
-        ModelItem(id="sme-finance-mobile-lora", name="SME Finance Copilot Mobile 0.5B (Edge LoRA)"),
     ],
     "local_native": [
         ModelItem(id="sme-finance-lora", name="SME Finance Copilot 3B (Flagship LoRA 4-Bit)"),
-        ModelItem(id="sme-finance-mobile-lora", name="SME Finance Copilot Mobile 0.5B (Edge LoRA)"),
     ],
     "gemini": [
         ModelItem(id="gemini-2.0-flash", name="Gemini 2.0 Flash (Recommended)"),

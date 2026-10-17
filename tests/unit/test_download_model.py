@@ -41,11 +41,11 @@ def test_canonical_model_resolution():
     assert resolve_canonical_model_name("offline") == "sme-finance-lora"
     assert resolve_canonical_model_name("local") == "sme-finance-lora"
     assert resolve_canonical_model_name("sme-finance-lora") == "sme-finance-lora"
-    assert resolve_canonical_model_name("sme-finance-mobile-lora") == "sme-finance-mobile-lora"
-    assert resolve_canonical_model_name("qwen-0.5b-mobile") == "sme-finance-mobile-lora"
-    assert resolve_canonical_model_name("qwen-0.5b") == "sme-finance-mobile-lora"
-    assert resolve_canonical_model_name("0.5b") == "sme-finance-mobile-lora"
-    assert resolve_canonical_model_name("mobile") == "sme-finance-mobile-lora"
+    # Retired 0.5B IDs from saved browser settings migrate to the 3B adapter
+    assert resolve_canonical_model_name("sme-finance-mobile-lora") == "sme-finance-lora"
+    assert resolve_canonical_model_name("qwen-0.5b-mobile") == "sme-finance-lora"
+    assert "sme-finance-mobile-lora" not in SUPPORTED_LOCAL_MODELS
+    assert "qwen2.5-0.5b-instruct" not in SUPPORTED_LOCAL_MODELS
 
 
 def test_download_model_invalid_identifier():
@@ -61,7 +61,7 @@ def test_download_model_network_exception_handling():
     """Simulates network timeout/failure during download to verify robust exception handling."""
     engine = LocalTransformersEngine.get_instance()
     with patch("huggingface_hub.snapshot_download", side_effect=ConnectionError("Failed to resolve host 'huggingface.co'")):
-        res = engine.download_model("qwen-0.5b-mobile")
+        res = engine.download_model("sme-finance-lora")
         assert res["success"] is False
         assert "Network connection error" in res["message"] or "Failed to resolve host" in res["message"]
         assert res["downloaded_path"] is None
@@ -71,7 +71,7 @@ def test_download_model_disk_space_exception_handling():
     """Simulates insufficient disk space to verify friendly OS error handling."""
     engine = LocalTransformersEngine.get_instance()
     with patch("huggingface_hub.snapshot_download", side_effect=OSError("No space left on device")):
-        res = engine.download_model("qwen-0.5b-mobile")
+        res = engine.download_model("sme-finance-lora")
         assert res["success"] is False
         assert "Insufficient disk space" in res["message"] or "space" in res["message"]
 
@@ -83,51 +83,47 @@ def test_api_download_model_route(client):
         "download_model",
         return_value={
             "success": True,
-            "model_name": "qwen-0.5b-mobile",
-            "message": "Model 'qwen-0.5b-mobile' downloaded successfully (480.2 MB).",
-            "downloaded_path": "/mock/path/qwen-0.5b",
-            "size_mb": 480.2,
+            "model_name": "sme-finance-lora",
+            "message": "Model 'sme-finance-lora' downloaded successfully (5886.0 MB).",
+            "downloaded_path": "/mock/path/models/base/Qwen2.5-3B-Instruct",
+            "size_mb": 5886.0,
         },
     ):
-        resp = client.post("/api/v1/agent/download-model", json={"model_name": "qwen-0.5b-mobile"})
+        resp = client.post("/api/v1/agent/download-model", json={"model_name": "sme-finance-lora"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
-        assert data["model_name"] == "qwen-0.5b-mobile"
-        assert data["size_mb"] == 480.2
+        assert data["model_name"] == "sme-finance-lora"
+        assert data["size_mb"] == 5886.0
         assert "downloaded successfully" in data["message"]
 
 
-def test_fetch_remote_models_reports_both_tiers():
-    """Ensures discovery endpoint lists only the 2 fine-tuned models, omitting confusing base models."""
+def test_fetch_remote_models_reports_only_flagship_adapter():
+    """Ensures discovery endpoint lists only the fine-tuned 3B adapter, omitting base and retired 0.5B models."""
     resp = fetch_remote_models(FetchModelsRequest(provider="offline"))
     assert resp.success is True
-    assert len(resp.models) == 2
     ids = [m.id for m in resp.models]
-    assert "sme-finance-lora" in ids
-    assert "sme-finance-mobile-lora" in ids
-    assert "qwen2.5-3b-instruct" not in ids
-    assert "qwen2.5-0.5b-instruct" not in ids
+    assert ids == ["sme-finance-lora"]
 
 
 def test_download_model_saves_into_folder():
     """Verifies download_model passes local_dir to snapshot_download to store weights inside project models folder."""
     engine = LocalTransformersEngine.get_instance()
     with patch("huggingface_hub.snapshot_download") as mock_snapshot:
-        mock_snapshot.return_value = "F:\\SME Finance Copilot\\models\\base\\Qwen2.5-0.5B-Instruct"
-        res = engine.download_model("sme-finance-mobile-lora")
+        mock_snapshot.return_value = "F:/SME Finance Copilot/models/base/Qwen2.5-3B-Instruct"
+        res = engine.download_model("sme-finance-lora")
         assert res["success"] is True
         mock_snapshot.assert_called_once()
         _, kwargs = mock_snapshot.call_args
         assert "local_dir" in kwargs
-        assert kwargs["local_dir"].endswith("Qwen2.5-0.5B-Instruct")
+        assert kwargs["local_dir"].endswith("Qwen2.5-3B-Instruct")
 
 
 def test_test_connection_missing_model_handling():
     """Verifies that test_connection returns actionable guidance asking to download a model first."""
     engine = LocalTransformersEngine.get_instance()
     with patch.object(engine, "is_available", return_value=False):
-        resp = run_test_llm_connection(TestConnectionRequest(provider="offline", model_name="qwen-0.5b-mobile"))
+        resp = run_test_llm_connection(TestConnectionRequest(provider="offline", model_name="sme-finance-lora"))
         assert resp.success is False
         assert "not installed locally on disk" in resp.message
         assert "Download Model" in resp.message
@@ -156,7 +152,7 @@ def test_supervisor_asks_to_download_model_when_none_installed():
         with patch.object(engine, "is_available", return_value=False):
             req = AgentChatRequest(
                 message="Hello, how can you help my business?",
-                llm_config=LLMConfig(provider="offline", model_name="sme-finance-mobile-lora"),
+                llm_config=LLMConfig(provider="offline", model_name="sme-finance-lora"),
             )
             resp = run_copilot_supervisor(req, llm_config=req.llm_config)
             assert "Autonomous SME Finance Copilot" in resp.reply
@@ -169,20 +165,17 @@ def test_supervisor_asks_to_download_model_when_none_installed():
 
 def test_delete_model_protects_adapters(tmp_path):
     """Verifies that delete_model only targets base model directory and strictly preserves adapters."""
-    from services.agent.local_transformers import LORA_MODEL_DIR, MOBILE_MODEL_DIR
+    from services.agent.local_transformers import LORA_MODEL_DIR
     engine = LocalTransformersEngine.get_instance()
 
-    # Confirm adapter folders exist and are never deleted
+    # Confirm the adapter folder exists and is never deleted
     assert os.path.exists(LORA_MODEL_DIR)
-    assert os.path.exists(MOBILE_MODEL_DIR)
 
     with patch("shutil.rmtree") as mock_rmtree:
-        res = engine.delete_model("sme-finance-mobile-lora")
-        # Ensure rmtree was never called on LORA or MOBILE adapter directory
+        engine.delete_model("sme-finance-lora")
         for call_args in mock_rmtree.call_args_list:
             target_deleted = call_args[0][0]
             assert target_deleted != LORA_MODEL_DIR
-            assert target_deleted != MOBILE_MODEL_DIR
             assert "base" in target_deleted or "hub" in target_deleted
 
 
@@ -193,18 +186,18 @@ def test_api_delete_model_route(client):
         "delete_model",
         return_value={
             "success": True,
-            "model_name": "sme-finance-mobile-lora",
-            "message": "Model 'sme-finance-mobile-lora' removed successfully (942.0 MB freed).",
-            "deleted_path": "/mock/path/models/base/Qwen2.5-0.5B-Instruct",
-            "freed_mb": 942.0,
+            "model_name": "sme-finance-lora",
+            "message": "Model 'sme-finance-lora' removed successfully (5886.0 MB freed).",
+            "deleted_path": "/mock/path/models/base/Qwen2.5-3B-Instruct",
+            "freed_mb": 5886.0,
         },
     ):
-        resp = client.post("/api/v1/agent/delete-model", json={"model_name": "sme-finance-mobile-lora"})
+        resp = client.post("/api/v1/agent/delete-model", json={"model_name": "sme-finance-lora"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
-        assert data["model_name"] == "sme-finance-mobile-lora"
-        assert data["freed_mb"] == 942.0
+        assert data["model_name"] == "sme-finance-lora"
+        assert data["freed_mb"] == 5886.0
         assert "removed successfully" in data["message"]
 
 

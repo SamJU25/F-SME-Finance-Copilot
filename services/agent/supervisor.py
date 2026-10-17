@@ -290,39 +290,27 @@ def run_copilot_supervisor(
         "offline",
     )
 
-    # Default to Local fine-tuned or SLM model if available and not in automated test harness
     trans_engine = LocalTransformersEngine.get_instance()
     slm_engine = LocalSLMEngine.get_instance()
-    if (
-        (
-            effective_config is None
-            or ((effective_config.provider or "").lower() in LOCAL_PROVIDERS and not effective_config.model_name)
-        )
-        and "PYTEST_CURRENT_TEST" not in os.environ
-        and (trans_engine.is_available() or slm_engine.is_available())
-    ):
-        has_cuda = False
-        try:
-            import torch
-            has_cuda = torch.cuda.is_available()
-        except Exception:
-            pass
-        if has_cuda and trans_engine.is_available("sme-finance-lora"):
-            chosen_model = "sme-finance-lora"
-        elif trans_engine.is_available("sme-finance-mobile-lora"):
-            chosen_model = "sme-finance-mobile-lora"
-        elif trans_engine.is_available("qwen2.5-0.5b-instruct"):
-            chosen_model = "qwen2.5-0.5b-instruct"
-        else:
-            chosen_model = "sme-finance-mobile-lora"
-        effective_config = LLMConfig(provider="offline", model_name=chosen_model)
-
     has_cuda = False
     try:
         import torch
         has_cuda = torch.cuda.is_available()
     except Exception:
         pass
+
+    # Auto-select the 3B adapter only with CUDA: on CPU it needs ~12 GB RAM in float32 and
+    # swaps on 16 GB machines, so without a GPU replies stay deterministic unless a model is chosen.
+    if (
+        (
+            effective_config is None
+            or ((effective_config.provider or "").lower() in LOCAL_PROVIDERS and not effective_config.model_name)
+        )
+        and "PYTEST_CURRENT_TEST" not in os.environ
+        and has_cuda
+        and trans_engine.is_available("sme-finance-lora")
+    ):
+        effective_config = LLMConfig(provider="offline", model_name="sme-finance-lora")
 
 
     intent = detect_intent(request.message, request, config=effective_config)

@@ -22,20 +22,8 @@ MERGED_MODEL_DIR = os.path.abspath(
 LORA_MODEL_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../models/sme-finance-lora")
 )
-MOBILE_MODEL_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../models/sme-finance-mobile-lora")
-)
-LEGACY_MOBILE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../models/qwen-0.5b-mobile")
-)
-MOBILE_LORA_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../models/qwen-0.5b-lora")
-)
 BASE_3B_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../models/base/Qwen2.5-3B-Instruct")
-)
-BASE_05B_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../models/base/Qwen2.5-0.5B-Instruct")
 )
 
 SUPPORTED_LOCAL_MODELS = {
@@ -49,16 +37,6 @@ SUPPORTED_LOCAL_MODELS = {
         "is_lora": True,
         "device_preferred": "cuda",
     },
-    "sme-finance-mobile-lora": {
-        "id": "sme-finance-mobile-lora",
-        "name": "SME Finance Copilot Mobile 0.5B (Edge LoRA)",
-        "repo_id": "Qwen/Qwen2.5-0.5B-Instruct",
-        "local_dir": MOBILE_MODEL_DIR,
-        "base_dir": BASE_05B_DIR,
-        "description": "Ultra-lightweight 0.5B model engineered for 4GB RAM phones & CPU devices (~450 MB RAM).",
-        "is_lora": True,
-        "device_preferred": "cpu",
-    },
     "qwen2.5-3b-instruct": {
         "id": "qwen2.5-3b-instruct",
         "name": "Qwen 2.5 3B Instruct (Base Foundation)",
@@ -67,15 +45,6 @@ SUPPORTED_LOCAL_MODELS = {
         "description": "Original un-finetuned 3B foundation model for baseline reasoning comparison.",
         "is_lora": False,
         "device_preferred": "cuda",
-    },
-    "qwen2.5-0.5b-instruct": {
-        "id": "qwen2.5-0.5b-instruct",
-        "name": "Qwen 2.5 0.5B Instruct (Base Foundation)",
-        "repo_id": "Qwen/Qwen2.5-0.5B-Instruct",
-        "local_dir": BASE_05B_DIR,
-        "description": "Original un-finetuned 0.5B foundation model for baseline edge/mobile comparison.",
-        "is_lora": False,
-        "device_preferred": "cpu",
     },
 }
 
@@ -92,19 +61,11 @@ def resolve_canonical_model_name(name: Optional[str]) -> str:
         "sme-finance-lora",
         "lora",
         "3b",
+        # Retired 0.5B IDs still saved in browser settings resolve to the flagship model.
+        "sme-finance-mobile-lora",
+        "qwen-0.5b-mobile",
     ):
         return "sme-finance-lora"
-    if n in (
-        "sme-finance-mobile-lora",
-        "sme-finance-mobile",
-        "mobile-lora",
-        "qwen-0.5b-mobile",
-        "qwen-0.5b",
-        "mobile",
-        "0.5b",
-        "qwen-mobile",
-    ):
-        return "sme-finance-mobile-lora"
     if n in (
         "qwen2.5-3b-instruct",
         "qwen2.5-3b-base",
@@ -114,15 +75,6 @@ def resolve_canonical_model_name(name: Optional[str]) -> str:
         "qwen/qwen2.5-3b-instruct",
     ):
         return "qwen2.5-3b-instruct"
-    if n in (
-        "qwen2.5-0.5b-instruct",
-        "qwen2.5-0.5b-base",
-        "qwen-0.5b-base",
-        "0.5b-base",
-        "base-0.5b",
-        "qwen/qwen2.5-0.5b-instruct",
-    ):
-        return "qwen2.5-0.5b-instruct"
     return n
 
 
@@ -174,42 +126,6 @@ class LocalTransformersEngine:
                         pass
             return False
 
-        if c_name in ("sme-finance-mobile-lora", "qwen-0.5b-mobile"):
-            if os.path.exists(os.path.join(MOBILE_MODEL_DIR, "model.safetensors")):
-                return True
-            if os.path.exists(os.path.join(MOBILE_MODEL_DIR, "adapter_config.json")):
-                try:
-                    import peft  # noqa: F401
-                except ImportError:
-                    return False
-                if os.path.exists(os.path.join(BASE_05B_DIR, "config.json")):
-                    return True
-                try:
-                    from huggingface_hub import try_to_load_from_cache
-                    cached = try_to_load_from_cache(
-                        "Qwen/Qwen2.5-0.5B-Instruct", "model.safetensors"
-                    )
-                    if cached is not None and os.path.exists(str(cached)):
-                        return True
-                except Exception:
-                    pass
-            if os.path.exists(os.path.join(LEGACY_MOBILE_DIR, "model.safetensors")):
-                return True
-            if os.path.exists(os.path.join(LEGACY_MOBILE_DIR, "adapter_config.json")):
-                return True
-            if os.path.exists(os.path.join(MOBILE_LORA_DIR, "adapter_config.json")):
-                return True
-            try:
-                from huggingface_hub import try_to_load_from_cache
-                cached = try_to_load_from_cache(
-                    "Qwen/Qwen2.5-0.5B-Instruct", "model.safetensors"
-                )
-                if cached is not None and os.path.exists(str(cached)):
-                    return True
-            except Exception:
-                pass
-            return False
-
         if c_name in ("qwen2.5-3b-instruct", "qwen2.5-3b-base"):
             if os.path.exists(os.path.join(BASE_3B_DIR, "config.json")):
                 return True
@@ -217,20 +133,6 @@ class LocalTransformersEngine:
                 from huggingface_hub import try_to_load_from_cache
                 cached = try_to_load_from_cache(
                     "Qwen/Qwen2.5-3B-Instruct", "model-00001-of-00002.safetensors"
-                )
-                if cached is not None and os.path.exists(str(cached)):
-                    return True
-            except Exception:
-                pass
-            return False
-
-        if c_name in ("qwen2.5-0.5b-instruct", "qwen2.5-0.5b-base"):
-            if os.path.exists(os.path.join(BASE_05B_DIR, "config.json")):
-                return True
-            try:
-                from huggingface_hub import try_to_load_from_cache
-                cached = try_to_load_from_cache(
-                    "Qwen/Qwen2.5-0.5B-Instruct", "model.safetensors"
                 )
                 if cached is not None and os.path.exists(str(cached)):
                     return True
@@ -247,26 +149,10 @@ class LocalTransformersEngine:
             if os.path.exists(os.path.join(MERGED_MODEL_DIR, "config.json")):
                 return MERGED_MODEL_DIR
             return LORA_MODEL_DIR
-        if c_name in ("sme-finance-mobile-lora", "qwen-0.5b-mobile"):
-            if os.path.exists(os.path.join(MOBILE_MODEL_DIR, "adapter_config.json")):
-                return MOBILE_MODEL_DIR
-            if os.path.exists(os.path.join(MOBILE_MODEL_DIR, "model.safetensors")):
-                return MOBILE_MODEL_DIR
-            if os.path.exists(os.path.join(LEGACY_MOBILE_DIR, "adapter_config.json")):
-                return LEGACY_MOBILE_DIR
-            if os.path.exists(os.path.join(LEGACY_MOBILE_DIR, "model.safetensors")):
-                return LEGACY_MOBILE_DIR
-            if os.path.exists(os.path.join(MOBILE_LORA_DIR, "adapter_config.json")):
-                return MOBILE_LORA_DIR
-            return MOBILE_MODEL_DIR
         if c_name in ("qwen2.5-3b-instruct", "qwen2.5-3b-base"):
             if os.path.exists(BASE_3B_DIR):
                 return BASE_3B_DIR
             return "Qwen/Qwen2.5-3B-Instruct"
-        if c_name in ("qwen2.5-0.5b-instruct", "qwen2.5-0.5b-base"):
-            if os.path.exists(BASE_05B_DIR):
-                return BASE_05B_DIR
-            return "Qwen/Qwen2.5-0.5B-Instruct"
         return LORA_MODEL_DIR
 
     def _ensure_loaded(self, model_name: Optional[str] = None) -> bool:
@@ -321,57 +207,6 @@ class LocalTransformersEngine:
                 if has_cuda:
                     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
 
-                if c_name in ("sme-finance-mobile-lora", "qwen-0.5b-mobile", "qwen2.5-0.5b-instruct", "qwen2.5-0.5b-base"):
-                    model_path = self.get_model_path(c_name)
-                    logger.info("Loading ultra-lightweight mobile/0.5B model '%s' from %s...", c_name, model_path)
-
-                    is_lora = (
-                        os.path.exists(os.path.join(model_path, "adapter_config.json"))
-                        and not os.path.exists(os.path.join(model_path, "config.json"))
-                    )
-
-                    base_id = "Qwen/Qwen2.5-0.5B-Instruct"
-                    if is_lora:
-                        with open(os.path.join(model_path, "adapter_config.json"), "r", encoding="utf-8") as f:
-                            adapter_cfg = json.load(f)
-                        base_id = adapter_cfg.get("base_model_name_or_path", "Qwen/Qwen2.5-0.5B-Instruct")
-                    if os.path.exists(os.path.join(BASE_05B_DIR, "config.json")):
-                        base_id = BASE_05B_DIR
-
-                    tok_path = model_path if os.path.exists(os.path.join(model_path, "tokenizer_config.json")) else base_id
-                    self._tokenizer = AutoTokenizer.from_pretrained(
-                        tok_path,
-                        local_files_only=True,
-                        trust_remote_code=True,
-                    )
-                    if self._tokenizer.pad_token is None:
-                        self._tokenizer.pad_token = self._tokenizer.eos_token
-
-
-                    # Mobile model is ~450MB RAM, optimized for CPU execution or small GPU
-                    load_kwargs = {
-                        "local_files_only": True,
-                        "trust_remote_code": True,
-                        "torch_dtype": torch.float32,
-                    }
-                    if has_cuda and vram_gb >= 2.0:
-                        load_kwargs["device_map"] = "auto"
-                        load_kwargs["torch_dtype"] = torch.float16
-
-                    if is_lora:
-                        from peft import PeftModel
-                        base_model = AutoModelForCausalLM.from_pretrained(base_id, **load_kwargs)
-                        self._model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
-                    else:
-                        self._model = AutoModelForCausalLM.from_pretrained(model_path, **load_kwargs)
-
-                    self._model.eval()
-                    self._is_ready = True
-                    self._active_model_name = c_name
-                    logger.info("Local mobile model '%s' loaded successfully (is_lora=%s).", c_name, is_lora)
-                    return True
-
-                # Default: sme-finance-lora
                 model_path = self.get_model_path(c_name)
                 logger.info("Loading native fine-tuned model '%s' from %s...", c_name, model_path)
 
@@ -538,8 +373,8 @@ class LocalTransformersEngine:
 
         Strict Invariant:
         Only downloaded base foundation weights (in models/base/) are removed.
-        Fine-tuned adapter configurations and weights (in models/sme-finance-lora/ and
-        models/sme-finance-mobile-lora/) are protected and will NEVER be deleted.
+        Fine-tuned adapter configurations and weights (in models/sme-finance-lora/) are
+        protected and will NEVER be deleted.
         """
         import shutil
 
@@ -557,12 +392,7 @@ class LocalTransformersEngine:
         base_dir = meta.get("base_dir") if meta.get("is_lora") else meta["local_dir"]
 
         # Hard security guard: adapter folders are protected and can never be deleted
-        protected_adapter_dirs = {
-            os.path.abspath(LORA_MODEL_DIR),
-            os.path.abspath(MOBILE_MODEL_DIR),
-            os.path.abspath(LEGACY_MOBILE_DIR),
-            os.path.abspath(MOBILE_LORA_DIR),
-        }
+        protected_adapter_dirs = {os.path.abspath(LORA_MODEL_DIR)}
         if os.path.abspath(base_dir) in protected_adapter_dirs:
             return {
                 "success": False,
