@@ -99,3 +99,46 @@ def test_invoice_verification_without_details_asks_for_them():
     reply = run_copilot_supervisor(AgentChatRequest(message="Verify this invoice hash for me")).reply
     assert "please provide the supplier tax ID" in reply
     assert "Canonical Cryptographic Hash" not in reply
+
+
+def test_every_missing_input_calculation_maps_to_a_real_tool():
+    import re
+    from pathlib import Path
+
+    from services.agent.knowledge import CALCULATION_TOOLS
+
+    root = Path(__file__).resolve().parents[2]
+    tools = set(re.findall(r"^def (tool_\w+)", (root / "services/agent/tools.py").read_text(encoding="utf-8"), re.M))
+    used = set()
+    for path in (root / "services/agent/subagents").glob("*_subagent.py"):
+        used |= set(re.findall(r'get_missing_param_guidance\("([A-Z_]+)"\)', path.read_text(encoding="utf-8")))
+    assert used <= set(CALCULATION_TOOLS), used - set(CALCULATION_TOOLS)
+    assert set(CALCULATION_TOOLS.values()) <= tools
+
+
+def test_misrouted_concept_question_omits_unrelated_calculation_steps():
+    reply = run_copilot_supervisor(AgentChatRequest(message="Explain the cash conversion cycle")).reply
+    assert "CCC = DSO" in reply
+    assert "Cash Drag" not in reply
+
+
+def test_passkey_question_omits_invoice_verification_steps():
+    reply = run_copilot_supervisor(AgentChatRequest(message="Why does the app need a passkey?")).reply
+    assert "passkey" in reply.lower()
+    assert "verify an invoice" not in reply
+
+
+def test_card_naming_the_tool_is_preferred_and_steps_kept():
+    reply = run_copilot_supervisor(
+        AgentChatRequest(message="what happens to my loan if interest rates go up?")
+    ).reply
+    assert reply.startswith("A fixed rate stays the same")
+    assert "To calculate your commercial loan amortization" in reply
+
+
+def test_calculation_without_cards_keeps_steps():
+    from services.agent.knowledge import retrieve_cards, select_concept_card
+
+    cards = retrieve_cards("What is enterprise value?")
+    _, include_steps = select_concept_card(cards, "ENTERPRISE_VALUE")
+    assert include_steps

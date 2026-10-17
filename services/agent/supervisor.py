@@ -41,6 +41,7 @@ from services.agent.knowledge import (
     card_summary,
     format_reference_cards,
     retrieve_cards,
+    select_concept_card,
 )
 from services.agent.prompts import (
     COPILOT_PERSONA_BASE,
@@ -337,15 +338,16 @@ def run_copilot_supervisor(
         )
     )
 
-    def _enrich_reply(base_reply: str, prompt_type: str = "diagnostic") -> str:
+    def _enrich_reply(base_reply: str, prompt_type: str = "diagnostic", calculation: Optional[str] = None) -> str:
         """
         Has the model write the whole reply from the verified engine output (base_reply).
         base_reply is returned unchanged when no model is configured or answers, when the
         answer is a refusal, or when it states a figure the engine did not produce.
 
-        prompt_type "concept": base_reply is the "how to calculate" guidance for a question
-        whose inputs are missing. The reply becomes a card-grounded explanation followed by
-        that guidance; without a usable model answer, the top card's own text is used.
+        prompt_type "concept": base_reply is the "how to calculate" guidance for `calculation`,
+        a question whose inputs are missing. The reply becomes a card-grounded explanation,
+        followed by that guidance only when a retrieved card covers the calculation; without a
+        usable model answer, the selected card's own text is used.
         """
         is_explicit_local = (
             effective_config
@@ -363,7 +365,9 @@ def run_copilot_supervisor(
             cards = retrieve_cards(request.message)
             if not cards:
                 return base_reply
-            fallback = f"{card_summary(cards[0])}\n\n{base_reply}"
+            summary_card, include_steps = select_concept_card(cards, calculation)
+            steps = f"\n\n{base_reply}" if include_steps else ""
+            fallback = f"{card_summary(summary_card)}{steps}"
             if not has_model:
                 return fallback
             sys_directive = format_reference_cards(
@@ -406,7 +410,7 @@ def run_copilot_supervisor(
             and not is_ai_disclaimer(written)
             and numbers_are_grounded(written, grounding_source, context=f"{sys_directive}\n{request.message}")
         ):
-            return f"{written}\n\n{base_reply}" if prompt_type == "concept" else written
+            return f"{written}{steps}" if prompt_type == "concept" else written
 
         if is_explicit_local and "PYTEST_CURRENT_TEST" not in os.environ:
             from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS

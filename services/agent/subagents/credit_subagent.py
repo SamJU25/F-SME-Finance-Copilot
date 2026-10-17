@@ -121,7 +121,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("FCCR"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("FCCR"), prompt_type="concept", calculation="FCCR"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -167,7 +167,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DEBT_CAPACITY"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DEBT_CAPACITY"), prompt_type="concept", calculation="DEBT_CAPACITY"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -207,7 +207,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DSCR"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DSCR"), prompt_type="concept", calculation="DSCR"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -239,7 +239,7 @@ class CreditSubagent:
                     requires_biometric_hitl=False,
                 )
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("AMORTIZATION"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("AMORTIZATION"), prompt_type="concept", calculation="AMORTIZATION"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -277,7 +277,7 @@ class CreditSubagent:
                     requires_biometric_hitl=False,
                 )
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("FACTORING"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("FACTORING"), prompt_type="concept", calculation="FACTORING"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -287,7 +287,7 @@ class CreditSubagent:
             p_dict = extract_invoice_hash_params(request.message)
             if any(v is None for v in p_dict.values()):
                 return CopilotResponse(
-                    reply=enrich_fn(get_missing_param_guidance("INVOICE_HASH"), prompt_type="concept"),
+                    reply=enrich_fn(get_missing_param_guidance("INVOICE_HASH"), prompt_type="concept", calculation="INVOICE_HASH"),
                     intent_detected="CREDIT_UNDERWRITING",
                     requires_biometric_hitl=False,
                 )
@@ -342,7 +342,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DEBT_TO_EQUITY"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DEBT_TO_EQUITY"), prompt_type="concept", calculation="DEBT_TO_EQUITY"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -380,7 +380,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("INTEREST_COVERAGE"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("INTEREST_COVERAGE"), prompt_type="concept", calculation="INTEREST_COVERAGE"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -424,7 +424,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("LEASE_VS_BUY"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("LEASE_VS_BUY"), prompt_type="concept", calculation="LEASE_VS_BUY"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -475,7 +475,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("ALTMAN_Z_SCORE"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("ALTMAN_Z_SCORE"), prompt_type="concept", calculation="ALTMAN_Z_SCORE"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -515,7 +515,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("NET_DEBT_TO_EBITDA"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("NET_DEBT_TO_EBITDA"), prompt_type="concept", calculation="NET_DEBT_TO_EBITDA"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -561,7 +561,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DEBT_SERVICE_BURDEN"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DEBT_SERVICE_BURDEN"), prompt_type="concept", calculation="DEBT_SERVICE_BURDEN"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -603,7 +603,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("WACC"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("WACC"), prompt_type="concept", calculation="WACC"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -649,7 +649,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("ENTERPRISE_VALUE"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("ENTERPRISE_VALUE"), prompt_type="concept", calculation="ENTERPRISE_VALUE"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )
@@ -695,7 +695,7 @@ class CreditSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DCF_VALUATION"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DCF_VALUATION"), prompt_type="concept", calculation="DCF_VALUATION"),
                 intent_detected="CREDIT_UNDERWRITING",
                 requires_biometric_hitl=False,
             )

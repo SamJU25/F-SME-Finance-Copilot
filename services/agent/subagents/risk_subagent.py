@@ -118,7 +118,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("BREAK_EVEN"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("BREAK_EVEN"), prompt_type="concept", calculation="BREAK_EVEN"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -148,7 +148,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("BREAK_EVEN_UNITS"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("BREAK_EVEN_UNITS"), prompt_type="concept", calculation="BREAK_EVEN_UNITS"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -157,7 +157,7 @@ class RiskManagerSubagent:
         if sub_intent == "CONCENTRATION":
             if not effective_csv:
                 return CopilotResponse(
-                    reply=enrich_fn(get_missing_param_guidance("CONCENTRATION"), prompt_type="concept"),
+                    reply=enrich_fn(get_missing_param_guidance("CONCENTRATION"), prompt_type="concept", calculation="CONCENTRATION"),
                     intent_detected="CASH_DIAGNOSTIC",
                     requires_biometric_hitl=False,
                 )
@@ -236,7 +236,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("ATTRITION"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("ATTRITION"), prompt_type="concept", calculation="ATTRITION"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -278,7 +278,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DUPONT_ROE"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DUPONT_ROE"), prompt_type="concept", calculation="DUPONT_ROE"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -324,7 +324,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("ROIC"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("ROIC"), prompt_type="concept", calculation="ROIC"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -358,7 +358,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("ROA"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("ROA"), prompt_type="concept", calculation="ROA"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -400,7 +400,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("EVA"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("EVA"), prompt_type="concept", calculation="EVA"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -447,7 +447,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("LTV_CAC"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("LTV_CAC"), prompt_type="concept", calculation="LTV_CAC"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -487,7 +487,7 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("CAC_PAYBACK"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("CAC_PAYBACK"), prompt_type="concept", calculation="CAC_PAYBACK"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -538,13 +538,13 @@ class RiskManagerSubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("NRR"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("NRR"), prompt_type="concept", calculation="NRR"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("NRR"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("NRR"), prompt_type="concept", calculation="NRR"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )

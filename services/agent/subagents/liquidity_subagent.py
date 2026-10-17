@@ -95,7 +95,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("WCR"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("WCR"), prompt_type="concept", calculation="WCR"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -123,7 +123,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("OCF_RATIO"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("OCF_RATIO"), prompt_type="concept", calculation="OCF_RATIO"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -174,7 +174,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("DEFENSIVE_INTERVAL"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("DEFENSIVE_INTERVAL"), prompt_type="concept", calculation="DEFENSIVE_INTERVAL"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -231,7 +231,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("CURRENT_RATIO"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("CURRENT_RATIO"), prompt_type="concept", calculation="CURRENT_RATIO"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -275,7 +275,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("QUICK_RATIO"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("QUICK_RATIO"), prompt_type="concept", calculation="QUICK_RATIO"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -328,7 +328,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("TRADE_CREDIT"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("TRADE_CREDIT"), prompt_type="concept", calculation="TRADE_CREDIT"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -378,7 +378,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("CASH_DRAG"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("CASH_DRAG"), prompt_type="concept", calculation="CASH_DRAG"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -433,7 +433,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("FCFF"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("FCFF"), prompt_type="concept", calculation="FCFF"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -472,7 +472,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("CURRENCY_CONVERSION"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("CURRENCY_CONVERSION"), prompt_type="concept", calculation="CURRENCY_CONVERSION"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
@@ -514,7 +514,7 @@ class LiquiditySubagent:
                 )
 
             return CopilotResponse(
-                reply=enrich_fn(get_missing_param_guidance("FX_EXPOSURE"), prompt_type="concept"),
+                reply=enrich_fn(get_missing_param_guidance("FX_EXPOSURE"), prompt_type="concept", calculation="FX_EXPOSURE"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )
