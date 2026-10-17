@@ -36,6 +36,7 @@ from services.agent.param_extractor import (
     extract_ocf_ratio_params,
     extract_wcr_params,
 )
+from services.agent.knowledge import append_reference_cards
 from services.agent.prompts import (
     COPILOT_PERSONA_BASE,
     evaluate_persona_policy,
@@ -349,6 +350,7 @@ def run_copilot_supervisor(
             else get_cash_diagnostic_prompt(base_reply)
         )
         sys_directive = _append_session_context(sys_directive, session_rec)
+        sys_directive = append_reference_cards(sys_directive, request.message)
 
         if is_explicit_local:
             raw_reply = generate_local_reply(
@@ -815,6 +817,7 @@ def run_copilot_supervisor(
                 "and ask the business owner to upload their bank statement CSV."
             )
         sys_directive = _append_session_context(sys_directive, session_rec)
+        sys_directive = append_reference_cards(sys_directive, request.message)
         local_reply = generate_local_reply(
             prompt=request.message,
             system_instruction=sys_directive,
@@ -844,6 +847,7 @@ def run_copilot_supervisor(
                 "and ask the business owner to upload their bank statement CSV."
             )
         sys_directive = _append_session_context(sys_directive, session_rec)
+        sys_directive = append_reference_cards(sys_directive, request.message)
         ai_reply = query_external_llm(
             prompt=request.message,
             system_instruction=sys_directive,
