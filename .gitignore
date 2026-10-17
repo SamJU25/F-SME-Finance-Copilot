@@ -74,4 +74,9 @@ checkpoint-*/
 # Local Session Store Cache
 .sessions/
 
+# Local Assistant Caches & Training Datasets
+.claude/
+dataset/
+
+
 
