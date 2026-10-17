@@ -1,0 +1,130 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "BankStatementProfileRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "BankStatementProfileTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_header_clean",
+            "field": "header_clean",
+            "name": "Normalized Lowercase Column Header"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_col",
+            "field": "canonical_column",
+            "name": "Canonical Column Type"
+          },
+          {
+            "id": "out_mult",
+            "field": "sign_multiplier",
+            "name": "Flow Multiplier (+1 for Inflow, -1 for Outflow, 0 for Metadata)"
+          },
+          {
+            "id": "out_conf",
+            "field": "confidence",
+            "name": "Pattern Confidence"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_col_tx_id",
+            "_description": "Transaction identifier or reference number",
+            "in_header_clean": "contains(['transaction id', 'transactionid', 'id', 'trans id', 'tx id', 'txid', 'transid', 'reference id', 'referenceid', 'reference number', 'referencenumber', 'ref no', 'refno', 'check number', 'checknumber', 'document number', 'documentnumber', 'receipt id', 'receiptid', 'order id', 'orderid', 'fit id', 'fitid', 'cheque no', 'chequeno', 'check no', 'checkno', 'num', 'check or slip', 'checkorslip', 'checkslip'], header_clean)",
+            "out_col": "'TX_ID'",
+            "out_mult": "0",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_date",
+            "_description": "Standard transaction date column",
+            "in_header_clean": "contains(['date', 'trans date', 'transdate', 'posting date', 'postingdate', 'transaction date', 'transactiondate', 'posted on', 'postedon', 'post date', 'postdate', 'booking date', 'bookingdate', 'effective date', 'effectivedate', 'value date', 'valuedate', 'txn date', 'txndate', 'created', 'created at', 'createdat', 'created utc', 'createdutc', 'time', 'timestamp', 'when', 'activity date', 'activitydate', 'operation date', 'operationdate', 'settlement date', 'settlementdate', 'process date', 'processdate', 'cleared date', 'cleareddate'], header_clean)",
+            "out_col": "'DATE'",
+            "out_mult": "0",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_desc",
+            "_description": "Transaction memo, narrative or description",
+            "in_header_clean": "contains(['description', 'memo', 'details', 'narrative', 'payee', 'payer', 'particulars', 'activity', 'transaction description', 'transaction details', 'transactiondetails', 'reference', 'merchant', 'notes', 'who', 'split', 'item', 'title', 'vendor', 'payee name', 'payeename', 'name', 'narrative description', 'descriptionnarrative'], header_clean)",
+            "out_col": "'DESCRIPTION'",
+            "out_mult": "0",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_currency",
+            "_description": "Currency or ISO currency code column",
+            "in_header_clean": "contains(['currency', 'curr', 'ccy', 'currency code', 'currencycode', 'iso currency', 'isocurrency'], header_clean)",
+            "out_col": "'CURRENCY'",
+            "out_mult": "0",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_balance",
+            "_description": "Running or ending daily balance column",
+            "in_header_clean": "contains(['balance', 'daily balance', 'ending balance', 'endingbalance', 'running balance', 'runningbalance', 'running bal', 'runningbal', 'ledger balance', 'ledgerbalance', 'available balance', 'availablebalance', 'ending daily balance', 'closing balance', 'closingbalance', 'account balance', 'accountbalance', 'current balance', 'currentbalance', 'bal'], header_clean)",
+            "out_col": "'BALANCE'",
+            "out_mult": "0",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_inflow",
+            "_description": "Deposit, credit, additions or inflow column",
+            "in_header_clean": "contains(['deposits', 'credits', 'additions', 'deposit', 'credit', 'inward', 'inflow', 'amount credited', 'credit (+)', 'deposits & additions', 'money in', 'moneyin', 'paid in', 'paidin', 'credit amount', 'creditamount', 'cr', 'income', 'receipts', 'received'], header_clean)",
+            "out_col": "'INFLOW'",
+            "out_mult": "1",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_outflow",
+            "_description": "Withdrawal, debit, check or outflow column",
+            "in_header_clean": "contains(['withdrawals', 'debits', 'subtractions', 'withdrawal', 'debit', 'checks', 'cheques', 'payments', 'outflow', 'amount debited', 'debit (-)', 'checks & debits', 'money out', 'moneyout', 'paid out', 'paidout', 'debit amount', 'debitamount', 'dr', 'expense', 'charges', 'spent'], header_clean)",
+            "out_col": "'OUTFLOW'",
+            "out_mult": "-1",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_net_amount",
+            "_description": "Net settlement amount after fees (takes priority over gross amount)",
+            "in_header_clean": "contains(['net amount', 'netamount', 'net'], header_clean)",
+            "out_col": "'NET_AMOUNT'",
+            "out_mult": "1",
+            "out_conf": "1.0"
+          },
+          {
+            "_id": "rule_col_signed_amount",
+            "_description": "Single signed transaction amount column",
+            "in_header_clean": "contains(['amount', 'transaction amount', 'transactionamount', 'trans amount', 'transamount', 'value', 'total', 'how much', 'howmuch', 'sum', 'price', 'subtotal', 'txn amount', 'txnamount'], header_clean)",
+            "out_col": "'SIGNED_AMOUNT'",
+            "out_mult": "1",
+            "out_conf": "0.9"
+          },
+          {
+            "_id": "rule_col_unknown",
+            "_description": "Unrecognized column header",
+            "in_header_clean": "",
+            "out_col": "'UNKNOWN'",
+            "out_mult": "0",
+            "out_conf": "0.0"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    }
+  ]
+}

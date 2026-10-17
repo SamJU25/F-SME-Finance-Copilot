@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "ReconciliationToleranceRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "ReconciliationToleranceTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_delta_cents",
+            "field": "delta_cents",
+            "name": "Balance Tie-Out Difference in Cents"
+          },
+          {
+            "id": "in_fee_match",
+            "field": "inferred_fee_match",
+            "name": "Matches Standard Commercial Bank Fee ($10/$15/$25/$30/$35)"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_status",
+            "field": "status",
+            "name": "Reconciliation Verdict"
+          },
+          {
+            "id": "out_allow",
+            "field": "allow_auto_reconcile",
+            "name": "Allow Automated Downstream Ingestion"
+          },
+          {
+            "id": "out_sev",
+            "field": "severity",
+            "name": "Discrepancy Severity"
+          },
+          {
+            "id": "out_note",
+            "field": "resolution_note",
+            "name": "Audit Trail Resolution Note"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_recon_balanced",
+            "_description": "Exact mathematical balance tie-out",
+            "in_delta_cents": "0",
+            "in_fee_match": "",
+            "out_status": "'BALANCED'",
+            "out_allow": "true",
+            "out_sev": "'NONE'",
+            "out_note": "'Exact arithmetic tie-out: Previous Balance + Inflows - Outflows == Current Balance.'"
+          },
+          {
+            "_id": "rule_recon_rounding",
+            "_description": "Sub-cent or 1-2 cent fractional rounding discrepancy",
+            "in_delta_cents": "<= 2",
+            "in_fee_match": "",
+            "out_status": "'ROUNDING_TOLERANCE'",
+            "out_allow": "true",
+            "out_sev": "'LOW'",
+            "out_note": "'Sub-cent or 1-2 cent commercial rounding variance automatically absorbed.'"
+          },
+          {
+            "_id": "rule_recon_bank_fee",
+            "_description": "Discrepancy matches standard bank fee schedule ($10/$15/$25/$30/$35)",
+            "in_delta_cents": "",
+            "in_fee_match": "true",
+            "out_status": "'INFERRED_BANK_FEE'",
+            "out_allow": "true",
+            "out_sev": "'LOW'",
+            "out_note": "'Discrepancy matches standard commercial bank wire or account maintenance fee schedule.'"
+          },
+          {
+            "_id": "rule_recon_break",
+            "_description": "Unreconciled balance discrepancy exceeding tolerance",
+            "in_delta_cents": "",
+            "in_fee_match": "",
+            "out_status": "'RECONCILIATION_BREAK'",
+            "out_allow": "false",
+            "out_sev": "'HIGH'",
+            "out_note": "'Arithmetic tie-out break: Running ledger balance does not match line transactions.'"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    }
+  ]
+}

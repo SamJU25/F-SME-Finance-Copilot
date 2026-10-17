@@ -5,29 +5,20 @@ from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional
 
-import zen
+try:
+    import zen
+except ImportError:
+    zen = None
 
 from services.decision.base import AbstractDecisionEngine
 from services.decision.types import DecisionDomain, DecisionRequest, DecisionResult
 
 logger = logging.getLogger(__name__)
 
+
 DECISION_TABLES_DIR = Path(__file__).resolve().parent.parent.parent.parent / "contracts" / "decision_tables"
 
-INJECTION_PATTERN = re.compile(
-    r"(ignore|disregard|forget|override)\s+(all\s+)?(?:previous\s+)?(?:instructions|prompts|rules|guidelines|security)"
-    r"|system\s+override"
-    r"|you\s+are\s+now\s+(?:an?\s+)?unrestricted"
-    r"|bypass\s+(?:2fa|biometric|security|hitl|tier)"
-    r"|admin\s+mode\s+enabled",
-    re.IGNORECASE,
-)
-
-API_KEY_PATTERN = re.compile(
-    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
-    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{4,})['\"]?",
-    re.IGNORECASE,
-)
+from services.decision.policy_loader import load_security_policy_config
 
 
 
@@ -43,7 +34,9 @@ class ZenRulesAdapter(AbstractDecisionEngine):
         self._engine = zen.ZenEngine()
         self._decisions: Dict[DecisionDomain, Any] = {}
         self._table_mtimes: Dict[DecisionDomain, float] = {}
+        self._inj_pattern, self._cred_pattern, self._staging_defaults = load_security_policy_config(self._tables_dir)
         self._load_decision_tables()
+
 
     @property
     def engine_id(self) -> str:
@@ -63,6 +56,9 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.REVENUE_VOLATILITY,
             DecisionDomain.FACILITY_MATCHING,
             DecisionDomain.AGENT_PERSONA,
+            DecisionDomain.BANK_STATEMENT_PROFILE,
+            DecisionDomain.RECONCILIATION_TOLERANCE,
+            DecisionDomain.EXPENSE_TRIAGE,
         ]
 
     def _get_domain_file_map(self) -> Dict[DecisionDomain, str]:
@@ -78,6 +74,9 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             DecisionDomain.REVENUE_VOLATILITY: "revenue_volatility_policy.json",
             DecisionDomain.FACILITY_MATCHING: "facility_matching_policy.json",
             DecisionDomain.AGENT_PERSONA: "agent_persona_policy.json",
+            DecisionDomain.BANK_STATEMENT_PROFILE: "bank_statement_profile_policy.json",
+            DecisionDomain.RECONCILIATION_TOLERANCE: "reconciliation_tolerance_policy.json",
+            DecisionDomain.EXPENSE_TRIAGE: "expense_categorization_policy.json",
         }
 
 
@@ -185,10 +184,20 @@ class ZenRulesAdapter(AbstractDecisionEngine):
                     adverse_factors.append("NSF_INCIDENTS_RECORDED")
             rationale = f"Evaluated in {perf} via JDM underwriting_policy.json (Rule={matched_rule_id}, DAB={dab_val}, NSF={nsf_val})."
         elif request.domain == DecisionDomain.SECURITY_GATE:
+            if request.input_state.get("get_staging_defaults"):
+                return DecisionResult(
+                    domain=DecisionDomain.SECURITY_GATE,
+                    selected_choice=str(self._staging_defaults.get("default_action_type", "DRAW_CREDIT_LINE")),
+                    confidence_score=1.0,
+                    engine_id=self.engine_id,
+                    matched_rule_id="rule_security_gate_defaults",
+                    rationale="Retrieved declarative staging defaults from security_gate_policy.json.",
+                    output_payload=dict(self._staging_defaults),
+                )
             if request.input_state.get("check_prompt_security"):
                 msg = str(request.input_state.get("text", request.input_state.get("message", "")))
-                is_inj = bool(INJECTION_PATTERN.search(msg))
-                is_key = bool(API_KEY_PATTERN.search(msg))
+                is_inj = bool(self._inj_pattern.search(msg))
+                is_key = bool(self._cred_pattern.search(msg))
                 if is_inj:
                     choice = "PROMPT_INJECTION_DETECTED"
                     is_safe = False
@@ -216,6 +225,7 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             else:
                 selected_choice = result_dict.get("security_tier", "TIER_1_OBSERVATION")
                 rationale = f"Evaluated in {perf} via JDM security_gate_policy.json (Rule={matched_rule_id}, Action={ctx.get('action_type')})."
+
         elif request.domain == DecisionDomain.DEFICIT_SEVERITY:
             if request.input_state.get("eval_horizon_confidence"):
                 target_days = int(ctx.get("target_horizon_days", 30))
@@ -420,6 +430,18 @@ class ZenRulesAdapter(AbstractDecisionEngine):
 
             rationale = f"Evaluated in {perf} via JDM agent_persona_policy.json (Rule={matched_rule_id}, PromptType={pt}, SubIntent={ctx.get('sub_intent')})."
 
+        elif request.domain == DecisionDomain.BANK_STATEMENT_PROFILE:
+            selected_choice = result_dict.get("canonical_column", "UNKNOWN")
+            rationale = f"Evaluated in {perf} via JDM bank_statement_profile_policy.json (Rule={matched_rule_id}, Column={selected_choice})."
+
+        elif request.domain == DecisionDomain.RECONCILIATION_TOLERANCE:
+            selected_choice = result_dict.get("status", "RECONCILIATION_BREAK")
+            rationale = result_dict.get("resolution_note") or f"Evaluated in {perf} via JDM reconciliation_tolerance_policy.json (Rule={matched_rule_id}, Status={selected_choice})."
+
+        elif request.domain == DecisionDomain.EXPENSE_TRIAGE:
+            selected_choice = result_dict.get("category", "GENERAL_EXPENSE")
+            rationale = f"Evaluated in {perf} via JDM expense_categorization_policy.json (Rule={matched_rule_id}, Category={selected_choice})."
+
         else:
             selected_choice = str(result_dict)
             rationale = f"Evaluated in {perf} via GoRules ZEN Engine."
@@ -530,5 +552,18 @@ class ZenRulesAdapter(AbstractDecisionEngine):
             pt = str(state.get("prompt_type", "BASE")).upper()
             sub = str(state.get("sub_intent", "")).upper()
             return {"prompt_type": pt, "sub_intent": sub}
+
+        elif request.domain == DecisionDomain.BANK_STATEMENT_PROFILE:
+            h = str(state.get("header_clean", state.get("header_raw", ""))).lower().strip()
+            return {"header_clean": h}
+
+        elif request.domain == DecisionDomain.RECONCILIATION_TOLERANCE:
+            d = abs(int(state.get("delta_cents", 0)))
+            fee = bool(state.get("inferred_fee_match", False))
+            return {"delta_cents": d, "inferred_fee_match": fee}
+
+        elif request.domain == DecisionDomain.EXPENSE_TRIAGE:
+            m = str(state.get("memo_clean", state.get("memo", ""))).lower().strip()
+            return {"memo_clean": m}
 
         return state

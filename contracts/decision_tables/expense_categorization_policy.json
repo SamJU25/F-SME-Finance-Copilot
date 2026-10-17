@@ -1,0 +1,106 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "name": "ExpenseCategorizationRequest",
+      "type": "inputNode"
+    },
+    {
+      "id": "table_node",
+      "name": "ExpenseCategorizationTable",
+      "type": "decisionTableNode",
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          {
+            "id": "in_memo_clean",
+            "field": "memo_clean",
+            "name": "Normalized Lowercase Transaction Memo"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "out_category",
+            "field": "category",
+            "name": "Operational Cash Flow Category"
+          },
+          {
+            "id": "out_recurrence",
+            "field": "recurrence",
+            "name": "Payment Recurrence Pattern"
+          },
+          {
+            "id": "out_essential",
+            "field": "is_essential_operating",
+            "name": "Is Non-Discretionary Operating Outflow"
+          }
+        ],
+        "rules": [
+          {
+            "_id": "rule_cat_payroll",
+            "_description": "Payroll processor or direct deposit wage payments",
+            "in_memo_clean": "matches(memo_clean, '.*(payroll|gusto|adp|paychex|workday|salary|wages|rippling|justworks).*')",
+            "out_category": "'PAYROLL'",
+            "out_recurrence": "'LUMPY_MONTHLY'",
+            "out_essential": "true"
+          },
+          {
+            "_id": "rule_cat_rent",
+            "_description": "Commercial rent, real estate lease, or office space",
+            "in_memo_clean": "matches(memo_clean, '.*(rent|lease|wework|regus|property|landlord|realty|storage).*')",
+            "out_category": "'RENT'",
+            "out_recurrence": "'LUMPY_MONTHLY'",
+            "out_essential": "true"
+          },
+          {
+            "_id": "rule_cat_debt",
+            "_description": "Debt service, loan amortization, or line of credit interest",
+            "in_memo_clean": "matches(memo_clean, '.*(loan|debt|principal|amortization|interest payment|sba|note payable|credit line).*')",
+            "out_category": "'DEBT_SERVICE'",
+            "out_recurrence": "'LUMPY_MONTHLY'",
+            "out_essential": "true"
+          },
+          {
+            "_id": "rule_cat_tax",
+            "_description": "Corporate income tax, payroll tax, or VAT payments",
+            "in_memo_clean": "matches(memo_clean, '.*(tax|irs|state tax|treasury|revenue dept|vat|withholding).*')",
+            "out_category": "'TAX'",
+            "out_recurrence": "'LUMPY_MONTHLY'",
+            "out_essential": "true"
+          },
+          {
+            "_id": "rule_cat_utilities",
+            "_description": "Essential commercial utilities and telecom",
+            "in_memo_clean": "matches(memo_clean, '.*(electric|power|water|internet|telecom|comcast|verizon|att|pge).*')",
+            "out_category": "'UTILITIES'",
+            "out_recurrence": "'LUMPY_MONTHLY'",
+            "out_essential": "true"
+          },
+          {
+            "_id": "rule_cat_revenue",
+            "_description": "Payment gateway settlements and customer invoice collections",
+            "in_memo_clean": "matches(memo_clean, '.*(stripe|square|shopify|paypal|merchant pay|customer wire|settlement|invoice payment).*')",
+            "out_category": "'REVENUE'",
+            "out_recurrence": "'VARIABLE'",
+            "out_essential": "false"
+          },
+          {
+            "_id": "rule_cat_general",
+            "_description": "General operating expenditure",
+            "in_memo_clean": "",
+            "out_category": "'GENERAL_EXPENSE'",
+            "out_recurrence": "'VARIABLE'",
+            "out_essential": "false"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_in_to_table",
+      "sourceId": "input_node",
+      "targetId": "table_node"
+    }
+  ]
+}

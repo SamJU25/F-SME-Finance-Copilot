@@ -127,6 +127,276 @@
             "out_rationale": "'Negative operating margin. Business is incurring operational losses.'"
           },
           {
+            "_id": "rule_dupont_exceptional",
+            "_description": "ROE >= 20%",
+            "in_metric": "'DUPONT_ROE'",
+            "in_value": ">= 20.0",
+            "out_tier": "'EXCEPTIONAL_ROE'",
+            "out_status": "'EXCEPTIONAL_ROE'",
+            "out_healthy": "true",
+            "out_rationale": "'Exceptional Return on Equity ({value}%). Substantial value creation for shareholders.'"
+          },
+          {
+            "_id": "rule_dupont_strong",
+            "_description": "ROE between 12% and 20%",
+            "in_metric": "'DUPONT_ROE'",
+            "in_value": ">= 12.0",
+            "out_tier": "'STRONG_ROE'",
+            "out_status": "'STRONG_ROE'",
+            "out_healthy": "true",
+            "out_rationale": "'Strong commercial Return on Equity ({value}%). Healthy balance between margins, asset efficiency, and leverage.'"
+          },
+          {
+            "_id": "rule_dupont_moderate",
+            "_description": "ROE between 5% and 12%",
+            "in_metric": "'DUPONT_ROE'",
+            "in_value": ">= 5.0",
+            "out_tier": "'MODERATE_ROE'",
+            "out_status": "'MODERATE_ROE'",
+            "out_healthy": "true",
+            "out_rationale": "'Moderate Return on Equity ({value}%). Operating margins or asset velocity could be improved.'"
+          },
+          {
+            "_id": "rule_dupont_subpar",
+            "_description": "ROE < 5%",
+            "in_metric": "'DUPONT_ROE'",
+            "in_value": "< 5.0",
+            "out_tier": "'SUBPAR_ROE'",
+            "out_status": "'SUBPAR_ROE'",
+            "out_healthy": "false",
+            "out_rationale": "'Subpar Return on Equity ({value}%). Business returns lag commercial cost of equity capital.'"
+          },
+          {
+            "_id": "rule_roic_exceptional",
+            "_description": "ROIC >= 15%",
+            "in_metric": "'ROIC'",
+            "in_value": ">= 15.0",
+            "out_tier": "'EXCEPTIONAL_ROIC'",
+            "out_status": "'EXCEPTIONAL_ROIC'",
+            "out_healthy": "true",
+            "out_rationale": "'Exceptional capital efficiency (ROIC: {value}%). Creates substantial surplus economic value.'"
+          },
+          {
+            "_id": "rule_roic_strong",
+            "_description": "ROIC >= 10%",
+            "in_metric": "'ROIC'",
+            "in_value": ">= 10.0",
+            "out_tier": "'STRONG_ROIC'",
+            "out_status": "'STRONG_ROIC'",
+            "out_healthy": "true",
+            "out_rationale": "'Strong Return on Invested Capital ({value}%). Healthy returns exceed commercial hurdle rates.'"
+          },
+          {
+            "_id": "rule_roic_moderate",
+            "_description": "ROIC >= 6%",
+            "in_metric": "'ROIC'",
+            "in_value": ">= 6.0",
+            "out_tier": "'MODERATE_ROIC'",
+            "out_status": "'MODERATE_ROIC'",
+            "out_healthy": "true",
+            "out_rationale": "'Moderate Return on Invested Capital ({value}%). Matches standard borrowing costs.'"
+          },
+          {
+            "_id": "rule_roic_destructive",
+            "_description": "ROIC < 6%",
+            "in_metric": "'ROIC'",
+            "in_value": "< 6.0",
+            "out_tier": "'VALUE_DESTRUCTIVE'",
+            "out_status": "'VALUE_DESTRUCTIVE'",
+            "out_healthy": "false",
+            "out_rationale": "'Subpar capital efficiency (ROIC: {value}%). Returns lag behind typical commercial debt costs.'"
+          },
+          {
+            "_id": "rule_roa_excellent",
+            "_description": "ROA >= 10%",
+            "in_metric": "'ROA'",
+            "in_value": ">= 10.0",
+            "out_tier": "'EXCELLENT_ROA'",
+            "out_status": "'EXCELLENT_ROA'",
+            "out_healthy": "true",
+            "out_rationale": "'Excellent asset productivity (ROA: {value}%). Superior earnings velocity per asset dollar.'"
+          },
+          {
+            "_id": "rule_roa_healthy",
+            "_description": "ROA >= 5%",
+            "in_metric": "'ROA'",
+            "in_value": ">= 5.0",
+            "out_tier": "'HEALTHY_ROA'",
+            "out_status": "'HEALTHY_ROA'",
+            "out_healthy": "true",
+            "out_rationale": "'Healthy commercial asset return (ROA: {value}%).'"
+          },
+          {
+            "_id": "rule_roa_marginal",
+            "_description": "ROA >= 0%",
+            "in_metric": "'ROA'",
+            "in_value": ">= 0.0",
+            "out_tier": "'MARGINAL_ROA'",
+            "out_status": "'MARGINAL_ROA'",
+            "out_healthy": "false",
+            "out_rationale": "'Marginal asset return (ROA: {value}%). High capital intensity or depressed margins.'"
+          },
+          {
+            "_id": "rule_roa_negative",
+            "_description": "ROA < 0%",
+            "in_metric": "'ROA'",
+            "in_value": "< 0.0",
+            "out_tier": "'NEGATIVE_ROA'",
+            "out_status": "'NEGATIVE_ROA'",
+            "out_healthy": "false",
+            "out_rationale": "'Negative asset return (ROA: {value}%). Operating losses on asset base.'"
+          },
+          {
+            "_id": "rule_eva_positive",
+            "_description": "EVA > 0",
+            "in_metric": "'EVA'",
+            "in_value": "> 0.0",
+            "out_tier": "'POSITIVE_EVA'",
+            "out_status": "'POSITIVE_EVA'",
+            "out_healthy": "true",
+            "out_rationale": "'Positive Economic Value Added (${value}). Generates true economic profit.'"
+          },
+          {
+            "_id": "rule_eva_breakeven",
+            "_description": "EVA == 0",
+            "in_metric": "'EVA'",
+            "in_value": "== 0.0",
+            "out_tier": "'BREAK_EVEN_EVA'",
+            "out_status": "'BREAK_EVEN_EVA'",
+            "out_healthy": "true",
+            "out_rationale": "'Break-even Economic Value Added ($0.00). Exactly covers cost of capital.'"
+          },
+          {
+            "_id": "rule_eva_negative",
+            "_description": "EVA < 0",
+            "in_metric": "'EVA'",
+            "in_value": "< 0.0",
+            "out_tier": "'NEGATIVE_EVA'",
+            "out_status": "'NEGATIVE_EVA'",
+            "out_healthy": "false",
+            "out_rationale": "'Negative Economic Value Added (${value}). Fails to cover cost of capital.'"
+          },
+          {
+            "_id": "rule_ltv_cac_efficient",
+            "_description": "LTV/CAC >= 4.0x",
+            "in_metric": "'LTV_CAC'",
+            "in_value": ">= 4.0",
+            "out_tier": "'CAPITAL_EFFICIENT_EXPANSION'",
+            "out_status": "'CAPITAL_EFFICIENT_EXPANSION'",
+            "out_healthy": "true",
+            "out_rationale": "'Exceptional unit economics ({value}x LTV/CAC). Aggressive acquisition expansion justified.'"
+          },
+          {
+            "_id": "rule_ltv_cac_prime",
+            "_description": "LTV/CAC >= 3.0x",
+            "in_metric": "'LTV_CAC'",
+            "in_value": ">= 3.0",
+            "out_tier": "'PRIME_UNIT_ECONOMICS'",
+            "out_status": "'PRIME_UNIT_ECONOMICS'",
+            "out_healthy": "true",
+            "out_rationale": "'Prime unit economics ({value}x LTV/CAC). Aligns with institutional SaaS benchmark.'"
+          },
+          {
+            "_id": "rule_ltv_cac_marginal",
+            "_description": "LTV/CAC >= 1.5x",
+            "in_metric": "'LTV_CAC'",
+            "in_value": ">= 1.5",
+            "out_tier": "'VIABLE_MARGINAL'",
+            "out_status": "'VIABLE_MARGINAL'",
+            "out_healthy": "true",
+            "out_rationale": "'Marginal unit economics ({value}x LTV/CAC). Modest profitability buffer.'"
+          },
+          {
+            "_id": "rule_ltv_cac_unsustainable",
+            "_description": "LTV/CAC < 1.5x",
+            "in_metric": "'LTV_CAC'",
+            "in_value": "< 1.5",
+            "out_tier": "'UNSUSTAINABLE_CAC'",
+            "out_status": "'UNSUSTAINABLE_CAC'",
+            "out_healthy": "false",
+            "out_rationale": "'Unsustainable customer acquisition cost ({value}x LTV/CAC < 1.5x).'"
+          },
+          {
+            "_id": "rule_payback_rapid",
+            "_description": "CAC Payback <= 12 months",
+            "in_metric": "'CAC_PAYBACK'",
+            "in_value": "<= 12.0",
+            "out_tier": "'RAPID_PAYBACK'",
+            "out_status": "'RAPID_PAYBACK'",
+            "out_healthy": "true",
+            "out_rationale": "'Rapid CAC payback ({value} months). Excellent capital recycling speed.'"
+          },
+          {
+            "_id": "rule_payback_standard",
+            "_description": "CAC Payback <= 18 months",
+            "in_metric": "'CAC_PAYBACK'",
+            "in_value": "<= 18.0",
+            "out_tier": "'COMMERCIAL_STANDARD'",
+            "out_status": "'COMMERCIAL_STANDARD'",
+            "out_healthy": "true",
+            "out_rationale": "'Standard CAC payback ({value} months). Typical recurring revenue model.'"
+          },
+          {
+            "_id": "rule_payback_elevated",
+            "_description": "CAC Payback <= 24 months",
+            "in_metric": "'CAC_PAYBACK'",
+            "in_value": "<= 24.0",
+            "out_tier": "'ELEVATED_PAYBACK'",
+            "out_status": "'ELEVATED_PAYBACK'",
+            "out_healthy": "false",
+            "out_rationale": "'Elevated CAC payback ({value} months). Capital tied up for extensive period.'"
+          },
+          {
+            "_id": "rule_payback_trap",
+            "_description": "CAC Payback > 24 months",
+            "in_metric": "'CAC_PAYBACK'",
+            "in_value": "> 24.0",
+            "out_tier": "'PROLONGED_CASH_TRAP'",
+            "out_status": "'PROLONGED_CASH_TRAP'",
+            "out_healthy": "false",
+            "out_rationale": "'Prolonged CAC payback ({value} months). High risk of unrecouped sales spend upon churn.'"
+          },
+          {
+            "_id": "rule_nrr_best",
+            "_description": "NRR >= 120%",
+            "in_metric": "'NRR'",
+            "in_value": ">= 120.0",
+            "out_tier": "'BEST_IN_CLASS_EXPANSION'",
+            "out_status": "'BEST_IN_CLASS_EXPANSION'",
+            "out_healthy": "true",
+            "out_rationale": "'Best-in-class Net Revenue Retention ({value}%). Negative net churn.'"
+          },
+          {
+            "_id": "rule_nrr_strong",
+            "_description": "NRR >= 105%",
+            "in_metric": "'NRR'",
+            "in_value": ">= 105.0",
+            "out_tier": "'STRONG_NET_EXPANSION'",
+            "out_status": "'STRONG_NET_EXPANSION'",
+            "out_healthy": "true",
+            "out_rationale": "'Strong Net Revenue Retention ({value}%). Account expansion exceeds churn.'"
+          },
+          {
+            "_id": "rule_nrr_stable",
+            "_description": "NRR >= 95%",
+            "in_metric": "'NRR'",
+            "in_value": ">= 95.0",
+            "out_tier": "'STABLE_RETENTION'",
+            "out_status": "'STABLE_RETENTION'",
+            "out_healthy": "true",
+            "out_rationale": "'Stable retention ({value}%). Revenue base is preserved.'"
+          },
+          {
+            "_id": "rule_nrr_attrition",
+            "_description": "NRR < 95%",
+            "in_metric": "'NRR'",
+            "in_value": "< 95.0",
+            "out_tier": "'NET_REVENUE_ATTRITION'",
+            "out_status": "'NET_REVENUE_ATTRITION'",
+            "out_healthy": "false",
+            "out_rationale": "'Net revenue contraction ({value}%). Underlying cohort ARR is eroding.'"
+          },
+          {
             "_id": "rule_default",
             "_description": "Default baseline",
             "in_metric": "",

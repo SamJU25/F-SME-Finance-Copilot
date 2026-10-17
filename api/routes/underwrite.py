@@ -14,6 +14,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv
+from services.ingestion.pdf_parser import parse_pdf_statement
+from services.ingestion.pdf_validator import PDFValidationError
 from services.matcher.liquidity_matcher import (
     RiskTier,
     ProductType,
@@ -37,6 +39,9 @@ class UnderwritingDossierResponse(BaseModel):
     recommended_product_types: list[ProductType]
     revenue_volatility_cv: Optional[str] = None
     volatility_tier: Optional[str] = None
+    liquidity_score: Optional[int] = None
+    score_tier: Optional[str] = None
+    conditional_proposal: Optional[str] = None
 
 
 class FinancingOptionResponse(BaseModel):
@@ -77,6 +82,18 @@ async def underwrite_statement(
             content={"error": {"code": "UPLOAD_TOO_LARGE", "message": "CSV upload exceeds the configured size limit."}},
         )
 
+    filename = file.filename or "statement.csv"
+    is_pdf = filename.lower().endswith(".pdf") or content.startswith(b"%PDF")
+    if is_pdf:
+        try:
+            pdf_res = parse_pdf_statement(content)
+            content = pdf_res.csv_text.encode("utf-8")
+        except PDFValidationError as exc:
+            return JSONResponse(
+                status_code=422,
+                content={"error": {"code": exc.code, "message": str(exc)}},
+            )
+
     try:
         ingestion = parse_bank_csv(content)
     except CSVIngestionError as exc:
@@ -96,6 +113,9 @@ async def underwrite_statement(
             recommended_product_types=dossier.recommended_product_types,
             revenue_volatility_cv=_format_money(dossier.revenue_volatility_cv) if dossier.revenue_volatility_cv is not None else None,
             volatility_tier=dossier.volatility_tier,
+            liquidity_score=dossier.liquidity_score,
+            score_tier=dossier.score_tier,
+            conditional_proposal=dossier.conditional_proposal,
         ),
         matched_options=[
             FinancingOptionResponse(

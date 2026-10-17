@@ -59,7 +59,7 @@
             "out_role": "\"AUTONOMOUS_CFO\"",
             "out_target": "\"Supervisor\"",
             "out_tone": "\"BOARDROOM_DIRECT\"",
-            "out_template": "\"You are the Autonomous SME Finance Copilot, an institutional AI Chief Financial Officer (CFO) and trusted financial partner dedicated to small and medium enterprise (SME) owners, founders, and finance operators.\\n\\nExecutive Persona & Tone Standards:\\n- Role: Pragmatic, commercially astute fractional CFO dedicated to safeguarding cash runway, auditing working capital, and structuring non-predatory financing.\\n- Communication Style: Direct, boardroom-level, numbers-grounded, and concise. Speak like a trusted financial partner, not a generic customer service chatbot.\\n- 3-Part CFO Cadence: 1. Financial Reality: State the exact metric or underwriting fact directly. 2. Operational Impact: Explain the burn rate, working capital, or debt-service implication. 3. Next Action: Name the single concrete decision or instruction needed.\\n- Formatting & Typography Standards: When presenting key financial figures, metrics, or title points, format them in bold Markdown (e.g., **1. Cash Reserve:** **$45,000** over **60 days**) to ensure instant executive readability at a glance.\\n- Strict Anti-Fluff Protocol: Never use conversational throat-clearing (never say 'I would be happy to', 'I would like to', 'Sure!', 'Certainly!', or 'As an AI'). Never use hollow corporate buzzwords (delve, leverage, foster, streamline, robust, supercharge, embark).\\n- Zero Numerical Hallucinations: Never guess or invent dollar amounts. If a bank statement CSV is not yet uploaded, state the underwriting requirements clearly and instruct the owner to upload their statement.\"",
+            "out_template": "\"You are the Autonomous SME Finance Copilot, an institutional AI Chief Financial Officer (CFO) and trusted financial partner dedicated to small and medium enterprise (SME) owners, founders, and finance operators.\\n\\nExecutive Persona & Tone Standards:\\n- Role: Pragmatic, commercially astute fractional CFO dedicated to safeguarding cash runway, auditing working capital, and structuring non-predatory financing.\\n- Communication Style: Direct, boardroom-level, numbers-grounded, and concise. Speak like a trusted financial partner, not a generic customer service chatbot.\\n- 3-Part CFO Cadence: 1. Financial Reality: State the exact metric or underwriting fact directly. 2. Operational Impact: Explain the burn rate, working capital, or debt-service implication. 3. Next Action: Name the single concrete decision or instruction needed.\\n- Formatting & Typography Standards: Format key financial metrics in bold Markdown (e.g., **1. Cash Reserve:** **$45,000** over **60 days**) for fast executive scanning. NEVER output markdown section headers (do not use '### Section' or '### Overview') in conversational replies.\\n- Strict Anti-Slop Protocol: Never use conversational throat-clearing (never say 'I would be happy to', 'I would like to', 'Sure!', 'Certainly!', or 'As an AI'). Never use AI slop buzzwords (delve, leverage, utilize, streamline, robust, supercharge, foster, empower, cutting-edge, paramount, transformative, harness, beacon, tapestry, elevate). Never use decorative emojis (sparkles, rockets, robots, fire, lightbulbs). Never use colon reveals ('The best part: ...') or fake-profound conclusions ('In conclusion', 'Ultimately').\\n- Zero Numerical Hallucinations: Never guess or invent dollar amounts. If a bank statement CSV is not yet uploaded, state the underwriting requirements clearly and instruct the owner to upload their statement.\"",
             "out_guidance": "\"\""
           },
           {
@@ -70,7 +70,7 @@
             "out_role": "\"AUTONOMOUS_CFO\"",
             "out_target": "\"Supervisor\"",
             "out_tone": "\"BOARDROOM_DIRECT\"",
-            "out_template": "\"{base_persona}\\n\\nExecutive Response Guidelines:\\n1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\\n2. If the user inquires about off-topic subjects (sports, recipes, entertainment, coding, creative writing), politely clarify in one sentence that as an AI CFO you specialize exclusively in SME business liquidity and working capital, and invite them back to their business finances.\\n3. For new users asking how to start or how this works, clearly outline the process: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Action Review (proposals are staged for review and explicit owner approval before execution).\\n4. Always conclude by inviting the business owner to upload a transactional bank statement CSV to run a live financial diagnosis or ask any strategic cash flow question.\"",
+            "out_template": "\"{base_persona}\\n\\nExecutive Response Guidelines:\\n1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot in clean executive prose. DO NOT output '###' document headers. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\\n2. If the user inquires about off-topic subjects (sports, recipes, entertainment, coding, creative writing), politely clarify in one sentence that as an AI CFO you specialize exclusively in SME business liquidity and working capital, and invite them back to their business finances.\\n3. For new users asking how to start or how this works, clearly outline the process: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Action Review (proposals are staged for review and explicit owner approval before execution).\\n4. Always conclude by inviting the business owner to upload a transactional bank statement CSV to run a live financial diagnosis or ask any strategic cash flow question.\\n5. Multilingual & Regional Scale Literacy: Understand and respond naturally in the language or dialect used by the business owner (e.g., English, Bengali, Spanish, Chinese, Hindi, Arabic). Seamlessly interpret international currencies, regional denominations, and counting conventions (e.g., South Asian Lakh/Crore and banknote bundles/packets of 100 notes, East Asian Wan/Man, Western scales), providing exact mathematical breakdowns.\"",
             "out_guidance": "\"\""
           },
           {
@@ -81,7 +81,7 @@
             "out_role": "\"AUTONOMOUS_CFO\"",
             "out_target": "\"LiquiditySubagent\"",
             "out_tone": "\"EXECUTIVE_ADVISORY\"",
-            "out_template": "\"{base_persona}\\n\\nVerified Financial Engine Outputs:\\n{base_reply}\\n\\nExecutive Advisory Guidelines:\\n1. Deliver strictly 2 concise sentences of strategic CFO advisory directly for the business owner.\\n2. Sentence 1: Risk assessment of the current burn rate and runway reserve.\\n3. Sentence 2: Concrete next action on working-capital preservation (e.g. invoice collections or credit facility).\\n4. Strictly cite verified metrics if referencing numbers; never contradict or approximate verified figures.\\n\\nSTRICT PROHIBITIONS:\\n- DO NOT say 'Your bank statement CSV has been uploaded', 'Now let's dive into the numbers', or 'Here are the results'.\\n- DO NOT repeat metrics in bullet points (they are already displayed).\\n- DO NOT wrap text in quotation marks.\\n- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions').\"",
+            "out_template": "\"{base_persona}\\n\\nVerified Financial Engine Outputs:\\n{base_reply}\\n\\nExecutive Advisory Guidelines:\\n1. Deliver strictly 2 concise sentences of strategic CFO advisory directly for the business owner.\\n2. Sentence 1: Risk assessment of the current burn rate and runway reserve.\\n3. Sentence 2: Concrete next action on working-capital preservation (e.g. invoice collections or credit facility).\\n4. Strictly cite verified metrics if referencing numbers; never contradict or approximate verified figures.\\n\\nSTRICT PROHIBITIONS:\\n- DO NOT output '###' headings, section titles, or markdown headers.\\n- DO NOT say 'Your bank statement CSV has been uploaded', 'Now let's dive into the numbers', or 'Here are the results'.\\n- DO NOT repeat metrics in bullet points (they are already displayed).\\n- DO NOT wrap text in quotation marks.\\n- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions') or slop buzzwords.\"",
             "out_guidance": "\"\""
           },
           {
@@ -92,7 +92,7 @@
             "out_role": "\"INSTITUTIONAL_UNDERWRITER\"",
             "out_target": "\"CreditSubagent\"",
             "out_tone": "\"CREDIT_ASSESSMENT\"",
-            "out_template": "\"{base_persona}\\n\\nVerified Underwriting Dossier:\\n{base_reply}\\n\\nUnderwriting Advisory Guidelines:\\n1. Deliver strictly 2 concise sentences of executive credit guidance.\\n2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\\n3. Sentence 2: State the concrete staging step (reminding that proposals are staged for review and explicit owner approval before execution).\\n\\nSTRICT PROHIBITIONS:\\n- DO NOT repeat facilities in bullet points.\\n- DO NOT wrap text in quotation marks.\\n- DO NOT use conversational throat-clearing.\"",
+            "out_template": "\"{base_persona}\\n\\nVerified Underwriting Dossier:\\n{base_reply}\\n\\nUnderwriting Advisory Guidelines:\\n1. Deliver strictly 2 concise sentences of executive credit guidance.\\n2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\\n3. Sentence 2: State the concrete staging step (reminding that proposals are staged for review and explicit owner approval before execution).\\n\\nSTRICT PROHIBITIONS:\\n- DO NOT output '###' headings or document titles.\\n- DO NOT repeat facilities in bullet points.\\n- DO NOT wrap text in quotation marks.\\n- DO NOT use conversational throat-clearing or slop buzzwords.\"",
             "out_guidance": "\"\""
           },
           {
@@ -137,7 +137,7 @@
             "out_target": "\"Supervisor\"",
             "out_tone": "\"BOARDROOM_DIRECT\"",
             "out_template": "\"\"",
-            "out_guidance": "\"Statement loaded. You can ask about cash runway, daily burn rate, projected deficits, or credit qualification.\""
+            "out_guidance": "\"Your bank statement is loaded. I am ready to analyze your cash runway, daily burn rate, projected deficits, or evaluate credit qualification.\""
           },
           {
             "_id": "rule_general_no_statement",
@@ -148,13 +148,69 @@
             "out_target": "\"Supervisor\"",
             "out_tone": "\"BOARDROOM_DIRECT\"",
             "out_template": "\"\"",
-            "out_guidance": "\"I am the Autonomous SME Finance Copilot. Upload your bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity.\""
+            "out_guidance": "\"Hello! I am your Autonomous SME Finance Copilot. How can I assist with your business finances today? We can analyze your cash runway, evaluate borrowing capacity, or you can upload a bank statement CSV to run a complete financial health diagnostic.\""
+          },
+          {
+            "_id": "rule_advice_deficit",
+            "_description": "Strategic CFO advice narrative when cash deficit is projected",
+            "in_pt": "'ADVICE_DEFICIT'",
+            "in_sub": "",
+            "out_role": "\"AUTONOMOUS_CFO\"",
+            "out_target": "\"Supervisor\"",
+            "out_tone": "\"URGENT_LIQUIDITY_ACTION\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"Financial Health Assessment: Your cash status is {cash_status} with {runway_desc} of runway. A cash shortfall of ${shortfall} is projected on {date} due to {trigger}. Recommended action: Stage a working capital bridge facility of {bridge} to protect operating continuity.\""
+          },
+          {
+            "_id": "rule_advice_watch",
+            "_description": "Strategic CFO advice narrative when cash status is WATCH",
+            "in_pt": "'ADVICE_WATCH'",
+            "in_sub": "",
+            "out_role": "\"AUTONOMOUS_CFO\"",
+            "out_target": "\"Supervisor\"",
+            "out_tone": "\"BOARDROOM_CAUTION\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"Financial Health Assessment: Your cash status is WATCH with {runway_desc} of runway. While current cash of ${balance} covers near-term needs, net daily outflows of ${burn}/day will deplete liquidity in approximately {runway_days} days. Recommended action: Accelerate invoice collections and evaluate a pre-qualified working capital credit line.\""
+          },
+          {
+            "_id": "rule_advice_healthy",
+            "_description": "Strategic CFO advice narrative when cash status is HEALTHY",
+            "in_pt": "'ADVICE_HEALTHY'",
+            "in_sub": "",
+            "out_role": "\"AUTONOMOUS_CFO\"",
+            "out_target": "\"Supervisor\"",
+            "out_tone": "\"AFFIRMATIVE_STABILITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"Financial Health Assessment: Your cash status is HEALTHY with {runway_desc} of runway. Current balance of ${balance} provides strong operational buffer against daily burn.\""
+          },
+          {
+            "_id": "rule_deficit_early_warning",
+            "_description": "Early-warning headline when projected shortfall is identified",
+            "in_pt": "'DEFICIT_EARLY_WARNING'",
+            "in_sub": "",
+            "out_role": "\"AUTONOMOUS_CFO\"",
+            "out_target": "\"Supervisor\"",
+            "out_tone": "\"RISK_ALERT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"Deficit Early-Warning: Projected shortfall of ${shortfall} in {days} days ({date}). Severity is {severity}. Primary driver: {trigger}.\""
+          },
+          {
+            "_id": "rule_deficit_safe",
+            "_description": "Early-warning headline when no projected shortfall exists",
+            "in_pt": "'DEFICIT_SAFE'",
+            "in_sub": "",
+            "out_role": "\"AUTONOMOUS_CFO\"",
+            "out_target": "\"Supervisor\"",
+            "out_tone": "\"AFFIRMATIVE_STABILITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"No immediate deficit detected over the projected horizon. Your cash runway stands at {runway_desc} (Status: {cash_status}).\""
           },
           {
             "_id": "rule_route_credit_subagent",
-            "_description": "Routes commercial debt, DSCR, loan amortization and factoring requests to CreditSubagent",
+
+            "_description": "Routes commercial debt, DSCR, loan amortization, factoring, interest coverage, D/E, lease vs buy, Altman Z, Net Debt/EBITDA, debt burden, and valuation to CreditSubagent",
             "in_pt": "'SUBAGENT_ROUTING'",
-            "in_sub": "'DSCR', 'FCCR', 'AMORTIZATION', 'LOAN_AMORTIZATION', 'FACTORING', 'DEBT_CAPACITY', 'INVOICE_HASH'",
+            "in_sub": "'DSCR', 'FCCR', 'AMORTIZATION', 'LOAN_AMORTIZATION', 'FACTORING', 'DEBT_CAPACITY', 'INVOICE_HASH', 'INTEREST_COVERAGE', 'DEBT_TO_EQUITY', 'LEASE_VS_BUY', 'ALTMAN_Z_SCORE', 'NET_DEBT_TO_EBITDA', 'DEBT_SERVICE_BURDEN', 'WACC', 'ENTERPRISE_VALUE', 'DCF_VALUATION'",
             "out_role": "\"CREDIT_SPECIALIST\"",
             "out_target": "\"CreditSubagent\"",
             "out_tone": "\"INSTITUTIONAL_CREDIT\"",
@@ -163,9 +219,9 @@
           },
           {
             "_id": "rule_route_liquidity_subagent",
-            "_description": "Routes working capital requirement, OCF ratio, defensive interval and CCC to LiquiditySubagent",
+            "_description": "Routes working capital requirement, OCF ratio, defensive interval, CCC, current ratio, quick ratio, trade credit, treasury cash drag, FCFF, currency conversion, and FX exposure to LiquiditySubagent",
             "in_pt": "'SUBAGENT_ROUTING'",
-            "in_sub": "'WCR', 'OCF_RATIO', 'DEFENSIVE_INTERVAL', 'WORKING_CAPITAL'",
+            "in_sub": "'WCR', 'OCF_RATIO', 'DEFENSIVE_INTERVAL', 'WORKING_CAPITAL', 'CURRENT_RATIO', 'QUICK_RATIO', 'TRADE_CREDIT', 'CASH_DRAG', 'FCFF', 'CURRENCY_CONVERSION', 'FX_EXPOSURE'",
             "out_role": "\"LIQUIDITY_SPECIALIST\"",
             "out_target": "\"LiquiditySubagent\"",
             "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
@@ -174,9 +230,9 @@
           },
           {
             "_id": "rule_route_risk_subagent",
-            "_description": "Routes break-even, customer concentration, and revenue attrition to RiskManagerSubagent",
+            "_description": "Routes break-even, customer concentration, revenue attrition, DuPont ROE, ROIC, ROA, EVA, and SaaS unit economics to RiskManagerSubagent",
             "in_pt": "'SUBAGENT_ROUTING'",
-            "in_sub": "'BREAK_EVEN', 'BREAK_EVEN_UNITS', 'CONCENTRATION', 'ATTRITION'",
+            "in_sub": "'BREAK_EVEN', 'BREAK_EVEN_UNITS', 'CONCENTRATION', 'ATTRITION', 'DUPONT_ROE', 'ROIC', 'ROA', 'EVA', 'LTV_CAC', 'CAC_PAYBACK', 'NRR'",
             "out_role": "\"RISK_SPECIALIST\"",
             "out_target": "\"RiskManagerSubagent\"",
             "out_tone": "\"RISK_MANAGEMENT\"",
@@ -325,6 +381,259 @@
             "out_tone": "\"RISK_MANAGEMENT\"",
             "out_template": "\"\"",
             "out_guidance": "\"To simulate client churn impact on your cash flow, please specify your current annual revenue, annual operating burn, and the revenue contributed by the client at risk.\\n\\nExample format: 'What is the cash flow impact if we lose our largest client who pays $80,000 out of $300,000 revenue with $250,000 annual expenses?'\""
+          },
+          {
+            "_id": "rule_missing_param_current_ratio",
+            "_description": "Missing parameter prompt for Current Ratio calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'CURRENT_RATIO'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Current Ratio, please specify your current assets and current liabilities.\\n\\nExample format: 'What is our current ratio for assets $150,000 and liabilities $100,000?'\\n\\nBenchmark: Ratio >= 1.50x represents a healthy working capital buffer.\""
+          },
+          {
+            "_id": "rule_missing_param_quick_ratio",
+            "_description": "Missing parameter prompt for Quick Ratio calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'QUICK_RATIO'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Quick Ratio (Acid Test), please provide current assets, inventory value, and current liabilities.\\n\\nExample format: 'Calculate quick ratio with assets $200,000, inventory $50,000, and liabilities $100,000'.\\n\\nBenchmark: Quick Ratio >= 1.00x ensures liquid coverage without requiring inventory sales.\""
+          },
+          {
+            "_id": "rule_missing_param_debt_to_equity",
+            "_description": "Missing parameter prompt for Debt-to-Equity Ratio calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'DEBT_TO_EQUITY'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Debt-to-Equity (D/E) Ratio, please specify your total debt and total shareholder equity.\\n\\nExample format: 'Calculate debt to equity for debt $250,000 and equity $500,000'.\\n\\nBenchmark: D/E <= 1.50x represents a conservative to moderate leverage profile.\""
+          },
+          {
+            "_id": "rule_missing_param_interest_coverage",
+            "_description": "Missing parameter prompt for Interest Coverage Ratio calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'INTEREST_COVERAGE'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Interest Coverage Ratio (Times Interest Earned), please provide your annual EBIT (Operating Income) and annual interest expense.\\n\\nExample format: 'What is our interest coverage with EBIT $120,000 and interest expense $20,000?'\\n\\nBenchmark: Ratio >= 2.50x indicates strong debt service covenant compliance.\""
+          },
+          {
+            "_id": "rule_missing_param_trade_credit",
+            "_description": "Missing parameter prompt for Trade Credit early payment discount evaluation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'TRADE_CREDIT'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To evaluate early payment vendor discount terms (e.g. 2/10 Net 30), please specify the discount percentage, discount days, and net days.\\n\\nExample format: 'Evaluate trade terms 2/10 net 30 for a $50,000 invoice with a 10% credit line'.\\n\\nFormula calculates the annualized implied APR to determine whether taking the discount saves financing costs.\""
+          },
+          {
+            "_id": "rule_missing_param_cash_drag",
+            "_description": "Missing parameter prompt for Treasury Cash Drag and idle cash yield loss evaluation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'CASH_DRAG'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Treasury Cash Drag and idle cash yield loss, please specify your current cash balance and monthly operating burn (or desired cash reserve).\\n\\nExample format: 'Calculate cash drag for cash balance $500,000 with monthly burn $50,000 at 4.5% yield'.\\n\\nAnalyzes opportunity cost of excess liquidity earning zero interest vs money market benchmarks.\""
+          },
+          {
+            "_id": "rule_missing_param_dupont_roe",
+            "_description": "Missing parameter prompt for 3-Stage DuPont Return on Equity decomposition",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'DUPONT_ROE'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To perform a 3-stage DuPont ROE decomposition, please provide your Net Income, Total Revenue, Total Assets, and Total Shareholder Equity.\\n\\nExample format: 'Calculate DuPont ROE: net income $80,000, revenue $1,000,000, assets $600,000, equity $400,000'.\\n\\nDeconstructs ROE into Net Margin x Asset Turnover x Equity Multiplier.\""
+          },
+          {
+            "_id": "rule_missing_param_lease_vs_buy",
+            "_description": "Missing parameter prompt for Equipment Lease vs Buy NPV analysis",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'LEASE_VS_BUY'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To evaluate equipment Lease vs. Buy Net Present Value, please provide the equipment purchase price, annual lease payment, term in years, and discount rate.\\n\\nExample format: 'Should we lease or buy equipment costing $100,000 with lease payments of $28,000 for 4 years at 8% discount rate?'\\n\\nCompares after-tax cash flows including depreciation tax shields and salvage value.\""
+          },
+          {
+            "_id": "rule_missing_param_altman_z",
+            "_description": "Missing parameter prompt for Altman Z'-Score private SME distress calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'ALTMAN_Z_SCORE'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Altman Z'-Score for insolvency risk, please specify your Working Capital, Retained Earnings, EBIT, Book Equity, Total Liabilities, Revenue, and Total Assets.\\n\\nExample format: 'Calculate Altman Z score: working capital $50,000, retained earnings $80,000, EBIT $40,000, equity $120,000, liabilities $180,000, revenue $500,000, assets $300,000'.\""
+          },
+          {
+            "_id": "rule_missing_param_net_debt",
+            "_description": "Missing parameter prompt for Net Debt to EBITDA calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'NET_DEBT_TO_EBITDA'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Net Debt to EBITDA leverage ratio, please provide your Total Debt, Cash and Equivalents, and annual operating EBITDA.\\n\\nExample format: 'What is our Net Debt to EBITDA with debt $250,000, cash $50,000, and EBITDA $100,000?'\""
+          },
+          {
+            "_id": "rule_missing_param_debt_burden",
+            "_description": "Missing parameter prompt for Debt Service Burden calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'DEBT_SERVICE_BURDEN'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Debt Service Burden ratio, please provide your total annual debt service payments and gross annual commercial revenue.\\n\\nExample format: 'What is our debt service burden if annual debt payments are $60,000 and revenue is $400,000?'\""
+          },
+          {
+            "_id": "rule_missing_param_roic",
+            "_description": "Missing parameter prompt for ROIC calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'ROIC'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Return on Invested Capital (ROIC), please specify your annual Operating Income (EBIT), Total Debt, and Total Shareholder Equity.\\n\\nExample format: 'Calculate ROIC for EBIT $120,000, debt $200,000, equity $300,000, and cash $50,000'.\""
+          },
+          {
+            "_id": "rule_missing_param_roa",
+            "_description": "Missing parameter prompt for ROA calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'ROA'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Return on Assets (ROA), please specify your annual Net Income and Total Balance Sheet Assets.\\n\\nExample format: 'What is our ROA if net income is $45,000 and total assets are $500,000?'\""
+          },
+          {
+            "_id": "rule_missing_param_eva",
+            "_description": "Missing parameter prompt for Economic Value Added (EVA) calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'EVA'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Economic Value Added (EVA), please provide your annual EBIT, Invested Capital, and cost of capital (WACC).\\n\\nExample format: 'Calculate EVA for EBIT $150,000, invested capital $800,000, and 9% WACC'.\""
+          },
+          {
+            "_id": "rule_missing_param_fcff",
+            "_description": "Missing parameter prompt for Free Cash Flow calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'FCFF'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate Free Cash Flow to Firm (FCFF) and Equity (FCFE), please specify your annual Operating Cash Flow (OCF) and Capital Expenditures (CapEx).\\n\\nExample format: 'Calculate free cash flow for OCF $180,000 and CapEx $40,000 with $15,000 interest'.\""
+          },
+          {
+            "_id": "rule_missing_param_wacc",
+            "_description": "Missing parameter prompt for WACC calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'WACC'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Weighted Average Cost of Capital (WACC), please provide your Equity Value, Total Debt, expected Cost of Equity, and borrowing interest rate on debt.\\n\\nExample format: 'Calculate WACC with equity $600,000 at 12%, debt $400,000 at 7%, and 21% tax rate'.\""
+          },
+          {
+            "_id": "rule_missing_param_ev",
+            "_description": "Missing parameter prompt for Enterprise Value and Multiples calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'ENTERPRISE_VALUE'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate Enterprise Value (EV) and valuation multiples, please provide your Equity Value, Total Debt, Cash reserves, and EBITDA.\\n\\nExample format: 'What is our EV and EV/EBITDA multiple if equity is $1.2M, debt $300k, cash $100k, and EBITDA $250k?'\""
+          },
+          {
+            "_id": "rule_missing_param_dcf",
+            "_description": "Missing parameter prompt for DCF Valuation calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'DCF_VALUATION'",
+            "out_role": "\"CREDIT_SPECIALIST\"",
+            "out_target": "\"CreditSubagent\"",
+            "out_tone": "\"INSTITUTIONAL_CREDIT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To perform a Discounted Cash Flow (DCF) valuation, please specify your projected annual cash flows and WACC discount rate.\\n\\nExample format: 'Run DCF valuation for cash flows $50k, $65k, $80k, $100k at 9% WACC with 2.5% terminal growth'.\""
+          },
+          {
+            "_id": "rule_missing_param_ltv_cac",
+            "_description": "Missing parameter prompt for LTV/CAC calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'LTV_CAC'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your Customer Lifetime Value (LTV) and LTV/CAC ratio, please provide your Annual ARPU, Gross Margin %, Annual Churn Rate %, and Customer Acquisition Cost (CAC).\\n\\nExample format: 'Calculate LTV/CAC for ARPU $1,200, gross margin 80%, churn 10%, and CAC $300'.\""
+          },
+          {
+            "_id": "rule_missing_param_cac_payback",
+            "_description": "Missing parameter prompt for CAC Payback calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'CAC_PAYBACK'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate your CAC Payback period in months, please specify your Monthly ARPU, Gross Margin %, and Customer Acquisition Cost (CAC).\\n\\nExample format: 'Calculate CAC payback for monthly ARPU $100, gross margin 75%, and CAC $600'.\""
+          },
+          {
+            "_id": "rule_missing_param_nrr",
+            "_description": "Missing parameter prompt for Net Revenue Retention (NRR) calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'NRR'",
+            "out_role": "\"RISK_SPECIALIST\"",
+            "out_target": "\"RiskManagerSubagent\"",
+            "out_tone": "\"RISK_MANAGEMENT\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate Net Revenue Retention (NRR) and cohort expansion, please provide your Starting ARR, Expansion ARR, Contraction ARR, and Churn ARR.\\n\\nExample format: 'Calculate NRR for starting ARR $500,000, expansion $80,000, contraction $20,000, and churn $15,000'.\""
+          },
+          {
+            "_id": "rule_missing_param_currency",
+            "_description": "Missing parameter prompt for Currency Conversion calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'CURRENCY_CONVERSION'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To convert currency, please specify the amount, source currency, and target currency.\\n\\nExample format: 'Convert 50,000 USD to EUR' or 'Exchange 100,000 BDT to USD at 0.0084 rate with 30 bps spread'.\""
+          },
+          {
+            "_id": "rule_missing_param_fx_exposure",
+            "_description": "Missing parameter prompt for Foreign Exchange (FX) Exposure calculation",
+            "in_pt": "'MISSING_PARAM'",
+            "in_sub": "'FX_EXPOSURE'",
+            "out_role": "\"LIQUIDITY_SPECIALIST\"",
+            "out_target": "\"LiquiditySubagent\"",
+            "out_tone": "\"OPERATIONAL_LIQUIDITY\"",
+            "out_template": "\"\"",
+            "out_guidance": "\"To calculate foreign exchange exposure and potential cash flow loss, please provide your foreign currency receivables and foreign payables.\\n\\nExample format: 'Calculate FX exposure for 100,000 EUR receivables and 20,000 EUR payables in USD with 5% shock'.\""
           }
         ]
       }

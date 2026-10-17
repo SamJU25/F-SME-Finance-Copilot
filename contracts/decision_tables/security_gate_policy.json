@@ -1,4 +1,13 @@
 {
+  "prompt_security_patterns": {
+    "injection_regex": "(ignore|disregard|forget|override)\\s+(all\\s+)?(?:previous|prior|above)?\\s*(?:instructions|prompts|rules|guidelines|security)|system\\s+override|god\\s+mode|jailbreak|you\\s+are\\s+now\\s+(?:an?\\s+)?unrestricted|bypass\\s+(?:2fa|biometric|security|hitl|tier)|admin\\s+mode\\s+enabled",
+    "credential_regex": "\\b(?:sk-ant-[a-zA-Z0-9_\\-]{20,}|sk-[a-zA-Z0-9_\\-]{20,}|AIzaSy[a-zA-Z0-9_\\-]{30,}|gsk_[a-zA-Z0-9_\\-]{20,})\\b|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\\s*[:=]\\s*['\"]?([a-zA-Z0-9_\\-]{4,})['\"]?"
+  },
+  "staging_defaults": {
+    "default_action_type": "DRAW_CREDIT_LINE",
+    "default_amount_cents": 2500000,
+    "default_target_identifier": "SME-LIQUIDITY-FACILITY"
+  },
   "nodes": [
     {
       "id": "input_node",

@@ -123,6 +123,204 @@
             "out_rationale": "'Inadequate fixed-charge coverage ({ratio}x). High risk of lease or debt default.'"
           },
           {
+            "_id": "rule_tie_free",
+            "_description": "Zero interest expense",
+            "in_metric": "'INTEREST_COVERAGE'",
+            "in_ratio": ">= 999.0",
+            "out_status": "'DEBT_FREE'",
+            "out_approved": "true",
+            "out_rationale": "'Company has zero scheduled interest obligations.'"
+          },
+          {
+            "_id": "rule_tie_healthy",
+            "_description": "EBIT covers interest payments >= 3.0x",
+            "in_metric": "'INTEREST_COVERAGE'",
+            "in_ratio": ">= 3.0",
+            "out_status": "'HEALTHY'",
+            "out_approved": "true",
+            "out_rationale": "'EBIT covers interest payments {ratio}x, exceeding commercial banking benchmarks.'"
+          },
+          {
+            "_id": "rule_tie_acceptable",
+            "_description": "EBIT covers interest payments >= 1.5x",
+            "in_metric": "'INTEREST_COVERAGE'",
+            "in_ratio": ">= 1.5",
+            "out_status": "'ACCEPTABLE'",
+            "out_approved": "true",
+            "out_rationale": "'EBIT covers interest payments {ratio}x. Adequate for ongoing servicing but vulnerable to earnings volatility.'"
+          },
+          {
+            "_id": "rule_tie_risk",
+            "_description": "Interest coverage strained < 1.5x",
+            "in_metric": "'INTEREST_COVERAGE'",
+            "in_ratio": "< 1.5",
+            "out_status": "'COVENANT_BREACH_RISK'",
+            "out_approved": "false",
+            "out_rationale": "'Interest coverage is strained at {ratio}x (<1.5x minimum covenant). Heightened risk of default or lender covenant breach.'"
+          },
+          {
+            "_id": "rule_de_conservative",
+            "_description": "Conservative D/E ratio <= 1.0x",
+            "in_metric": "'DEBT_TO_EQUITY'",
+            "in_ratio": "<= 1.0",
+            "out_status": "'CONSERVATIVE'",
+            "out_approved": "true",
+            "out_rationale": "'Conservative capital structure (D/E: {ratio}x). Net worth covers total liabilities 1:1.'"
+          },
+          {
+            "_id": "rule_de_moderate",
+            "_description": "Moderate commercial leverage D/E <= 2.0x",
+            "in_metric": "'DEBT_TO_EQUITY'",
+            "in_ratio": "<= 2.0",
+            "out_status": "'MODERATE_LEVERAGE'",
+            "out_approved": "true",
+            "out_rationale": "'Balanced leverage ratio (D/E: {ratio}x) within standard commercial lending thresholds.'"
+          },
+          {
+            "_id": "rule_de_elevated",
+            "_description": "Elevated leverage D/E <= 3.0x",
+            "in_metric": "'DEBT_TO_EQUITY'",
+            "in_ratio": "<= 3.0",
+            "out_status": "'ELEVATED_LEVERAGE'",
+            "out_approved": "false",
+            "out_rationale": "'Elevated financial leverage (D/E: {ratio}x). Total debt significantly exceeds shareholder equity.'"
+          },
+          {
+            "_id": "rule_de_distressed",
+            "_description": "Distressed leverage D/E > 3.0x",
+            "in_metric": "'DEBT_TO_EQUITY'",
+            "in_ratio": "> 3.0",
+            "out_status": "'DISTRESSED_LEVERAGE'",
+            "out_approved": "false",
+            "out_rationale": "'Severely overleveraged capital structure (D/E: {ratio}x). Debt recapitalization or equity injection required.'"
+          },
+          {
+            "_id": "rule_lease_vs_buy_buy",
+            "_description": "Recommend Buy equipment outright",
+            "in_metric": "'LEASE_VS_BUY'",
+            "in_ratio": "1.0",
+            "out_status": "'RECOMMEND_BUY'",
+            "out_approved": "true",
+            "out_rationale": "'Purchasing equipment outright generates superior Net Present Value.'"
+          },
+          {
+            "_id": "rule_lease_vs_buy_lease",
+            "_description": "Recommend Lease equipment",
+            "in_metric": "'LEASE_VS_BUY'",
+            "in_ratio": "2.0",
+            "out_status": "'RECOMMEND_LEASE'",
+            "out_approved": "true",
+            "out_rationale": "'Operating lease preserves working capital and generates superior Net Present Value.'"
+          },
+          {
+            "_id": "rule_altman_safe",
+            "_description": "Altman Z'-score > 2.90 Safe Zone",
+            "in_metric": "'ALTMAN_Z_SCORE'",
+            "in_ratio": "> 2.90",
+            "out_status": "'SAFE_ZONE'",
+            "out_approved": "true",
+            "out_rationale": "'Altman Z-Score indicates strong solvency and minimal default risk.'"
+          },
+          {
+            "_id": "rule_altman_grey",
+            "_description": "Altman Z'-score 1.23 to 2.90 Grey Zone",
+            "in_metric": "'ALTMAN_Z_SCORE'",
+            "in_ratio": ">= 1.23",
+            "out_status": "'GREY_ZONE'",
+            "out_approved": "true",
+            "out_rationale": "'Altman Z-Score indicates moderate credit risk. Monitor operating margins.'"
+          },
+          {
+            "_id": "rule_altman_distress",
+            "_description": "Altman Z'-score < 1.23 Distress Zone",
+            "in_metric": "'ALTMAN_Z_SCORE'",
+            "in_ratio": "< 1.23",
+            "out_status": "'DISTRESS_ZONE'",
+            "out_approved": "false",
+            "out_rationale": "'Altman Z-Score flags acute insolvency distress risk.'"
+          },
+          {
+            "_id": "rule_net_debt_cash_pos",
+            "_description": "Net Debt <= 0 Net Cash Positive",
+            "in_metric": "'NET_DEBT_TO_EBITDA'",
+            "in_ratio": "<= 0.0",
+            "out_status": "'NET_CASH_POSITIVE'",
+            "out_approved": "true",
+            "out_rationale": "'Cash reserves exceed total debt obligations.'"
+          },
+          {
+            "_id": "rule_net_debt_prime",
+            "_description": "Net Debt to EBITDA <= 2.0x Prime Leverage",
+            "in_metric": "'NET_DEBT_TO_EBITDA'",
+            "in_ratio": "<= 2.0",
+            "out_status": "'PRIME_LEVERAGE'",
+            "out_approved": "true",
+            "out_rationale": "'Conservative leverage ratio within prime institutional bank thresholds.'"
+          },
+          {
+            "_id": "rule_net_debt_moderate",
+            "_description": "Net Debt to EBITDA <= 3.5x Moderate Leverage",
+            "in_metric": "'NET_DEBT_TO_EBITDA'",
+            "in_ratio": "<= 3.5",
+            "out_status": "'MODERATE_LEVERAGE'",
+            "out_approved": "true",
+            "out_rationale": "'Moderate commercial debt multiple within standard credit boundaries.'"
+          },
+          {
+            "_id": "rule_net_debt_elevated",
+            "_description": "Net Debt to EBITDA <= 4.5x Elevated Leverage",
+            "in_metric": "'NET_DEBT_TO_EBITDA'",
+            "in_ratio": "<= 4.5",
+            "out_status": "'ELEVATED_LEVERAGE'",
+            "out_approved": "false",
+            "out_rationale": "'Elevated leverage multiple approaching covenant breach limits.'"
+          },
+          {
+            "_id": "rule_net_debt_high_risk",
+            "_description": "Net Debt to EBITDA > 4.5x High Risk",
+            "in_metric": "'NET_DEBT_TO_EBITDA'",
+            "in_ratio": "> 4.5",
+            "out_status": "'HIGH_RISK_LEVERAGE'",
+            "out_approved": "false",
+            "out_rationale": "'High risk debt multiple exceeding prudent commercial boundaries.'"
+          },
+          {
+            "_id": "rule_burden_light",
+            "_description": "Debt service burden <= 10%",
+            "in_metric": "'DEBT_SERVICE_BURDEN'",
+            "in_ratio": "<= 10.0",
+            "out_status": "'LIGHT_BURDEN'",
+            "out_approved": "true",
+            "out_rationale": "'Debt repayments claim a minimal fraction of topline revenue.'"
+          },
+          {
+            "_id": "rule_burden_moderate",
+            "_description": "Debt service burden <= 20%",
+            "in_metric": "'DEBT_SERVICE_BURDEN'",
+            "in_ratio": "<= 20.0",
+            "out_status": "'MODERATE_BURDEN'",
+            "out_approved": "true",
+            "out_rationale": "'Debt payments are well managed within typical commercial tolerance.'"
+          },
+          {
+            "_id": "rule_burden_heavy",
+            "_description": "Debt service burden <= 30%",
+            "in_metric": "'DEBT_SERVICE_BURDEN'",
+            "in_ratio": "<= 30.0",
+            "out_status": "'HEAVY_BURDEN'",
+            "out_approved": "false",
+            "out_rationale": "'Heavy debt service burden constricts operational working capital.'"
+          },
+          {
+            "_id": "rule_burden_critical",
+            "_description": "Debt service burden > 30%",
+            "in_metric": "'DEBT_SERVICE_BURDEN'",
+            "in_ratio": "> 30.0",
+            "out_status": "'CRITICAL_BURDEN'",
+            "out_approved": "false",
+            "out_rationale": "'Critical debt service burden exceeding 30% of gross inflows.'"
+          },
+          {
             "_id": "rule_default",
             "_description": "Default baseline",
             "in_metric": "",

@@ -17,6 +17,8 @@ class DecisionDomain(str, Enum):
     REVENUE_VOLATILITY = "REVENUE_VOLATILITY"      # Weekly inflow coefficient of variation tiers
     FACILITY_MATCHING = "FACILITY_MATCHING"        # Pre-qualified financing catalog, pricing & suitability
     AGENT_PERSONA = "AGENT_PERSONA"                # Agent personality directives, system prompts & subagent routing
+    BANK_STATEMENT_PROFILE = "BANK_STATEMENT_PROFILE"      # PDF statement column header & format normalization
+    RECONCILIATION_TOLERANCE = "RECONCILIATION_TOLERANCE"  # Accounting tie-out proofs & discrepancy classification
 
 
 

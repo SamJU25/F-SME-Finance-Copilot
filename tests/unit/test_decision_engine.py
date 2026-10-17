@@ -939,6 +939,14 @@ def test_agent_persona_subagent_routing_parity():
         ("BREAK_EVEN_UNITS", "RiskManagerSubagent"),
         ("CONCENTRATION", "RiskManagerSubagent"),
         ("ATTRITION", "RiskManagerSubagent"),
+        ("CURRENT_RATIO", "LiquiditySubagent"),
+        ("QUICK_RATIO", "LiquiditySubagent"),
+        ("TRADE_CREDIT", "LiquiditySubagent"),
+        ("CASH_DRAG", "LiquiditySubagent"),
+        ("DEBT_TO_EQUITY", "CreditSubagent"),
+        ("INTEREST_COVERAGE", "CreditSubagent"),
+        ("LEASE_VS_BUY", "CreditSubagent"),
+        ("DUPONT_ROE", "RiskManagerSubagent"),
         ("UNRECOGNIZED_QUERY", "Supervisor"),
     ]
 
@@ -968,6 +976,14 @@ def test_agent_persona_missing_param_guidance_parity():
         ("BREAK_EVEN_UNITS", "fixed costs"),
         ("CONCENTRATION", "herfindahl"),
         ("ATTRITION", "client churn"),
+        ("CURRENT_RATIO", "current assets"),
+        ("QUICK_RATIO", "inventory"),
+        ("DEBT_TO_EQUITY", "total debt"),
+        ("INTEREST_COVERAGE", "ebit"),
+        ("TRADE_CREDIT", "discount"),
+        ("CASH_DRAG", "cash balance"),
+        ("DUPONT_ROE", "net income"),
+        ("LEASE_VS_BUY", "purchase price"),
     ]
 
     for adapter in (zen, fb):
@@ -1058,6 +1074,67 @@ def test_prompts_module_dynamic_behavior():
     # Missing param guidance
     fccr_msg = get_missing_param_guidance("FCCR")
     assert "ebitda" in fccr_msg.lower()
+
+
+def test_clusters_1_to_5_decision_table_parity():
+    zen = ZenRulesAdapter()
+    fb = FallbackRuleAdapter()
+
+    # 1. Working Capital Risk (Current Ratio, Quick Ratio, Trade Credit, Cash Drag)
+    wc_cases = [
+        ({"metric": "CURRENT_RATIO", "value": 2.5}, "EXCELLENT"),
+        ({"metric": "CURRENT_RATIO", "value": 0.8}, "DEFICIT"),
+        ({"metric": "QUICK_RATIO", "value": 1.4}, "HEALTHY"),
+        ({"metric": "QUICK_RATIO", "value": 0.7}, "INVENTORY_DEPENDENT"),
+        ({"metric": "TRADE_CREDIT_DISCOUNT", "value": 37.24}, "TAKE_DISCOUNT_AGGRESSIVELY"),
+        ({"metric": "TRADE_CREDIT_DISCOUNT", "value": 12.0}, "STRETCH_PAYABLES"),
+        ({"metric": "CASH_DRAG", "value": 18000.0}, "EXCESSIVE_CASH_DRAG"),
+        ({"metric": "CASH_DRAG", "value": 2500.0}, "MODERATE_CASH_DRAG"),
+        ({"metric": "CASH_DRAG", "value": 0.0}, "OPTIMAL_TREASURY_ALLOCATION"),
+    ]
+
+    for adapter in (zen, fb):
+        for state, expected in wc_cases:
+            res = adapter.evaluate(DecisionRequest(
+                domain=DecisionDomain.WORKING_CAPITAL_RISK,
+                input_state=state,
+            ))
+            assert res.selected_choice == expected, f"Failed for {adapter.__class__.__name__} on {state}"
+
+    # 2. Debt Affordability (Debt-to-Equity, Interest Coverage, Lease vs Buy)
+    debt_cases = [
+        ({"metric": "DEBT_TO_EQUITY", "ratio": 0.8}, "CONSERVATIVE"),
+        ({"metric": "DEBT_TO_EQUITY", "ratio": 3.5}, "DISTRESSED_LEVERAGE"),
+        ({"metric": "INTEREST_COVERAGE", "ratio": 4.0}, "HEALTHY"),
+        ({"metric": "INTEREST_COVERAGE", "ratio": 1.2}, "COVENANT_BREACH_RISK"),
+        ({"metric": "LEASE_VS_BUY", "ratio": 1.0, "recommended_action": "BUY"}, "RECOMMEND_BUY"),
+        ({"metric": "LEASE_VS_BUY", "ratio": 2.0, "recommended_action": "LEASE"}, "RECOMMEND_LEASE"),
+    ]
+
+    for adapter in (zen, fb):
+        for state, expected in debt_cases:
+            res = adapter.evaluate(DecisionRequest(
+                domain=DecisionDomain.DEBT_AFFORDABILITY,
+                input_state=state,
+            ))
+            assert res.selected_choice == expected, f"Failed for {adapter.__class__.__name__} on {state}"
+
+    # 3. Unit Economics (DuPont ROE)
+    ue_cases = [
+        ({"metric": "DUPONT_ROE", "value": 20.0}, "EXCEPTIONAL_ROE"),
+        ({"metric": "DUPONT_ROE", "value": 15.0}, "STRONG_ROE"),
+        ({"metric": "DUPONT_ROE", "value": 8.0}, "MODERATE_ROE"),
+        ({"metric": "DUPONT_ROE", "value": 3.0}, "SUBPAR_ROE"),
+    ]
+
+    for adapter in (zen, fb):
+        for state, expected in ue_cases:
+            res = adapter.evaluate(DecisionRequest(
+                domain=DecisionDomain.UNIT_ECONOMICS,
+                input_state=state,
+            ))
+            assert res.selected_choice == expected, f"Failed for {adapter.__class__.__name__} on {state}"
+
 
 
 

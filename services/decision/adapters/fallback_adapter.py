@@ -9,20 +9,10 @@ PAYROLL_REGEX = re.compile(r"(payroll|salary|wages|stipend|direct\s*dep|gusto|ad
 RENT_REGEX = re.compile(r"(rent|lease|property|landlord|realty|storage)", re.IGNORECASE)
 DEBT_REGEX = re.compile(r"(loan|principal|debt\s*service|amortization|equipment\s*lease|note\s*pay)", re.IGNORECASE)
 
-INJECTION_PATTERN = re.compile(
-    r"(ignore|disregard|forget|override)\s+(all\s+)?(?:previous\s+)?(?:instructions|prompts|rules|guidelines|security)"
-    r"|system\s+override"
-    r"|you\s+are\s+now\s+(?:an?\s+)?unrestricted"
-    r"|bypass\s+(?:2fa|biometric|security|hitl|tier)"
-    r"|admin\s+mode\s+enabled",
-    re.IGNORECASE,
-)
+from services.decision.policy_loader import load_security_policy_config
 
-API_KEY_PATTERN = re.compile(
-    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
-    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{4,})['\"]?",
-    re.IGNORECASE,
-)
+_inj_pattern, _cred_pattern, _staging_defaults = load_security_policy_config()
+
 
 
 class FallbackRuleAdapter(AbstractDecisionEngine):
@@ -52,6 +42,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             DecisionDomain.REVENUE_VOLATILITY,
             DecisionDomain.FACILITY_MATCHING,
             DecisionDomain.AGENT_PERSONA,
+            DecisionDomain.BANK_STATEMENT_PROFILE,
+            DecisionDomain.RECONCILIATION_TOLERANCE,
         ]
 
     def evaluate(self, request: DecisionRequest) -> DecisionResult:
@@ -83,6 +75,10 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             return self._evaluate_facility_matching(state)
         elif request.domain == DecisionDomain.AGENT_PERSONA:
             return self._evaluate_agent_persona(state)
+        elif request.domain == DecisionDomain.BANK_STATEMENT_PROFILE:
+            return self._evaluate_bank_statement_profile(state)
+        elif request.domain == DecisionDomain.RECONCILIATION_TOLERANCE:
+            return self._evaluate_reconciliation_tolerance(state)
         else:
             raise ValueError(f"Domain {request.domain} not supported by {self.engine_id}")
 
@@ -147,10 +143,21 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         )
 
     def _evaluate_security_gate(self, state: Dict[str, Any]) -> DecisionResult:
+        if state.get("get_staging_defaults"):
+            return DecisionResult(
+                domain=DecisionDomain.SECURITY_GATE,
+                selected_choice=str(_staging_defaults.get("default_action_type", "DRAW_CREDIT_LINE")),
+                confidence_score=1.0,
+                engine_id=self.engine_id,
+                matched_rule_id="fallback_security_gate_defaults",
+                rationale="Retrieved declarative staging defaults from security_gate_policy.json.",
+                output_payload=dict(_staging_defaults),
+            )
         if state.get("check_prompt_security"):
             msg = str(state.get("text", state.get("message", "")))
-            is_inj = bool(INJECTION_PATTERN.search(msg))
-            is_key = bool(API_KEY_PATTERN.search(msg))
+            is_inj = bool(_inj_pattern.search(msg))
+            is_key = bool(_cred_pattern.search(msg))
+
             if is_inj:
                 choice = "PROMPT_INJECTION_DETECTED"
                 is_safe = False
@@ -331,23 +338,95 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
         )
 
     def _evaluate_expense_triage(self, state: Dict[str, Any]) -> DecisionResult:
-        memo = str(state.get("description", state.get("memo", "")))
-        if PAYROLL_REGEX.search(memo):
-            category = "PAYROLL"
-        elif RENT_REGEX.search(memo):
-            category = "RENT"
-        elif DEBT_REGEX.search(memo):
-            category = "DEBT_SERVICE"
+        memo = str(state.get("description", state.get("memo", state.get("memo_clean", "")))).lower()
+        if any(k in memo for k in ("payroll", "gusto", "adp", "paychex", "workday", "salary", "wages", "rippling", "justworks")):
+            category, recurrence, essential = "PAYROLL", "LUMPY_MONTHLY", True
+        elif any(k in memo for k in ("rent", "lease", "wework", "regus", "property", "landlord", "realty", "storage")):
+            category, recurrence, essential = "RENT", "LUMPY_MONTHLY", True
+        elif any(k in memo for k in ("loan", "debt", "principal", "amortization", "interest payment", "sba", "note payable", "credit line")):
+            category, recurrence, essential = "DEBT_SERVICE", "LUMPY_MONTHLY", True
+        elif any(k in memo for k in ("tax", "irs", "state tax", "treasury", "revenue dept", "vat", "withholding")):
+            category, recurrence, essential = "TAX", "LUMPY_MONTHLY", True
+        elif any(k in memo for k in ("electric", "power", "water", "internet", "telecom", "comcast", "verizon", "att", "pge")):
+            category, recurrence, essential = "UTILITIES", "LUMPY_MONTHLY", True
+        elif any(k in memo for k in ("stripe", "square", "shopify", "paypal", "merchant pay", "customer wire", "settlement", "invoice payment")):
+            category, recurrence, essential = "REVENUE", "VARIABLE", False
         else:
-            category = "OPERATING_EXPENSE"
+            category, recurrence, essential = "GENERAL_EXPENSE", "VARIABLE", False
 
         return DecisionResult(
             domain=DecisionDomain.EXPENSE_TRIAGE,
             selected_choice=category,
             confidence_score=0.95,
             engine_id=self.engine_id,
-            rationale=f"Memo regex triage classified as {category}.",
-            output_payload={"category": category},
+            matched_rule_id=f"rule_fallback_{category.lower()}",
+            rationale=f"Memo triage classified as {category} ({recurrence}).",
+            output_payload={"category": category, "recurrence": recurrence, "is_essential_operating": essential},
+        )
+
+    def _evaluate_bank_statement_profile(self, state: Dict[str, Any]) -> DecisionResult:
+        raw = str(state.get("header_clean", state.get("header_raw", ""))).lower().strip()
+        collapsed = re.sub(r"[^a-z0-9]", "", raw)
+
+        if any(k in raw for k in ("transaction id", "trans id", "tx id", "reference id", "reference number", "ref no", "check number", "document number", "receipt id", "order id", "fit id", "cheque no", "check no")) or \
+           collapsed in ("transactionid", "id", "transid", "txid", "referenceid", "refno", "referencenumber", "checknumber", "documentnumber", "num", "receiptid", "orderid", "fitid", "chequeno", "checkorslip", "checkslip", "checkno"):
+            col, mult, conf = "TX_ID", 0, 1.0
+        elif any(k in raw for k in ("trans date", "posting date", "transaction date", "effective date", "txn date", "value date", "posted on", "post date", "booking date", "activity date", "operation date", "settlement date", "process date", "cleared date", "date", "created")) or \
+             collapsed in ("date", "postedon", "postdate", "postingdate", "transactiondate", "transdate", "bookingdate", "effectivedate", "valuedate", "created", "createdat", "createdutc", "time", "timestamp", "when", "activitydate", "operationdate", "settlementdate", "txndate", "processdate", "cleareddate"):
+            col, mult, conf = "DATE", 0, 1.0
+        elif any(k in raw for k in ("description", "memo", "details", "narrative", "payee", "particulars", "activity", "reference", "merchant", "notes", "who", "vendor")) or \
+             collapsed in ("description", "details", "memo", "name", "counterparty", "payee", "payer", "merchant", "narrative", "transactiondetails", "notes", "who", "reference", "particulars", "split", "item", "title", "vendor", "payeename", "descriptionnarrative"):
+            col, mult, conf = "DESCRIPTION", 0, 1.0
+        elif any(k in raw for k in ("currency", "curr", "ccy", "currency code", "iso currency")) or \
+             collapsed in ("currency", "curr", "ccy", "currencycode", "isocurrency"):
+            col, mult, conf = "CURRENCY", 0, 1.0
+        elif any(k in raw for k in ("balance", "daily balance", "ending balance", "running balance", "ledger balance", "available balance", "closing balance")) or \
+             collapsed in ("closingbalance", "balance", "runningbal", "runningbalance", "accountbalance", "currentbalance", "availablebalance", "endingbalance", "ledgerbalance", "bal"):
+            col, mult, conf = "BALANCE", 0, 1.0
+        elif any(k in raw for k in ("deposits", "credits", "additions", "deposit", "credit", "inward", "inflow", "amount credited", "credit (+)", "money in", "paid in", "income", "receipts")) or \
+             collapsed in ("credit", "deposit", "deposits", "moneyin", "paidin", "creditamount", "cr", "income", "receipts", "inflow", "received", "credits"):
+            col, mult, conf = "INFLOW", 1, 1.0
+        elif any(k in raw for k in ("withdrawals", "debits", "subtractions", "withdrawal", "debit", "checks", "cheques", "payments", "outflow", "amount debited", "debit (-)", "money out", "paid out", "charges", "expense")) or \
+             collapsed in ("debit", "withdrawal", "withdrawals", "moneyout", "paidout", "debitamount", "dr", "expense", "charges", "outflow", "spent", "debits", "payments"):
+            col, mult, conf = "OUTFLOW", -1, 1.0
+        elif any(k in raw for k in ("net amount", "net")) or collapsed in ("net", "netamount"):
+            col, mult, conf = "NET_AMOUNT", 1, 1.0
+        elif any(k in raw for k in ("amount", "transaction amount", "trans amount", "total", "value")) or \
+             collapsed in ("amount", "transactionamount", "transamount", "value", "total", "howmuch", "sum", "price", "subtotal", "txnamount"):
+            col, mult, conf = "SIGNED_AMOUNT", 1, 0.9
+        else:
+            col, mult, conf = "UNKNOWN", 0, 0.0
+
+        return DecisionResult(
+            domain=DecisionDomain.BANK_STATEMENT_PROFILE,
+            selected_choice=col,
+            confidence_score=conf,
+            engine_id=self.engine_id,
+            matched_rule_id=f"rule_fallback_{col.lower()}",
+            rationale=f"Fallback rule mapped header '{raw}' to {col}.",
+            output_payload={"canonical_column": col, "sign_multiplier": mult, "confidence": conf},
+        )
+
+    def _evaluate_reconciliation_tolerance(self, state: Dict[str, Any]) -> DecisionResult:
+        delta = abs(int(state.get("delta_cents", 0)))
+        fee_match = bool(state.get("inferred_fee_match", False))
+        if delta == 0:
+            status, allow, sev, note = "BALANCED", True, "NONE", "Exact arithmetic tie-out."
+        elif delta <= 2:
+            status, allow, sev, note = "ROUNDING_TOLERANCE", True, "LOW", "Sub-cent or 1-2 cent commercial rounding variance automatically absorbed."
+        elif fee_match:
+            status, allow, sev, note = "INFERRED_BANK_FEE", True, "LOW", "Discrepancy matches standard commercial bank wire or account maintenance fee schedule."
+        else:
+            status, allow, sev, note = "RECONCILIATION_BREAK", False, "HIGH", "Arithmetic tie-out break: Running ledger balance does not match line transactions."
+
+        return DecisionResult(
+            domain=DecisionDomain.RECONCILIATION_TOLERANCE,
+            selected_choice=status,
+            confidence_score=1.0,
+            engine_id=self.engine_id,
+            matched_rule_id=f"rule_fallback_{status.lower()}",
+            rationale=note,
+            output_payload={"status": status, "allow_auto_reconcile": allow, "severity": sev, "resolution_note": note},
         )
 
     def _evaluate_intent_routing(
@@ -357,14 +436,60 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
 
         if state.get("classify_sub_intent_only"):
             sub = "GENERAL"
-            if any(w in prompt for w in ("dscr", "debt service coverage")):
+            if any(w in prompt for w in ("altman", "z-score", "z'-score", "distress score")):
+                sub = "ALTMAN_Z_SCORE"
+            elif any(w in prompt for w in ("net debt to ebitda", "net debt / ebitda", "net debt")):
+                sub = "NET_DEBT_TO_EBITDA"
+            elif any(w in prompt for w in ("debt service burden", "debt burden")):
+                sub = "DEBT_SERVICE_BURDEN"
+            elif any(w in prompt for w in ("dscr", "debt service coverage")):
                 sub = "DSCR"
             elif any(w in prompt for w in ("fccr", "fixed charge")):
                 sub = "FCCR"
-            elif any(w in prompt for w in ("runway", "burn")):
-                sub = "RUNWAY"
+            elif any(w in prompt for w in ("wacc", "cost of capital")):
+                sub = "WACC"
+            elif any(w in prompt for w in ("enterprise value", "ev/ebitda", "ev/revenue", "ev multiple")):
+                sub = "ENTERPRISE_VALUE"
+            elif any(w in prompt for w in ("dcf", "discounted cash flow")):
+                sub = "DCF_VALUATION"
+            elif any(w in prompt for w in ("fcff", "fcfe", "free cash flow")):
+                sub = "FCFF"
+            elif any(w in prompt for w in ("roic", "return on invested capital")):
+                sub = "ROIC"
+            elif any(w in prompt for w in ("roa", "return on assets")):
+                sub = "ROA"
+            elif any(w in prompt for w in ("eva", "economic value added")):
+                sub = "EVA"
+            elif any(w in prompt for w in ("ltv", "ltv/cac", "lifetime value")):
+                sub = "LTV_CAC"
+            elif any(w in prompt for w in ("cac payback", "payback period")):
+                sub = "CAC_PAYBACK"
+            elif any(w in prompt for w in ("nrr", "grr", "net revenue retention", "gross revenue retention")):
+                sub = "NRR"
+            elif any(w in prompt for w in ("dupont", "roe")):
+                sub = "DUPONT_ROE"
+            elif any(w in prompt for w in ("lease vs buy", "lease or buy")):
+                sub = "LEASE_VS_BUY"
+            elif any(w in prompt for w in ("amortization", "loan payment", "installment")):
+                sub = "AMORTIZATION"
             elif any(w in prompt for w in ("factoring", "invoice advance")):
                 sub = "FACTORING"
+            elif any(w in prompt for w in ("break-even", "breakeven", "margin of safety")):
+                sub = "BREAK_EVEN"
+            elif any(w in prompt for w in ("current ratio",)):
+                sub = "CURRENT_RATIO"
+            elif any(w in prompt for w in ("quick ratio", "acid test")):
+                sub = "QUICK_RATIO"
+            elif any(w in prompt for w in ("debt to equity", "d/e ratio")):
+                sub = "DEBT_TO_EQUITY"
+            elif any(w in prompt for w in ("interest coverage", "times interest earned")):
+                sub = "INTEREST_COVERAGE"
+            elif any(w in prompt for w in ("trade credit", "vendor discount", "2/10")):
+                sub = "TRADE_CREDIT"
+            elif any(w in prompt for w in ("cash drag", "idle cash")):
+                sub = "CASH_DRAG"
+            elif any(w in prompt for w in ("runway", "burn")):
+                sub = "RUNWAY"
             elif any(w in prompt for w in ("ccc", "working capital", "cash conversion")):
                 sub = "WORKING_CAPITAL"
             elif any(w in prompt for w in ("concentration", "top customer")):
@@ -379,11 +504,20 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 output_payload={"sub_intent": sub},
             )
 
-        if any(w in prompt for w in ("borrow", "loan", "factoring", "apr", "credit line")):
+        if any(w in prompt for w in (
+            "borrow", "loan", "factoring", "apr", "credit line", "altman", "z-score",
+            "net debt", "debt service burden", "wacc", "enterprise value", "dcf",
+            "lease vs buy", "lease or buy", "interest coverage", "debt to equity",
+        )):
             choice = "CREDIT_UNDERWRITING"
         elif any(w in prompt for w in ("stage", "transfer", "draw", "pledge", "execute")):
             choice = "ACTION_STAGING"
-        elif any(w in prompt for w in ("runway", "burn", "balance", "deficit", "cash", "dscr", "dab")):
+        elif any(w in prompt for w in (
+            "runway", "burn", "balance", "deficit", "cash", "dscr", "dab",
+            "fcff", "fcfe", "free cash flow", "roic", "roa", "eva", "ltv",
+            "cac payback", "nrr", "grr", "dupont", "break-even", "breakeven",
+            "current ratio", "quick ratio", "trade credit", "cash drag",
+        )):
             choice = "CASH_DIAGNOSTIC"
         else:
             choice = "GENERAL_ASSISTANCE"
@@ -529,8 +663,81 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             else:
                 status = "DISTRESSED"
                 is_risk = True
-                rule_id = "fallback_ocf_distressed"
-                rationale = "Negative operating cash flow indicates severe operational burn."
+        elif metric == "CURRENT_RATIO":
+            if val >= Decimal("2.0"):
+                status = "EXCELLENT"
+                is_risk = False
+                rule_id = "fallback_cr_excellent"
+                rationale = f"Strong short-term solvency (Current Ratio: {val}x). Current assets cover current liabilities 2x+."
+            elif val >= Decimal("1.5"):
+                status = "HEALTHY"
+                is_risk = False
+                rule_id = "fallback_cr_healthy"
+                rationale = f"Healthy working capital buffer (Current Ratio: {val}x). Liquid assets comfortably exceed obligations."
+            elif val >= Decimal("1.0"):
+                status = "ADEQUATE"
+                is_risk = False
+                rule_id = "fallback_cr_adequate"
+                rationale = f"Adequate working capital (Current Ratio: {val}x). Current assets cover short-term liabilities with limited buffer."
+            else:
+                status = "DEFICIT"
+                is_risk = True
+                rule_id = "fallback_cr_deficit"
+                rationale = f"Negative net working capital (Current Ratio: {val}x). Short-term obligations exceed current assets, creating severe liquidity strain."
+        elif metric == "QUICK_RATIO":
+            if val >= Decimal("1.0"):
+                status = "HEALTHY"
+                is_risk = False
+                rule_id = "fallback_qr_healthy"
+                rationale = f"Acid-test coverage healthy (Quick Ratio: {val}x). Liquid quick assets satisfy immediate payables without needing inventory sales."
+            else:
+                status = "INVENTORY_DEPENDENT"
+                is_risk = True
+                rule_id = "fallback_qr_inventory_dep"
+                rationale = f"Tight quick liquidity (Quick Ratio: {val}x). Business relies on inventory liquidations or external credit to satisfy immediate debts."
+        elif metric == "TRADE_CREDIT_DISCOUNT":
+            if val > Decimal("25.0"):
+                status = "TAKE_DISCOUNT_AGGRESSIVELY"
+                is_risk = True
+                rule_id = "fallback_tc_high"
+                rationale = f"Foregoing this discount carries an exorbitant annualized cost of {val}% APR. Draw a lower-rate credit facility to capture early payment discounts."
+            elif val > Decimal("15.0"):
+                status = "TAKE_DISCOUNT"
+                is_risk = False
+                rule_id = "fallback_tc_moderate"
+                rationale = f"Annualized discount value of {val}% APR exceeds standard bank borrowing rates. Settle within discount period."
+            else:
+                status = "STRETCH_PAYABLES"
+                is_risk = False
+                rule_id = "fallback_tc_low"
+                rationale = f"Trade credit cost is moderate ({val}% APR). Preserve operational cash flow by utilizing full net payment terms."
+        elif metric == "CASH_DRAG":
+            if val > Decimal("5000.0"):
+                status = "EXCESSIVE_CASH_DRAG"
+                is_risk = True
+                rule_id = "fallback_cash_drag_high"
+                rationale = f"Excessive cash drag (annual yield loss: ${val}). Sweep surplus balances beyond operational reserve into institutional money market yield."
+            elif val > Decimal("1000.0"):
+                status = "MODERATE_CASH_DRAG"
+                is_risk = False
+                rule_id = "fallback_cash_drag_moderate"
+                rationale = f"Moderate cash drag (annual yield loss: ${val}). Treasury yield optimization would generate meaningful risk-free interest."
+            else:
+                status = "OPTIMAL_TREASURY_ALLOCATION"
+                is_risk = False
+                rule_id = "fallback_cash_drag_optimal"
+                rationale = "Optimal treasury allocation. Operating cash balance is closely calibrated to working capital reserves."
+        elif metric == "FCFF":
+            if val > Decimal("0.0"):
+                status = "STRONG_SELF_FUNDING"
+                is_risk = False
+                rule_id = "fallback_fcff_positive"
+                rationale = "Positive Free Cash Flow to Firm after CapEx investments."
+            else:
+                status = "EXTERNAL_FINANCING_DEPENDENT"
+                is_risk = True
+                rule_id = "fallback_fcff_deficit"
+                rationale = "Negative Free Cash Flow to Firm. Operations require external financing."
         else:
             status = "BALANCED"
             is_risk = False
@@ -605,11 +812,123 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 is_approved = True
                 rule_id = "fallback_fccr_borderline"
                 rationale = f"Borderline coverage ({ratio}x). Sensitive to facility rent or rate increases."
+        elif metric == "INTEREST_COVERAGE":
+            if ratio >= Decimal("999.0"):
+                status = "DEBT_FREE"
+                is_approved = True
+                rule_id = "fallback_tie_free"
+                rationale = "Company has zero scheduled interest obligations."
+            elif ratio >= Decimal("3.0"):
+                status = "HEALTHY"
+                is_approved = True
+                rule_id = "fallback_tie_healthy"
+                rationale = f"EBIT covers interest payments {ratio}x, exceeding commercial banking benchmarks."
+            elif ratio >= Decimal("1.5"):
+                status = "ACCEPTABLE"
+                is_approved = True
+                rule_id = "fallback_tie_acceptable"
+                rationale = f"EBIT covers interest payments {ratio}x. Adequate for ongoing servicing but vulnerable to earnings volatility."
             else:
-                status = "HIGH_RISK"
+                status = "COVENANT_BREACH_RISK"
                 is_approved = False
-                rule_id = "fallback_fccr_high_risk"
-                rationale = f"Inadequate fixed-charge coverage ({ratio}x). High risk of lease or debt default."
+                rule_id = "fallback_tie_risk"
+                rationale = f"Interest coverage is strained at {ratio}x (<1.5x minimum covenant). Heightened risk of default or lender covenant breach."
+        elif metric == "DEBT_TO_EQUITY":
+            if ratio <= Decimal("1.0"):
+                status = "CONSERVATIVE"
+                is_approved = True
+                rule_id = "fallback_de_conservative"
+                rationale = f"Conservative capital structure (D/E: {ratio}x). Net worth covers total liabilities 1:1."
+            elif ratio <= Decimal("2.0"):
+                status = "MODERATE_LEVERAGE"
+                is_approved = True
+                rule_id = "fallback_de_moderate"
+                rationale = f"Balanced leverage ratio (D/E: {ratio}x) within standard commercial lending thresholds."
+            elif ratio <= Decimal("3.0"):
+                status = "ELEVATED_LEVERAGE"
+                is_approved = False
+                rule_id = "fallback_de_elevated"
+                rationale = f"Elevated financial leverage (D/E: {ratio}x). Total debt significantly exceeds shareholder equity."
+            else:
+                status = "DISTRESSED_LEVERAGE"
+                is_approved = False
+                rule_id = "fallback_de_distressed"
+                rationale = f"Severely overleveraged capital structure (D/E: {ratio}x). Debt recapitalization or equity injection required."
+        elif metric == "LEASE_VS_BUY":
+            rec = str(state.get("recommended_action", "")).upper()
+            if ratio == Decimal("1.0") or ratio == Decimal("1") or rec == "BUY":
+                status = "RECOMMEND_BUY"
+                is_approved = True
+                rule_id = "fallback_lease_buy_buy"
+                rationale = "Purchasing equipment outright generates superior Net Present Value."
+            else:
+                status = "RECOMMEND_LEASE"
+                is_approved = True
+                rule_id = "fallback_lease_buy_lease"
+                rationale = "Operating lease preserves working capital and generates superior Net Present Value."
+        elif metric in ("ALTMAN_Z_SCORE", "ALTMAN_Z"):
+            if ratio > Decimal("2.90"):
+                status = "SAFE_ZONE"
+                is_approved = True
+                rule_id = "fallback_altman_safe"
+                rationale = f"Altman Z-Score of {ratio} is in the Safe Zone (>2.90). Low insolvency risk."
+            elif ratio >= Decimal("1.23"):
+                status = "GREY_ZONE"
+                is_approved = True
+                rule_id = "fallback_altman_grey"
+                rationale = f"Altman Z-Score of {ratio} is in the Grey Zone (1.23 - 2.90). Moderate financial stress."
+            else:
+                status = "DISTRESS_ZONE"
+                is_approved = False
+                rule_id = "fallback_altman_distress"
+                rationale = f"Altman Z-Score of {ratio} flags acute insolvency distress risk (<1.23)."
+        elif metric == "NET_DEBT_TO_EBITDA":
+            if ratio <= Decimal("0.0"):
+                status = "NET_CASH_POSITIVE"
+                is_approved = True
+                rule_id = "fallback_net_debt_cash_pos"
+                rationale = f"Cash reserves exceed total debt obligations (Net Debt/EBITDA: {ratio}x)."
+            elif ratio <= Decimal("2.0"):
+                status = "PRIME_LEVERAGE"
+                is_approved = True
+                rule_id = "fallback_net_debt_prime"
+                rationale = f"Conservative leverage ratio within prime institutional bank thresholds ({ratio}x)."
+            elif ratio <= Decimal("3.5"):
+                status = "MODERATE_LEVERAGE"
+                is_approved = True
+                rule_id = "fallback_net_debt_moderate"
+                rationale = f"Moderate commercial debt multiple within standard credit boundaries ({ratio}x)."
+            elif ratio <= Decimal("4.5"):
+                status = "ELEVATED_LEVERAGE"
+                is_approved = False
+                rule_id = "fallback_net_debt_elevated"
+                rationale = f"Elevated leverage multiple approaching covenant breach limits ({ratio}x)."
+            else:
+                status = "HIGH_RISK_LEVERAGE"
+                is_approved = False
+                rule_id = "fallback_net_debt_high_risk"
+                rationale = f"High risk debt multiple exceeding prudent commercial boundaries ({ratio}x)."
+        elif metric == "DEBT_SERVICE_BURDEN":
+            if ratio <= Decimal("10.0"):
+                status = "LIGHT_BURDEN"
+                is_approved = True
+                rule_id = "fallback_burden_light"
+                rationale = f"Debt repayments claim a minimal fraction of topline revenue ({ratio}%)."
+            elif ratio <= Decimal("20.0"):
+                status = "MODERATE_BURDEN"
+                is_approved = True
+                rule_id = "fallback_burden_moderate"
+                rationale = f"Debt payments are well managed within typical commercial tolerance ({ratio}%)."
+            elif ratio <= Decimal("30.0"):
+                status = "HEAVY_BURDEN"
+                is_approved = False
+                rule_id = "fallback_burden_heavy"
+                rationale = f"Heavy debt service burden constricts operational working capital ({ratio}%)."
+            else:
+                status = "CRITICAL_BURDEN"
+                is_approved = False
+                rule_id = "fallback_burden_critical"
+                rationale = f"Critical debt service burden exceeding 30% of gross inflows ({ratio}%)."
         else:
             status = "STANDARD"
             is_approved = True
@@ -769,6 +1088,121 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
                 tier = "LOSS_MAKING"
                 healthy = False
                 desc = "Negative operating margin. Business is incurring operational losses."
+        elif metric == "DUPONT_ROE":
+            if val >= Decimal("20.0"):
+                tier = "EXCEPTIONAL_ROE"
+                healthy = True
+                desc = f"Exceptional Return on Equity ({val}%). Substantial value creation for shareholders."
+            elif val >= Decimal("12.0"):
+                tier = "STRONG_ROE"
+                healthy = True
+                desc = f"Strong commercial Return on Equity ({val}%). Healthy balance between margins, asset efficiency, and leverage."
+            elif val >= Decimal("5.0"):
+                tier = "MODERATE_ROE"
+                healthy = True
+                desc = f"Moderate Return on Equity ({val}%). Operating margins or asset velocity could be improved."
+            else:
+                tier = "SUBPAR_ROE"
+                healthy = False
+                desc = f"Subpar Return on Equity ({val}%). Business returns lag commercial cost of equity capital."
+        elif metric == "ROIC":
+            if val >= Decimal("15.0"):
+                tier = "EXCEPTIONAL_ROIC"
+                healthy = True
+                desc = f"Exceptional capital efficiency (ROIC: {val}%). Creates substantial surplus economic value."
+            elif val >= Decimal("10.0"):
+                tier = "STRONG_ROIC"
+                healthy = True
+                desc = f"Strong Return on Invested Capital ({val}%). Healthy returns exceed commercial hurdle rates."
+            elif val >= Decimal("6.0"):
+                tier = "MODERATE_ROIC"
+                healthy = True
+                desc = f"Moderate Return on Invested Capital ({val}%). Matches standard borrowing costs."
+            else:
+                tier = "VALUE_DESTRUCTIVE"
+                healthy = False
+                desc = f"Subpar capital efficiency (ROIC: {val}%). Returns lag behind typical commercial debt costs."
+        elif metric == "ROA":
+            if val >= Decimal("10.0"):
+                tier = "EXCELLENT_ROA"
+                healthy = True
+                desc = f"Excellent asset productivity (ROA: {val}%). Superior earnings velocity per asset dollar."
+            elif val >= Decimal("5.0"):
+                tier = "HEALTHY_ROA"
+                healthy = True
+                desc = f"Healthy commercial asset return (ROA: {val}%)."
+            elif val >= Decimal("0.0"):
+                tier = "MARGINAL_ROA"
+                healthy = False
+                desc = f"Marginal asset return (ROA: {val}%). High capital intensity or depressed margins."
+            else:
+                tier = "NEGATIVE_ROA"
+                healthy = False
+                desc = f"Negative asset return (ROA: {val}%). Operating losses on asset base."
+        elif metric == "EVA":
+            if val > Decimal("0.0"):
+                tier = "POSITIVE_EVA"
+                healthy = True
+                desc = f"Positive Economic Value Added (${val:,.2f}). Generates true economic profit."
+            elif val == Decimal("0.0"):
+                tier = "BREAK_EVEN_EVA"
+                healthy = True
+                desc = "Break-even Economic Value Added ($0.00). Exactly covers cost of capital."
+            else:
+                tier = "NEGATIVE_EVA"
+                healthy = False
+                desc = f"Negative Economic Value Added (${val:,.2f}). Fails to cover cost of capital."
+        elif metric == "LTV_CAC":
+            if val >= Decimal("4.0"):
+                tier = "CAPITAL_EFFICIENT_EXPANSION"
+                healthy = True
+                desc = f"Exceptional unit economics ({val}x LTV/CAC). Aggressive acquisition expansion justified."
+            elif val >= Decimal("3.0"):
+                tier = "PRIME_UNIT_ECONOMICS"
+                healthy = True
+                desc = f"Prime unit economics ({val}x LTV/CAC). Aligns with institutional SaaS benchmark."
+            elif val >= Decimal("1.5"):
+                tier = "VIABLE_MARGINAL"
+                healthy = True
+                desc = f"Marginal unit economics ({val}x LTV/CAC). Modest profitability buffer."
+            else:
+                tier = "UNSUSTAINABLE_CAC"
+                healthy = False
+                desc = f"Unsustainable customer acquisition cost ({val}x LTV/CAC < 1.5x)."
+        elif metric == "CAC_PAYBACK":
+            if val <= Decimal("12.0"):
+                tier = "RAPID_PAYBACK"
+                healthy = True
+                desc = f"Rapid CAC payback ({val} months). Excellent capital recycling speed."
+            elif val <= Decimal("18.0"):
+                tier = "COMMERCIAL_STANDARD"
+                healthy = True
+                desc = f"Standard CAC payback ({val} months). Typical recurring revenue model."
+            elif val <= Decimal("24.0"):
+                tier = "ELEVATED_PAYBACK"
+                healthy = False
+                desc = f"Elevated CAC payback ({val} months). Capital tied up for extensive period."
+            else:
+                tier = "PROLONGED_CASH_TRAP"
+                healthy = False
+                desc = f"Prolonged CAC payback ({val} months). High risk of unrecouped sales spend upon churn."
+        elif metric == "NRR":
+            if val >= Decimal("120.0"):
+                tier = "BEST_IN_CLASS_EXPANSION"
+                healthy = True
+                desc = f"Best-in-class Net Revenue Retention ({val}%). Negative net churn."
+            elif val >= Decimal("105.0"):
+                tier = "STRONG_NET_EXPANSION"
+                healthy = True
+                desc = f"Strong Net Revenue Retention ({val}%). Account expansion exceeds churn."
+            elif val >= Decimal("95.0"):
+                tier = "STABLE_RETENTION"
+                healthy = True
+                desc = f"Stable retention ({val}%). Revenue base is preserved."
+            else:
+                tier = "NET_REVENUE_ATTRITION"
+                healthy = False
+                desc = f"Net revenue attrition ({val}% < 95%). Contraction outpaces customer expansions."
         else:
             tier = "MODERATE"
             healthy = True
@@ -896,56 +1330,51 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             "- Role: Pragmatic, commercially astute fractional CFO dedicated to safeguarding cash runway, auditing working capital, and structuring non-predatory financing.\n"
             "- Communication Style: Direct, boardroom-level, numbers-grounded, and concise. Speak like a trusted financial partner, not a generic customer service chatbot.\n"
             "- 3-Part CFO Cadence: 1. Financial Reality: State the exact metric or underwriting fact directly. 2. Operational Impact: Explain the burn rate, working capital, or debt-service implication. 3. Next Action: Name the single concrete decision or instruction needed.\n"
-            "- Formatting & Typography Standards: When presenting key financial figures, metrics, or title points, format them in bold Markdown (e.g., **1. Cash Reserve:** **$45,000** over **60 days**) to ensure instant executive readability at a glance.\n"
-            "- Strict Anti-Fluff Protocol: Never use conversational throat-clearing (never say 'I would be happy to', 'I would like to', 'Sure!', 'Certainly!', or 'As an AI'). Never use hollow corporate buzzwords (delve, leverage, foster, streamline, robust, supercharge, embark).\n"
+            "- Formatting & Typography Standards: Format key financial metrics in bold Markdown (e.g., **1. Cash Reserve:** **$45,000** over **60 days**) for fast executive scanning. NEVER output markdown section headers (do not use '### Section' or '### Overview') in conversational replies.\n"
+            "- Strict Anti-Slop Protocol: Never use conversational throat-clearing (never say 'I would be happy to', 'I would like to', 'Sure!', 'Certainly!', or 'As an AI'). Never use AI slop buzzwords (delve, leverage, utilize, streamline, robust, supercharge, foster, empower, cutting-edge, paramount, transformative, harness, beacon, tapestry, elevate). Never use decorative emojis (sparkles, rockets, robots, fire, lightbulbs). Never use colon reveals ('The best part: ...') or fake-profound conclusions ('In conclusion', 'Ultimately').\n"
             "- Zero Numerical Hallucinations: Never guess or invent dollar amounts. If a bank statement CSV is not yet uploaded, state the underwriting requirements clearly and instruct the owner to upload their statement."
         )
 
         conversational_guidelines = (
-            f"{base_persona_text}\n\n"
             "Executive Response Guidelines:\n"
-            "1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\n"
+            "1. For greetings and introductions, introduce yourself directly as the Autonomous SME Finance Copilot in clean executive prose. DO NOT output '###' document headers. State your core analytical capabilities: cash runway auditing, overdraft forecasting, working capital optimization (CCC), and digital credit facility matching.\n"
             "2. If the user inquires about off-topic subjects (sports, recipes, entertainment, coding, creative writing), politely clarify in one sentence that as an AI CFO you specialize exclusively in SME business liquidity and working capital, and invite them back to their business finances.\n"
             "3. For new users asking how to start or how this works, clearly outline the process: 1) Upload Statement (CSV dropzone or paste transactions); 2) Instant Liquidity Audit (deterministic DAB, burn velocity, runway days, and deficit early-warning); 3) Action Review (proposals are staged for review and explicit owner approval before execution).\n"
             "4. Always conclude by inviting the business owner to upload a transactional bank statement CSV to run a live financial diagnosis or ask any strategic cash flow question."
         )
 
         cash_diag_guidelines = (
-            f"{base_persona_text}\n\n"
-            f"Verified Financial Engine Outputs:\n{base_reply}\n\n"
             "Executive Advisory Guidelines:\n"
             "1. Deliver strictly 2 concise sentences of strategic CFO advisory directly for the business owner.\n"
             "2. Sentence 1: Risk assessment of the current burn rate and runway reserve.\n"
             "3. Sentence 2: Concrete next action on working-capital preservation (e.g. invoice collections or credit facility).\n"
             "4. Strictly cite verified metrics if referencing numbers; never contradict or approximate verified figures.\n\n"
             "STRICT PROHIBITIONS:\n"
+            "- DO NOT output '###' headings, section titles, or markdown headers.\n"
             "- DO NOT say 'Your bank statement CSV has been uploaded', 'Now let's dive into the numbers', or 'Here are the results'.\n"
             "- DO NOT repeat metrics in bullet points (they are already displayed).\n"
             "- DO NOT wrap text in quotation marks.\n"
-            "- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions')."
+            "- DO NOT use corporate fluff ('provide a clear picture', 'make informed decisions') or slop buzzwords."
         )
 
         credit_uw_guidelines = (
-            f"{base_persona_text}\n\n"
-            f"Verified Underwriting Dossier:\n{base_reply}\n\n"
             "Underwriting Advisory Guidelines:\n"
             "1. Deliver strictly 2 concise sentences of executive credit guidance.\n"
             "2. Sentence 1: Evaluate borrowing capacity relative to Daily Average Balance (DAB) and confirm non-predatory APR suitability.\n"
             "3. Sentence 2: State the concrete staging step (reminding that proposals are staged for review and explicit owner approval before execution).\n\n"
             "STRICT PROHIBITIONS:\n"
+            "- DO NOT output '###' headings or document titles.\n"
             "- DO NOT repeat facilities in bullet points.\n"
             "- DO NOT wrap text in quotation marks.\n"
-            "- DO NOT use conversational throat-clearing."
+            "- DO NOT use conversational throat-clearing or slop buzzwords."
         )
 
         missing_stmt_diag = (
-            f"{base_persona_text}\n\n"
             "The business owner is inquiring about their bank statement, cash flow, or runway, but NO bank statement CSV is currently loaded in session.\n"
             "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded in the session. Instruct the user to upload their 90-day bank statement CSV so you can compute their deterministic Daily Average Balance (DAB), net burn rate, and cash runway."
         )
 
         missing_stmt_uw = (
-            f"{base_persona_text}\n\n"
             "The business owner is inquiring about financing or credit underwriting, but NO bank statement CSV is currently loaded in session.\n"
             "Respond in 2 concise, executive sentences. State clearly that no statement CSV is currently loaded. Instruct the user to upload their 90-day bank statement CSV so you can evaluate their Daily Average Balance (DAB) and inflow volatility to determine borrowing capacity with true APR disclosures."
         )
@@ -971,11 +1400,45 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             "BREAK_EVEN_UNITS": "To calculate your break-even sales volume in physical units, please specify your fixed overhead, unit selling price, and unit variable cost.\n\nExample format: 'How many units must we sell to break even if fixed costs are $40,000, price $100, and variable cost $60?'",
             "CONCENTRATION": "To audit your client revenue concentration and Herfindahl-Hirschman Index (HHI), please provide your transactional bank statement CSV.",
             "ATTRITION": "To simulate client churn impact on your cash flow, please specify your current annual revenue, annual operating burn, and the revenue contributed by the client at risk.\n\nExample format: 'What is the cash flow impact if we lose our largest client who pays $80,000 out of $300,000 revenue with $250,000 annual expenses?'",
+            "CURRENT_RATIO": "To calculate your Current Ratio, please specify your current assets and current liabilities.\n\nExample format: 'What is our current ratio for assets $150,000 and liabilities $100,000?'\n\nBenchmark: Ratio >= 1.50x represents a healthy working capital buffer.",
+            "QUICK_RATIO": "To calculate your Quick Ratio (Acid Test), please provide current assets, inventory value, and current liabilities.\n\nExample format: 'Calculate quick ratio with assets $200,000, inventory $50,000, and liabilities $100,000'.\n\nBenchmark: Quick Ratio >= 1.00x ensures liquid coverage without requiring inventory sales.",
+            "DEBT_TO_EQUITY": "To calculate your Debt-to-Equity (D/E) Ratio, please specify your total debt and total shareholder equity.\n\nExample format: 'Calculate debt to equity for debt $250,000 and equity $500,000'.\n\nBenchmark: D/E <= 1.50x represents a conservative to moderate leverage profile.",
+            "INTEREST_COVERAGE": "To calculate your Interest Coverage Ratio (Times Interest Earned), please provide your annual EBIT (Operating Income) and annual interest expense.\n\nExample format: 'What is our interest coverage with EBIT $120,000 and interest expense $20,000?'\n\nBenchmark: Ratio >= 2.50x indicates strong debt service covenant compliance.",
+            "TRADE_CREDIT": "To evaluate early payment vendor discount terms (e.g. 2/10 Net 30), please specify the discount percentage, discount days, and net days.\n\nExample format: 'Evaluate trade terms 2/10 net 30 for a $50,000 invoice with a 10% credit line'.\n\nFormula calculates the annualized implied APR to determine whether taking the discount saves financing costs.",
+            "CASH_DRAG": "To calculate your Treasury Cash Drag and idle cash yield loss, please specify your current cash balance and monthly operating burn (or desired cash reserve).\n\nExample format: 'Calculate cash drag for cash balance $500,000 with monthly burn $50,000 at 4.5% yield'.\n\nAnalyzes opportunity cost of excess liquidity earning zero interest vs money market benchmarks.",
+            "DUPONT_ROE": "To perform a 3-stage DuPont ROE decomposition, please provide your Net Income, Total Revenue, Total Assets, and Total Shareholder Equity.\n\nExample format: 'Calculate DuPont ROE: net income $80,000, revenue $1,000,000, assets $600,000, equity $400,000'.\n\nDeconstructs ROE into Net Margin x Asset Turnover x Equity Multiplier.",
+            "LEASE_VS_BUY": "To evaluate equipment Lease vs. Buy Net Present Value, please provide the equipment purchase price, annual lease payment, term in years, and discount rate.\n\nExample format: 'Should we lease or buy equipment costing $100,000 with lease payments of $28,000 for 4 years at 8% discount rate?'\n\nCompares after-tax cash flows including depreciation tax shields and salvage value.",
+            "ALTMAN_Z_SCORE": "To calculate your Altman Z'-Score for insolvency risk, please specify your Working Capital, Retained Earnings, EBIT, Book Equity, Total Liabilities, Revenue, and Total Assets.\n\nExample format: 'Calculate Altman Z score: working capital $50,000, retained earnings $80,000, EBIT $40,000, equity $120,000, liabilities $180,000, revenue $500,000, assets $300,000'.",
+            "NET_DEBT_TO_EBITDA": "To calculate your Net Debt to EBITDA leverage ratio, please provide your Total Debt, Cash and Equivalents, and annual operating EBITDA.\n\nExample format: 'What is our Net Debt to EBITDA with debt $250,000, cash $50,000, and EBITDA $100,000?'",
+            "DEBT_SERVICE_BURDEN": "To calculate your Debt Service Burden ratio, please provide your total annual debt service payments and gross annual commercial revenue.\n\nExample format: 'What is our debt service burden if annual debt payments are $60,000 and revenue is $400,000?'",
+            "ROIC": "To calculate your Return on Invested Capital (ROIC), please specify your annual Operating Income (EBIT), Total Debt, and Total Shareholder Equity.\n\nExample format: 'Calculate ROIC for EBIT $120,000, debt $200,000, equity $300,000, and cash $50,000'.",
+            "ROA": "To calculate your Return on Assets (ROA), please specify your annual Net Income and Total Balance Sheet Assets.\n\nExample format: 'What is our ROA if net income is $45,000 and total assets are $500,000?'",
+            "EVA": "To calculate your Economic Value Added (EVA), please provide your annual EBIT, Invested Capital, and cost of capital (WACC).\n\nExample format: 'Calculate EVA for EBIT $150,000, invested capital $800,000, and 9% WACC'.",
+            "FCFF": "To calculate Free Cash Flow to Firm (FCFF) and Equity (FCFE), please specify your annual Operating Cash Flow (OCF) and Capital Expenditures (CapEx).\n\nExample format: 'Calculate free cash flow for OCF $180,000 and CapEx $40,000 with $15,000 interest'.",
+            "WACC": "To calculate your Weighted Average Cost of Capital (WACC), please provide your Equity Value, Total Debt, expected Cost of Equity, and borrowing interest rate on debt.\n\nExample format: 'Calculate WACC with equity $600,000 at 12%, debt $400,000 at 7%, and 21% tax rate'.",
+            "ENTERPRISE_VALUE": "To calculate Enterprise Value (EV) and valuation multiples, please provide your Equity Value, Total Debt, Cash reserves, and EBITDA.\n\nExample format: 'What is our EV and EV/EBITDA multiple if equity is $1.2M, debt $300k, cash $100k, and EBITDA $250k?'",
+            "DCF_VALUATION": "To perform a Discounted Cash Flow (DCF) valuation, please specify your projected annual cash flows and WACC discount rate.\n\nExample format: 'Run DCF valuation for cash flows $50k, $65k, $80k, $100k at 9% WACC with 2.5% terminal growth'.",
+            "LTV_CAC": "To calculate your Customer Lifetime Value (LTV) and LTV/CAC ratio, please provide your Annual ARPU, Gross Margin %, Annual Churn Rate %, and Customer Acquisition Cost (CAC).\n\nExample format: 'Calculate LTV/CAC for ARPU $1,200, gross margin 80%, churn 10%, and CAC $300'.",
+            "CAC_PAYBACK": "To calculate your CAC Payback period in months, please specify your Monthly ARPU, Gross Margin %, and Customer Acquisition Cost (CAC).\n\nExample format: 'Calculate CAC payback for monthly ARPU $100, gross margin 75%, and CAC $600'.",
+            "NRR": "To calculate Net Revenue Retention (NRR) and cohort expansion, please provide your Starting ARR, Expansion ARR, Contraction ARR, and Churn ARR.\n\nExample format: 'Calculate NRR for starting ARR $500,000, expansion $80,000, contraction $20,000, and churn $15,000'.",
+            "CURRENCY_CONVERSION": "To convert currency, please specify the amount, source currency, and target currency.\n\nExample format: 'Convert 50,000 USD to EUR' or 'Exchange 100,000 BDT to USD at 0.0084 rate with 30 bps spread'.",
+            "FX_EXPOSURE": "To calculate foreign exchange exposure and potential cash flow loss, please provide your foreign currency receivables and foreign payables.\n\nExample format: 'Calculate FX exposure for 100,000 EUR receivables and 20,000 EUR payables in USD with 5% shock'.",
         }
 
-        credit_intents = {"DSCR", "FCCR", "AMORTIZATION", "LOAN_AMORTIZATION", "FACTORING", "DEBT_CAPACITY", "INVOICE_HASH"}
-        liquidity_intents = {"WCR", "OCF_RATIO", "DEFENSIVE_INTERVAL", "WORKING_CAPITAL"}
-        risk_intents = {"BREAK_EVEN", "BREAK_EVEN_UNITS", "CONCENTRATION", "ATTRITION"}
+        credit_intents = {
+            "DSCR", "FCCR", "AMORTIZATION", "LOAN_AMORTIZATION", "FACTORING", "DEBT_CAPACITY",
+            "INVOICE_HASH", "INTEREST_COVERAGE", "DEBT_TO_EQUITY", "LEASE_VS_BUY",
+            "ALTMAN_Z_SCORE", "NET_DEBT_TO_EBITDA", "DEBT_SERVICE_BURDEN", "WACC", "ENTERPRISE_VALUE", "DCF_VALUATION",
+        }
+        liquidity_intents = {
+            "WCR", "OCF_RATIO", "DEFENSIVE_INTERVAL", "WORKING_CAPITAL",
+            "CURRENT_RATIO", "QUICK_RATIO", "TRADE_CREDIT", "CASH_DRAG", "FCFF",
+            "CURRENCY_CONVERSION", "FX_EXPOSURE",
+        }
+        risk_intents = {
+            "BREAK_EVEN", "BREAK_EVEN_UNITS", "CONCENTRATION", "ATTRITION",
+            "DUPONT_ROE", "ROIC", "ROA", "EVA", "LTV_CAC", "CAC_PAYBACK", "NRR",
+        }
 
         rule_id = "fallback_persona"
         role = "AUTONOMOUS_CFO"
@@ -1065,7 +1528,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             role = "AUTONOMOUS_CFO"
             target_subagent = "Supervisor"
             tone = "EXECUTIVE_INSTRUCTION"
-            template = missing_stmt_diag
+            bp = str(state.get("base_persona", "")).strip() or base_persona_text
+            template = f"{bp}\n\n{missing_stmt_diag}"
             guidance = "To diagnose your cash runway, burn rate, and overdraft risks, please provide your transactional bank statement CSV."
             selected_choice = role
 
@@ -1074,7 +1538,8 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             role = "INSTITUTIONAL_UNDERWRITER"
             target_subagent = "Supervisor"
             tone = "EXECUTIVE_INSTRUCTION"
-            template = missing_stmt_uw
+            bp = str(state.get("base_persona", "")).strip() or base_persona_text
+            template = f"{bp}\n\n{missing_stmt_uw}"
             guidance = "To evaluate credit underwriting and match financing options, please provide your transactional bank statement CSV."
             selected_choice = role
 
@@ -1091,7 +1556,7 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             role = "AUTONOMOUS_CFO"
             target_subagent = "Supervisor"
             tone = "BOARDROOM_DIRECT"
-            guidance = "Statement loaded. You can ask about cash runway, daily burn rate, projected deficits, or credit qualification."
+            guidance = "Your bank statement is loaded. I am ready to analyze your cash runway, daily burn rate, projected deficits, or evaluate credit qualification."
             selected_choice = role
 
         elif pt == "GENERAL_NO_STATEMENT":
@@ -1099,8 +1564,49 @@ class FallbackRuleAdapter(AbstractDecisionEngine):
             role = "AUTONOMOUS_CFO"
             target_subagent = "Supervisor"
             tone = "BOARDROOM_DIRECT"
-            guidance = "I am the Autonomous SME Finance Copilot. Upload your bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity."
+            guidance = "Hello! I am your Autonomous SME Finance Copilot. How can I assist with your business finances today? We can analyze your cash runway, evaluate borrowing capacity, or you can upload a bank statement CSV to run a complete financial health diagnostic."
             selected_choice = role
+
+        elif pt == "ADVICE_DEFICIT":
+            rule_id = "rule_advice_deficit"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "URGENT_LIQUIDITY_ACTION"
+            guidance = "Financial Health Assessment: Your cash status is {cash_status} with {runway_desc} of runway. A cash shortfall of ${shortfall} is projected on {date} due to {trigger}. Recommended action: Stage a working capital bridge facility of {bridge} to protect operating continuity."
+            selected_choice = role
+
+        elif pt == "ADVICE_WATCH":
+            rule_id = "rule_advice_watch"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "BOARDROOM_CAUTION"
+            guidance = "Financial Health Assessment: Your cash status is WATCH with {runway_desc} of runway. While current cash of ${balance} covers near-term needs, net daily outflows of ${burn}/day will deplete liquidity in approximately {runway_days} days. Recommended action: Accelerate invoice collections and evaluate a pre-qualified working capital credit line."
+            selected_choice = role
+
+        elif pt == "ADVICE_HEALTHY":
+            rule_id = "rule_advice_healthy"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "AFFIRMATIVE_STABILITY"
+            guidance = "Financial Health Assessment: Your cash status is HEALTHY with {runway_desc} of runway. Current balance of ${balance} provides strong operational buffer against daily burn."
+            selected_choice = role
+
+        elif pt == "DEFICIT_EARLY_WARNING":
+            rule_id = "rule_deficit_early_warning"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "RISK_ALERT"
+            guidance = "Deficit Early-Warning: Projected shortfall of ${shortfall} in {days} days ({date}). Severity is {severity}. Primary driver: {trigger}."
+            selected_choice = role
+
+        elif pt == "DEFICIT_SAFE":
+            rule_id = "rule_deficit_safe"
+            role = "AUTONOMOUS_CFO"
+            target_subagent = "Supervisor"
+            tone = "AFFIRMATIVE_STABILITY"
+            guidance = "No immediate deficit detected over the projected horizon. Your cash runway stands at {runway_desc} (Status: {cash_status})."
+            selected_choice = role
+
 
         else:
             rule_id = "rule_persona_default"

@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from services.decision.base import AbstractDecisionEngine
 from services.decision.adapters.fallback_adapter import FallbackRuleAdapter

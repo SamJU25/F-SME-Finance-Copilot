@@ -231,6 +231,132 @@
             "out_rationale": "'Negative operating cash flow ({value}x). Core operations deplete liquidity.'"
           },
           {
+            "_id": "rule_cr_excellent",
+            "_description": "Current ratio >= 2.0x indicates excellent liquidity buffer",
+            "in_metric": "'CURRENT_RATIO'",
+            "in_value": ">= 2.0",
+            "out_status": "'EXCELLENT'",
+            "out_risk": "false",
+            "out_rationale": "'Strong short-term solvency (Current Ratio: {value}x). Current assets cover current liabilities 2x+.'"
+          },
+          {
+            "_id": "rule_cr_healthy",
+            "_description": "Current ratio between 1.5x and 2.0x indicates healthy working capital",
+            "in_metric": "'CURRENT_RATIO'",
+            "in_value": ">= 1.5",
+            "out_status": "'HEALTHY'",
+            "out_risk": "false",
+            "out_rationale": "'Healthy working capital buffer (Current Ratio: {value}x). Liquid assets comfortably exceed obligations.'"
+          },
+          {
+            "_id": "rule_cr_adequate",
+            "_description": "Current ratio between 1.0x and 1.5x indicates adequate but limited buffer",
+            "in_metric": "'CURRENT_RATIO'",
+            "in_value": ">= 1.0",
+            "out_status": "'ADEQUATE'",
+            "out_risk": "false",
+            "out_rationale": "'Adequate working capital (Current Ratio: {value}x). Current assets cover short-term liabilities with limited buffer.'"
+          },
+          {
+            "_id": "rule_cr_deficit",
+            "_description": "Current ratio < 1.0x indicates negative net working capital",
+            "in_metric": "'CURRENT_RATIO'",
+            "in_value": "< 1.0",
+            "out_status": "'DEFICIT'",
+            "out_risk": "true",
+            "out_rationale": "'Negative net working capital (Current Ratio: {value}x). Short-term obligations exceed current assets, creating severe liquidity strain.'"
+          },
+          {
+            "_id": "rule_qr_healthy",
+            "_description": "Quick ratio >= 1.0x indicates acid-test solvency",
+            "in_metric": "'QUICK_RATIO'",
+            "in_value": ">= 1.0",
+            "out_status": "'HEALTHY'",
+            "out_risk": "false",
+            "out_rationale": "'Acid-test coverage healthy (Quick Ratio: {value}x). Liquid quick assets satisfy immediate payables without needing inventory sales.'"
+          },
+          {
+            "_id": "rule_qr_inventory_dep",
+            "_description": "Quick ratio < 1.0x indicates reliance on inventory liquidations",
+            "in_metric": "'QUICK_RATIO'",
+            "in_value": "< 1.0",
+            "out_status": "'INVENTORY_DEPENDENT'",
+            "out_risk": "true",
+            "out_rationale": "'Tight quick liquidity (Quick Ratio: {value}x). Business relies on inventory liquidations or external credit to satisfy immediate debts.'"
+          },
+          {
+            "_id": "rule_tc_high",
+            "_description": "Trade credit APR > 25% represents expensive financing",
+            "in_metric": "'TRADE_CREDIT_DISCOUNT'",
+            "in_value": "> 25.0",
+            "out_status": "'TAKE_DISCOUNT_AGGRESSIVELY'",
+            "out_risk": "true",
+            "out_rationale": "'Foregoing this discount carries an exorbitant annualized cost of {value}% APR. Draw a lower-rate credit facility to capture early payment discounts.'"
+          },
+          {
+            "_id": "rule_tc_moderate",
+            "_description": "Trade credit APR between 15% and 25% exceeds prime lending",
+            "in_metric": "'TRADE_CREDIT_DISCOUNT'",
+            "in_value": "> 15.0",
+            "out_status": "'TAKE_DISCOUNT'",
+            "out_risk": "false",
+            "out_rationale": "'Annualized discount value of {value}% APR exceeds standard bank borrowing rates. Settle within discount period.'"
+          },
+          {
+            "_id": "rule_tc_low",
+            "_description": "Trade credit APR <= 15% suggests stretching payables",
+            "in_metric": "'TRADE_CREDIT_DISCOUNT'",
+            "in_value": "<= 15.0",
+            "out_status": "'STRETCH_PAYABLES'",
+            "out_risk": "false",
+            "out_rationale": "'Trade credit cost is moderate ({value}% APR). Preserve operational cash flow by utilizing full net payment terms.'"
+          },
+          {
+            "_id": "rule_cash_drag_high",
+            "_description": "Annual yield loss > $5,000 indicates excessive cash drag",
+            "in_metric": "'CASH_DRAG'",
+            "in_value": "> 5000",
+            "out_status": "'EXCESSIVE_CASH_DRAG'",
+            "out_risk": "true",
+            "out_rationale": "'Excessive cash drag (annual yield loss: ${value}). Sweep surplus balances beyond operational reserve into institutional money market yield.'"
+          },
+          {
+            "_id": "rule_cash_drag_moderate",
+            "_description": "Annual yield loss > $1,000 indicates moderate cash drag",
+            "in_metric": "'CASH_DRAG'",
+            "in_value": "> 1000",
+            "out_status": "'MODERATE_CASH_DRAG'",
+            "out_risk": "false",
+            "out_rationale": "'Moderate cash drag (annual yield loss: ${value}). Treasury yield optimization would generate meaningful risk-free interest.'"
+          },
+          {
+            "_id": "rule_cash_drag_optimal",
+            "_description": "Annual yield loss <= $1,000 indicates optimal allocation",
+            "in_metric": "'CASH_DRAG'",
+            "in_value": ">= 0",
+            "out_status": "'OPTIMAL_TREASURY_ALLOCATION'",
+            "out_risk": "false",
+            "out_rationale": "'Optimal treasury allocation. Operating cash balance is closely calibrated to working capital reserves.'"
+          },
+          {
+            "_id": "rule_fcff_positive",
+            "_description": "FCFF > 0 indicates self-funding cash surplus",
+            "in_metric": "'FCFF'",
+            "in_value": "> 0.0",
+            "out_status": "'STRONG_SELF_FUNDING'",
+            "out_risk": "false",
+            "out_rationale": "'Positive Free Cash Flow to Firm after CapEx investments.'"
+          },
+          {
+            "_id": "rule_fcff_deficit",
+            "_description": "FCFF <= 0 indicates external financing dependency",
+            "in_metric": "'FCFF'",
+            "in_value": "<= 0.0",
+            "out_status": "'EXTERNAL_FINANCING_DEPENDENT'",
+            "out_risk": "true",
+            "out_rationale": "'Negative Free Cash Flow to Firm. Operations require external financing.'"
+          },
+          {
             "_id": "rule_default_balanced",
             "_description": "Default balanced baseline",
             "in_metric": "",
