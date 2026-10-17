@@ -343,8 +343,8 @@ const CASH_STATUS_LABELS: Record<string, string> = {
 const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defaultUrl?: string; description: string }> = {
   offline: {
     name: 'Offline Local Engine (Zero Keys)',
-    defaultModel: 'llama-3.2-1b-instruct-onnx',
-    description: '100% private and on-device. Meta Llama-3.2-1B ONNX local generation with zero external API calls.',
+    defaultModel: 'sme-finance-lora',
+    description: '100% private and on-device. SME Finance Copilot on-device generation with zero external API calls.',
   },
   gemini: {
     name: 'Google Gemini',
@@ -371,7 +371,7 @@ const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defau
     description: 'Low-cost commercial reasoning ($0.14/1M tokens) suitable for budget-conscious SMEs.',
   },
   groq: {
-    name: 'Groq (Llama 3.3)',
+    name: 'Groq (Cloud LPUs)',
     defaultModel: 'llama-3.3-70b-versatile',
     defaultUrl: 'https://api.groq.com/openai/v1',
     description: 'Sub-second latency (<300ms) for real-time interactive financial Q&A.',
@@ -380,9 +380,14 @@ const PRESETS: Record<LLMProviderId, { name: string; defaultModel: string; defau
     name: 'Custom (OpenAI-Compatible)',
     defaultModel: 'custom-model',
     defaultUrl: 'https://openrouter.ai/api/v1',
-    description: 'Universal adapter for OpenRouter, Together AI, vLLM, LM Studio, or private VPCs.',
+    description: 'Universal API connection for OpenRouter, Together AI, vLLM, LM Studio, or private VPCs.',
   },
 };
+
+const SUPPORTED_OFFLINE_MODELS: ModelItem[] = [
+  { id: 'sme-finance-lora', name: 'SME Finance Copilot 3B (Flagship LoRA 4-Bit)' },
+  { id: 'sme-finance-mobile-lora', name: 'SME Finance Copilot Mobile 0.5B (Edge LoRA)' },
+];
 
 function money(value: string, currency: string): string {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value);
@@ -401,7 +406,10 @@ function money(value: string, currency: string): string {
 
 function getEngineDisplayName(config: LLMConfig): string {
   if (config.provider === 'offline') {
-    return 'Llama 3.2 (Offline)';
+    if (config.model_name === 'sme-finance-mobile-lora') {
+      return 'SME Finance Mobile LoRA (Offline)';
+    }
+    return 'SME Finance LoRA (Offline)';
   }
   if (config.model_name && !config.model_name.startsWith('http')) {
     return config.model_name;
@@ -765,21 +773,25 @@ export default function HomePage() {
   // Multi-Provider AI Settings State
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
     provider: 'offline',
-    model_name: 'llama-3.2-1b-instruct-onnx',
+    model_name: 'sme-finance-mobile-lora',
   });
   const [draftConfig, setDraftConfig] = useState<LLMConfig>({
     provider: 'offline',
-    model_name: 'llama-3.2-1b-instruct-onnx',
+    model_name: 'sme-finance-mobile-lora',
   });
   const [showSettings, setShowSettings] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestConnectionResponse | null>(null);
 
-  // Dynamic Model Discovery State
+  // Dynamic Model Discovery & Download State
   const [availableModels, setAvailableModels] = useState<ModelItem[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [customModelMode, setCustomModelMode] = useState(false);
   const [modelsMessage, setModelsMessage] = useState<string | null>(null);
+  const [downloadingModel, setDownloadingModel] = useState(false);
+  const [deletingModel, setDeletingModel] = useState(false);
+  const [downloadProgressMsg, setDownloadProgressMsg] = useState<string | null>(null);
+  const [modelToDownload, setModelToDownload] = useState<string>('sme-finance-lora');
 
   useEffect(() => {
     try {
@@ -861,8 +873,8 @@ export default function HomePage() {
       const saved = localStorage.getItem('sme_copilot_llm_config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.provider === 'offline' && (!parsed.model_name || parsed.model_name === 'deterministic-v1')) {
-          parsed.model_name = 'llama-3.2-1b-instruct-onnx';
+        if (parsed.provider === 'offline' && (!parsed.model_name || parsed.model_name === 'deterministic-v1' || parsed.model_name.includes('llama') || parsed.model_name === 'sme-finance-lora')) {
+          parsed.model_name = 'sme-finance-mobile-lora';
           try {
             localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
           } catch {
@@ -871,7 +883,7 @@ export default function HomePage() {
         }
         if (parsed.provider === 'ollama') {
           parsed.provider = 'offline';
-          parsed.model_name = 'llama-3.2-1b-instruct-onnx';
+          parsed.model_name = 'sme-finance-mobile-lora';
           try {
             localStorage.setItem('sme_copilot_llm_config', JSON.stringify(parsed));
           } catch {
@@ -935,14 +947,6 @@ export default function HomePage() {
   }, [messages, sessionId]);
 
   async function fetchModels(cfg: LLMConfig) {
-    if (cfg.provider === 'offline') {
-      setAvailableModels([
-        { id: 'llama-3.2-1b-instruct-onnx', name: 'Meta Llama-3.2-1B-Instruct (On-Device ONNX)' },
-      ]);
-      setModelsMessage('✅ On-device SLM active: Meta Llama-3.2-1B-Instruct (Zero external keys).');
-      return;
-    }
-
     if (['gemini', 'anthropic', 'openai', 'deepseek', 'groq'].includes(cfg.provider) && !cfg.api_key) {
       setAvailableModels([]);
       setModelsMessage('API not connected. Enter your API key and verify connection to load available models.');
@@ -970,18 +974,23 @@ export default function HomePage() {
       const data: FetchModelsResponse = await res.json();
       if (data.success && data.models && data.models.length > 0) {
         setAvailableModels(data.models);
-        setModelsMessage(`✅ Connected: Discovered ${data.models.length} live models.`);
+        setModelsMessage(data.message || `✅ Connected: Discovered ${data.models.length} live models.`);
         const match = data.models.find((m) => m.id === cfg.model_name);
         if (!match && !customModelMode && data.models[0]) {
           setDraftConfig((prev) => ({ ...prev, model_name: data.models[0].id }));
         }
       } else {
         setAvailableModels([]);
-        setModelsMessage(data.message || '⚠️ Unable to discover models. Verify your API credentials.');
+        setModelsMessage(data.message || '⚠️ Unable to discover models.');
       }
     } catch (cause) {
-      setAvailableModels([]);
-      setModelsMessage(cause instanceof Error ? cause.message : 'Could not fetch remote models.');
+      if (cfg.provider === 'offline') {
+        setAvailableModels(SUPPORTED_OFFLINE_MODELS);
+        setModelsMessage('ℹ️ On-device engine active: Local models ready.');
+      } else {
+        setAvailableModels([]);
+        setModelsMessage(cause instanceof Error ? cause.message : 'Could not fetch remote models.');
+      }
     } finally {
       setLoadingModels(false);
     }
@@ -1012,6 +1021,57 @@ export default function HomePage() {
     }
   }
 
+  async function handleDownloadModel(modelName: string) {
+    setDownloadingModel(true);
+    setDownloadProgressMsg(`Downloading model '${modelName}'... Please wait.`);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/agent/download-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_name: modelName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDownloadProgressMsg(`✅ ${data.message}`);
+        await fetchModels(draftConfig);
+        await handleTestConnection();
+      } else {
+        setDownloadProgressMsg(`❌ ${data.message}`);
+      }
+    } catch (cause) {
+      setDownloadProgressMsg(cause instanceof Error ? `❌ ${cause.message}` : 'Download request failed.');
+    } finally {
+      setDownloadingModel(false);
+    }
+  }
+
+  async function handleDeleteModel(modelName: string) {
+    if (typeof window !== 'undefined' && !window.confirm(`Are you sure you want to delete '${modelName}' to free up disk space?\n\nYou can re-download this model at any time.`)) {
+      return;
+    }
+    setDeletingModel(true);
+    setDownloadProgressMsg(`Deleting model '${modelName}' to free up space...`);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/agent/delete-model`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_name: modelName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDownloadProgressMsg(`✅ ${data.message}`);
+        await fetchModels(draftConfig);
+        await handleTestConnection();
+      } else {
+        setDownloadProgressMsg(`❌ ${data.message}`);
+      }
+    } catch (cause) {
+      setDownloadProgressMsg(cause instanceof Error ? `❌ ${cause.message}` : 'Delete request failed.');
+    } finally {
+      setDeletingModel(false);
+    }
+  }
+
   function handleSaveSettings() {
     setLlmConfig(draftConfig);
     try {
@@ -1021,6 +1081,19 @@ export default function HomePage() {
     }
     setShowSettings(false);
     setTestResult(null);
+  }
+
+  function openModelDownloader(targetModel?: string) {
+    const chosen = targetModel || draftConfig.model_name || 'sme-finance-lora';
+    setModelToDownload(chosen);
+    setDraftConfig((prev) => ({ ...prev, provider: 'offline', model_name: chosen }));
+    setShowSettings(true);
+    setTimeout(() => {
+      const el = document.getElementById('model-downloader-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
   }
 
   async function executeAnalysis(targetFile: File | File[], thresholdValue?: string, preserveResult = false) {
@@ -1046,10 +1119,13 @@ export default function HomePage() {
       if (llmConfig) {
         headers['X-LLM-Config'] = JSON.stringify(llmConfig);
       }
+      if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
       const response = await fetch(`${API_URL}/api/v1/analyze`, { method: 'POST', body: data, headers });
       const body = await response.json();
       if (!response.ok) {
-        let msg = 'The file could not be analyzed. Check the CSV and try again.';
+        let msg = 'The file could not be analyzed. Check the statement format and try again.';
         if (body?.error?.message) {
           msg = body.error.message;
         } else if (Array.isArray(body?.detail)) {
@@ -1060,6 +1136,16 @@ export default function HomePage() {
         throw new Error(msg);
       }
       setResult(body as CashAnalysisResponse);
+      if (body?.normalized_csv) {
+        setCsvText(body.normalized_csv);
+        try {
+          const activeSession = sessionId || 'default';
+          localStorage.setItem(`sme_copilot_csv_${activeSession}`, body.normalized_csv);
+          localStorage.setItem('sme_copilot_csv_text', body.normalized_csv);
+        } catch {
+          // LocalStorage fallback
+        }
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'A network error interrupted the request. Try again.');
     } finally {
@@ -1087,15 +1173,19 @@ export default function HomePage() {
     }
     const entries = await Promise.all(
       files.map(async (f) => {
-        const text =
-          typeof f.text === 'function'
-            ? await f.text()
-            : await new Promise<string>((resolve) => {
-                const r = new FileReader();
-                r.onload = () => resolve((r.result as string) || '');
-                r.readAsText(f);
-              });
-        return { name: f.name, text };
+        const isPdf = f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+        let text = '';
+        if (!isPdf) {
+          text =
+            typeof f.text === 'function'
+              ? await f.text()
+              : await new Promise<string>((resolve) => {
+                  const r = new FileReader();
+                  r.onload = () => resolve((r.result as string) || '');
+                  r.readAsText(f);
+                });
+        }
+        return { name: f.name, text, isPdf };
       })
     );
     const textsMap: Record<string, string> = {};
@@ -1103,13 +1193,18 @@ export default function HomePage() {
       textsMap[e.name] = e.text;
     });
     setFileTextsByName(textsMap);
-    const combined = entries.map((e) => e.text).join('\n');
-    setCsvText(combined);
-    try {
-      localStorage.setItem(`sme_copilot_csv_${activeSessionId}`, combined);
-      localStorage.setItem('sme_copilot_csv_text', combined);
-    } catch {
-      // LocalStorage fallback
+    const combined = entries
+      .filter((e) => !e.isPdf)
+      .map((e) => e.text)
+      .join('\n');
+    if (combined) {
+      setCsvText(combined);
+      try {
+        localStorage.setItem(`sme_copilot_csv_${activeSessionId}`, combined);
+        localStorage.setItem('sme_copilot_csv_text', combined);
+      } catch {
+        // LocalStorage fallback
+      }
     }
     return combined;
   }
@@ -1204,12 +1299,18 @@ export default function HomePage() {
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const dropped = Array.from(e.dataTransfer.files).filter(
-        (f) => f.name.endsWith('.csv') || f.type === 'text/csv' || f.type.includes('csv')
+        (f) =>
+          f.name.toLowerCase().endsWith('.csv') ||
+          f.name.toLowerCase().endsWith('.pdf') ||
+          f.type === 'text/csv' ||
+          f.type === 'application/pdf' ||
+          f.type.includes('csv') ||
+          f.type.includes('pdf')
       );
       if (dropped.length > 0) {
         handleAddFiles(dropped);
       } else {
-        setError('Please drop CSV bank statement files.');
+        setError('Please drop CSV or PDF bank statement files.');
       }
     }
   }
@@ -1786,21 +1887,21 @@ export default function HomePage() {
                 >
                   <span className="upload-icon" aria-hidden="true">↑</span>
                   <label className="field-label" htmlFor="csv-file" style={{ cursor: 'pointer', margin: '4px 0' }}>
-                    {isDragging ? 'Drop CSV statements here' : 'Drop CSV statements here, or click to browse'}
+                    {isDragging ? 'Drop CSV or PDF statements here' : 'Drop CSV or PDF statements here, or click to browse'}
                   </label>
                   <input
                     ref={fileInputRef}
                     id="csv-file"
                     className="file-input"
-                    aria-label="Choose bank statement CSV file"
+                    aria-label="Choose bank statement CSV or PDF file"
                     type="file"
-                    accept=".csv,text/csv"
+                    accept=".csv,text/csv,.pdf,application/pdf"
                     multiple
                     style={{ display: 'none' }}
                     onChange={handleFileInputChange}
                   />
                   <div className="file-name" style={{ marginTop: 4 }}>
-                    Universal format · Multi-file & multi-bank supported · Max 1 MB
+                    Universal format · CSV & PDF bank statements · Multi-account supported · Max 10 MB
                   </div>
                 </div>
 
@@ -1830,8 +1931,13 @@ export default function HomePage() {
                       {filesList.map((f, idx) => (
                         <div key={`${f.name}_${idx}`} className="statement-queue-item">
                           <div className="statement-queue-item-info">
-                            <span aria-hidden="true">📄</span>
+                            <span aria-hidden="true">{f.name.toLowerCase().endsWith('.pdf') ? '📑' : '📄'}</span>
                             <span className="statement-queue-item-name">{f.name}</span>
+                            {f.name.toLowerCase().endsWith('.pdf') && (
+                              <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600, marginLeft: 4 }}>
+                                PDF
+                              </span>
+                            )}
                             <span className="statement-queue-item-size">{(f.size / 1024).toFixed(1)} KB</span>
                           </div>
                           <button
@@ -1865,7 +1971,7 @@ export default function HomePage() {
                 )}
 
                 <div style={{ marginTop: 12, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-                  Universal Ingestion: Compatible with CSV exports from any financial institution, bank, payment gateway, or accounting system worldwide. Automatically resolves column layouts, date formats, currencies, and multi-account portfolios.
+                  Universal Ingestion: Compatible with CSV and PDF statements from any financial institution, bank, payment gateway, or accounting system worldwide. Automatically resolves column layouts, date formats, currencies, and multi-account portfolios.
                 </div>
 
                 <button className="submit" type="submit" disabled={loading || (filesList.length === 0 && !file && !csvText)} style={{ marginTop: 16 }}>
@@ -2082,6 +2188,11 @@ export default function HomePage() {
                       ⚠️ {result.calendar_gaps.length} Statement Gap{result.calendar_gaps.length > 1 ? 's' : ''}
                     </span>
                   )}
+                  {result.document_format && result.document_format !== 'CSV' && (
+                    <span className="filter-badge format" title={`Document Format: ${result.document_format}`}>
+                      📑 {result.document_format} Ingestion{result.page_count ? ` (${result.page_count}p)` : ''}
+                    </span>
+                  )}
                 </div>
 
                 <div className="toolbar-sources-right">
@@ -2089,9 +2200,9 @@ export default function HomePage() {
                     ref={fileInputRef}
                     id="csv-file-active"
                     className="file-input"
-                    aria-label="Upload CSV statements"
+                    aria-label="Upload CSV or PDF statements"
                     type="file"
-                    accept=".csv,text/csv"
+                    accept=".csv,text/csv,.pdf,application/pdf"
                     multiple
                     style={{ display: 'none' }}
                     onChange={handleFileInputChange}
@@ -2103,7 +2214,9 @@ export default function HomePage() {
                       <span className="statement-chips-label">Sources:</span>
                       {filesList.map((f, idx) => (
                         <span key={`${f.name}_${idx}`} className="statement-chip">
-                          <span className="statement-chip-name" title={f.name}>📄 {f.name}</span>
+                          <span className="statement-chip-name" title={f.name}>
+                            {f.name.toLowerCase().endsWith('.pdf') ? '📑' : '📄'} {f.name}
+                          </span>
                           <button
                             type="button"
                             className="statement-chip-remove"
@@ -3035,6 +3148,47 @@ export default function HomePage() {
                       <FormattedChatBubble text={m.text} />
                     </div>
 
+                    {/* Actionable Download Model Card for Business Users */}
+                    {m.role === 'agent' && (m.text.includes('No local AI model') || m.text.includes('Please download a model first') || m.text.includes('No local weights were detected')) && (
+                      <div className="chat-card" style={{ borderColor: 'var(--amber, #f59e0b)', background: '#fffbeb', padding: '12px 14px', borderRadius: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: 220 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span>📥</span>
+                              <span>Local AI Model Required</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: '#78350f', marginTop: 4, lineHeight: 1.4 }}>
+                              Autonomous AI dialogue & strategic CFO commentary require an on-device model. Select and download a model in Settings with a single click.
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ fontSize: 12, padding: '7px 16px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                              onClick={() => openModelDownloader(llmConfig?.model_name || 'sme-finance-lora')}
+                            >
+                              <span>📥</span>
+                              <span>Download Model in Settings</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ fontSize: 12, padding: '7px 12px', whiteSpace: 'nowrap' }}
+                              onClick={() => setShowSettings(true)}
+                            >
+                              ⚙️ AI Settings
+                            </button>
+                          </div>
+                        </div>
+                        {downloadProgressMsg && (
+                          <div style={{ fontSize: 11, marginTop: 8, fontWeight: 500, color: downloadProgressMsg.startsWith('✅') ? 'var(--green, #16a34a)' : '#b45309' }}>
+                            {downloadProgressMsg}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Predictive Early-Warning Alert Card */}
                     {m.data?.metrics?.has_projected_deficit && (
                       <div className="chat-card" style={{ borderColor: '#e0837b', background: '#fdf2f1' }}>
@@ -3161,7 +3315,7 @@ export default function HomePage() {
                 <div className="modal-eyebrow">COGNITIVE ENGINE CONFIGURATION</div>
                 <h3 id="settings-title">AI Provider & Model Settings</h3>
                 <p className="modal-subtitle">
-                  Configure your LLM provider credentials, verify latency, and discover live fine-tuned models.
+                  Configure your LLM provider credentials, verify latency, and discover live models.
                 </p>
               </div>
               <button
@@ -3189,18 +3343,14 @@ export default function HomePage() {
                     const nextCfg: LLMConfig = {
                       ...draftConfig,
                       provider: p,
-                      model_name: p === 'offline' ? 'llama-3.2-1b-instruct-onnx' : '',
+                      model_name: p === 'offline' ? 'sme-finance-lora' : '',
                       base_url: info.defaultUrl || '',
                     };
                     setDraftConfig(nextCfg);
                     setTestResult(null);
                     setCustomModelMode(false);
                     setAvailableModels(
-                      p === 'offline'
-                        ? [
-                            { id: 'llama-3.2-1b-instruct-onnx', name: 'Meta Llama-3.2-1B-Instruct (On-Device ONNX)' },
-                          ]
-                        : []
+                      p === 'offline' ? SUPPORTED_OFFLINE_MODELS : []
                     );
                     if (p === 'offline' || nextCfg.api_key) {
                       fetchModels(nextCfg);
@@ -3288,7 +3438,7 @@ export default function HomePage() {
                                 {m.name}
                               </option>
                             ))}
-                            <option value="__custom__">➕ Custom / Fine-Tuned Model Name…</option>
+                            <option value="__custom__">➕ Custom Model Name…</option>
                           </select>
                           {modelsMessage && (
                             <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4, fontWeight: 500 }}>
@@ -3344,7 +3494,7 @@ export default function HomePage() {
                         </button>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                        Enter any model identifier or private fine-tune snapshot.
+                        Enter any custom model identifier or private endpoint deployment.
                       </div>
                     </div>
                   )}
@@ -3360,6 +3510,79 @@ export default function HomePage() {
                     )}
                     <div style={{ fontSize: 12, marginTop: 2 }}>{testResult.message}</div>
                   </div>
+                </div>
+              )}
+
+              {draftConfig.provider === 'offline' && (
+                <div id="model-downloader-section" style={{ marginTop: 14, padding: '12px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 6 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>📥</span>
+                      <span>On-Demand Model Downloader</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                      Download AI models on demand for 100% private, on-device financial analysis.
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+                        Select Model:
+                      </label>
+                      <select
+                        className="select-input"
+                        style={{ width: '100%', fontSize: 12, padding: '6px 8px' }}
+                        value={modelToDownload}
+                        onChange={(e) => {
+                          setModelToDownload(e.target.value);
+                          setDraftConfig((prev) => ({ ...prev, model_name: e.target.value }));
+                        }}
+                        disabled={downloadingModel || deletingModel}
+                      >
+                        {(availableModels.length > 0 ? availableModels : SUPPORTED_OFFLINE_MODELS).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 18, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        style={{ fontSize: 12, padding: '7px 14px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        disabled={downloadingModel || deletingModel}
+                        onClick={() => handleDownloadModel(modelToDownload)}
+                      >
+                        {downloadingModel ? '⏳ Downloading…' : '📥 Download Model'}
+                      </button>
+
+                      {((availableModels.length > 0 ? availableModels : SUPPORTED_OFFLINE_MODELS).find((m) => m.id === modelToDownload)?.name.includes('[Ready]')) && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: 12, padding: '7px 12px', whiteSpace: 'nowrap', color: 'var(--red, #dc2626)', borderColor: 'var(--border)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          disabled={downloadingModel || deletingModel}
+                          onClick={() => handleDeleteModel(modelToDownload)}
+                          title="Delete this model to free up disk space."
+                        >
+                          {deletingModel ? '⏳ Deleting…' : '🗑️ Delete Model'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.4 }}>
+                    💡 Deleting frees up disk space (~1–6 GB). Your business data, financial history, and custom configurations are always preserved.
+                  </div>
+
+                  {downloadProgressMsg && (
+                    <div style={{ fontSize: 11, marginTop: 10, fontWeight: 500, color: downloadProgressMsg.startsWith('✅') ? 'var(--green)' : 'var(--amber)' }}>
+                      {downloadProgressMsg}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

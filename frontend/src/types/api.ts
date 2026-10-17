@@ -54,6 +54,9 @@ export interface CashAnalysisResponse {
   has_overlaps_deduped?: boolean | null;
   operational_inflows?: string | null;
   operational_outflows?: string | null;
+  document_format?: 'CSV' | 'PDF' | 'HYBRID' | null;
+  page_count?: number | null;
+  normalized_csv?: string | null;
 }
 
 // Three-Tier Security Gate & Staged Action Intents
@@ -96,6 +99,9 @@ export interface UnderwritingDossier {
   recommended_product_types: ProductType[];
   revenue_volatility_cv?: string | null;
   volatility_tier?: 'LOW' | 'MODERATE' | 'HIGH' | null;
+  liquidity_score?: number | null;
+  score_tier?: 'PRIME' | 'NEAR_PRIME' | 'HIGH_RISK' | string | null;
+  conditional_proposal?: string | null;
 }
 
 export interface FinancingOption {
@@ -267,5 +273,18 @@ export interface DecisionApiResponse {
   output_payload: Record<string, unknown>;
 }
 
+export interface DownloadModelResponse {
+  success: boolean;
+  model_name: string;
+  message: string;
+  downloaded_path?: string | null;
+  size_mb?: number | null;
+}
 
-
+export interface DeleteModelResponse {
+  success: boolean;
+  model_name: string;
+  message: string;
+  deleted_path?: string | null;
+  freed_mb?: number | null;
+}
