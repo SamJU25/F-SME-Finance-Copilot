@@ -1316,7 +1316,7 @@
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
     "seen": 1792252581.3046222,
-    "ast_hash": "571b58b08346dc437d70e4123ec7925c",
+    "ast_hash": "",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -2019,6 +2019,54 @@
     "mtime": 1792249188.4400878,
     "seen": 1792250001.5723343,
     "ast_hash": "207a48da6f694c41ffb8791572b697ed",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_knowledge_cards.py": {
+    "mtime": 1792254095.486421,
+    "seen": 1792254137.9039986,
+    "ast_hash": "6183571b034b5fcd7c7647bd4eb6b758",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/app_safety.md": {
+    "mtime": 1792254053.7854807,
+    "seen": 1792254137.9256983,
+    "ast_hash": "5efa26fa0f8d5802fd3a5d0520249735",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/cash_liquidity.md": {
+    "mtime": 1792253867.1224973,
+    "seen": 1792254137.9257004,
+    "ast_hash": "0ff179788d8f0f4f0b6090b594fec5f7",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/credit_debt.md": {
+    "mtime": 1792253937.1348803,
+    "seen": 1792254137.9257019,
+    "ast_hash": "780f9f073774e2578f36d3b477917960",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/financing.md": {
+    "mtime": 1792254006.1549237,
+    "seen": 1792254137.9257038,
+    "ast_hash": "1bcf1e8e5cb095a188bcea161c5711b1",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/profitability_unit_economics.md": {
+    "mtime": 1792254053.8344312,
+    "seen": 1792254137.9257245,
+    "ast_hash": "6f8ced1d3fd3e571da7fbe7554d815c5",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/underwriting_risk.md": {
+    "mtime": 1792254006.2048151,
+    "seen": 1792254137.9257262,
+    "ast_hash": "d306e0ad78a1ed9bd4254d25e5b3b885",
+    "semantic_hash": ""
+  },
+  "knowledge/cards/working_capital.md": {
+    "mtime": 1792253937.0965538,
+    "seen": 1792254137.9257271,
+    "ast_hash": "cb60e6bc9a5d8474c948dcecd7f9a333",
     "semantic_hash": ""
   }
 }

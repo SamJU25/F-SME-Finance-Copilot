@@ -6,12 +6,12 @@
 - Unclassified: 25 file(s) not represented in the graph (top: .csv 11, (none) 6, .jsonl 2)
 
 ## Summary
-- 3869 nodes · 6832 edges · 355 communities (291 shown, 64 thin omitted)
+- 3875 nodes · 6824 edges · 363 communities (288 shown, 75 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 220 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `dffd1803`
+- Built from commit: `10c01539`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -119,7 +119,7 @@
 - code-optimizer (Global Specialist Agent)
 - code-reviewer (Global Specialist Agent)
 - cross-platform-engineer (Global Specialist Agent)
-- supervisor.py
+- .handle_sub_intent
 - penetration-tester (Global Specialist Agent)
 - prompt-engineer (Global Specialist Agent)
 - 2. Subagent Suites Directory (57 Specialized Subagents)
@@ -165,7 +165,7 @@
 - Using Superpowers
 - Verification Before Completion
 - Writing Plans
-- calculate_cash_analysis
+- extract_quick_ratio_params
 - Brainstorming Ideas Into Designs
 - Codebase Design
 - Frameworks Reference
@@ -218,7 +218,7 @@
 - liquidity_matcher.py
 - underwrite.py
 - DCF Model Builder
-- test_security_gate.py
+- test_csv_upload_e2e.py
 - Excel Model Structure
 - DecisionRequest
 - Workflow Integration
@@ -231,27 +231,26 @@
 - tests/security/__init__.py
 - SME Finance Copilot — Complete Master Architecture & Beginner's Guide
 - src/app/page.tsx
-- DCFModelValidator
+- calculate_client_concentration
 - HomePage
 - Equity Research Earnings Update
 - _DynamicPersonaBase
 - SME Finance Copilot — Complete Master Architecture & Beginner's Guide
-- test_blockchain_registry.py
-- CurrencyRegistry
-- test_analyze_api.py
+- invoice_hasher.py
+- test_currency_calculations.py
 - fintech-engineer (Suite: 2-fintech-engine)
 - test_agent_api.py
-- BankPDFParser
+- pdf_parser.py
 - staging_ledger.py
 - Domain A: Backend API, Security Gatekeeper & Container Platform
 - ADR-001: Runtime Multi-Agent Topology & Isolation Protocol
 - Phase 2: Analysis (2-3 hours)
 - next.config.js
 - next-env.d.ts
-- passkeys.py
+- test_security_gate.py
 - calculate_cash_drag
 - test-automator (Suite: 5-security-qa)
-- analyze_csv
+- analyze.py
 - app/layout.tsx
 - Domain A: Backend API, Security Gatekeeper & Container Platform
 - 1. Verified System Capabilities
@@ -259,11 +258,11 @@
 - devDependencies
 - scripts
 - 2. Complete Technical Capabilities & Architecture Breakdown
-- test_download_model.py
+- TestParameterExtractors
 - 5. Digital Underwriting & Truth-in-Lending
 - Superpowers Engineering Methodology
 - Domain C: Multi-Format Ingestion & Blockchain QA
-- agent.py
+- schema.py
 - Domain D: Quantitative FinTech Engine & Decision Tables
 - param_extractor.py
 - first-principles-thinking (Suite: 6-product-pitch)
@@ -275,7 +274,7 @@
 - Domain C: Multi-Format Ingestion & Blockchain QA
 - e2e/__init__.py
 - parse_bank_csv
-- .get_instance
+- calculations/__init__.py
 - Domain Alignment & Grilling Protocol
 - Domain D: Quantitative FinTech Engine & Decision Tables
 - DemoTransaction
@@ -285,59 +284,62 @@
 - V2EX (公开 API)
 - train_local_model.py
 - convert_factor_rate_to_apr
-- load_security_policy_config
+- .evaluate
 - calculate_dupont_roe
 - calculate_lease_vs_buy
-- generate_local_reply
-- FastEmbedSemanticRouter
+- passkey_authenticator.py
+- dynamic_router.py
 - Comprehensive Quality Control Checklist
 - csv_parser.py
 - Critical Requirements
 - High-Level Workflow
 - valuation.py
-- _query_llm_for_intent
-- .handle_sub_intent
+- LocalSLMEngine
+- supervisor.py
 - intent_prototypes
 - FORMATTING REQUIREMENTS
-- llm_bridge.py
+- tool_calculate_dupont_roe
 - Citation Examples for Specific Content
-- test_currency_calculations.py
-- clear_session
-- decision.py
+- test_backbone_apis.py
+- delete
+- .get_instance
 - 小红书 / XiaoHongShu（多后端）
 - generate_finetune_dataset.py
-- test_enterprise_finance_tools.py
+- MockLowConfidenceEngine
 - Sprint Workflow & Engineering Lifecycle
 - test_agent_action_staging_flow
 - Operational Guide: AI Agent Squad Orchestration
 - FallbackRuleAdapter
-- solvency.py
+- calculate_current_ratio
 - liquidity_score.py
 - test_agent_missing_csv_returns_guidance
 - test_agent_test_connection_missing_api_key
 - Domain B: Frontend Dashboard & Executive UI
-- .evaluate
-- analyze.py
+- AbstractDecisionEngine
+- get_session
 - calculate_trade_credit_apr
 - 8. System Architecture & Subagent Specialist Execution Guide
-- test_invariants.py
+- .evaluate
 - semantic_intent_prototypes.json
 - test_agent_general_assistance
 - test_agent_fetch_models_custom_missing_base_url
 - test_agent_header_tenant_isolation_overrides_body
-- test_agent_prompt_injection_defense
+- test_analyze_api.py
 - test_agent_cash_diagnostic_predictive_early_warning
 - test_agent_test_connection_custom_missing_base_url
 - test_agent_chat_with_header_llm_config
-- get_session
+- test_agent_prompt_injection_defense
 - test_agent_fetch_models_offline
 - run_copilot_supervisor
 - test_agent_fetch_models_missing_key
+- saas_unit_economics.py
 - test_agent_cash_diagnostic_dynamic_custom_days
-- 6. Consortium Blockchain & Double-Financing Defense
-- 6. Consortium Blockchain & Double-Financing Defense
+- test_pdf_decision_policies.py
 - test_agent_chat_target_horizon_field_in_request
+- 6. Consortium Blockchain & Double-Financing Defense
+- 6. Consortium Blockchain & Double-Financing Defense
 - test_agent_chat_horizon_capped_at_365_days
+- test_agent_chat_prudent_debt_capacity
 - test_agent_chat_handles_natural_followup_balance_and_borrowing
 - SystemOneModelAdapter
 - test_agent_greeting_zero_hallucination
@@ -356,46 +358,51 @@
 - test_agent_chat_customer_attrition_impact
 - test_agent_cash_diagnostic_flow
 - test_pii_masking_defense
-- test_agent_chat_prudent_debt_capacity
+- get
+- get_live_exchange_rate
 - test_agent_chat_operating_cash_flow_ratio
 - test_agent_chat_break_even_units
+- SoftAuthenticator
 - test_agent_chat_invoice_hash_verification
 - test_agent_chat_amortization_parameter_inheritance
 - test_agent_chat_dscr_parameter_inheritance
+- post
 - calculate_altman_z_score
-- test_financial_metrics.py
+- debt_service.py
+- BaseModel
+- fixture
 - test_agent_chat_contextual_history_followup
 - test_agent_chat_dscr_calculation
 - huggingface_hub
 
 ## God Nodes (most connected - your core abstractions)
-1. `DecisionRequest` - 152 edges
-2. `run_copilot_supervisor()` - 70 edges
-3. `DecisionDomain` - 56 edges
+1. `DecisionRequest` - 151 edges
+2. `run_copilot_supervisor()` - 69 edges
+3. `DecisionDomain` - 55 edges
 4. `AgentChatRequest` - 53 edges
-5. `DecisionEngineRegistry` - 52 edges
+5. `DecisionEngineRegistry` - 51 edges
 6. `FallbackRuleAdapter` - 49 edges
-7. `sub_intent_prototypes` - 45 edges
-8. `parse_bank_csv()` - 45 edges
+7. `parse_bank_csv()` - 45 edges
+8. `sub_intent_prototypes` - 45 edges
 9. `ZenRulesAdapter` - 44 edges
 10. `LocalTransformersEngine` - 43 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `6. The Three-Tier Security Gatekeeper (The Enforcer)` --references--> `stage_action_intent()`  [INFERRED]
-  docs/archive/SME_Finance_Copilot_Runtime_Subagents_Setup.md → api/routes/actions.py
-- `What Was Already Built & Tested for You (The Implemented Backbone)` --references--> `UnderwritingDossierResponse`  [INFERRED]
-  docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → api/routes/underwrite.py
-- `What Was Already Built & Tested for You (The Implemented Backbone)` --references--> `UnderwritingDossierResponse`  [INFERRED]
-  SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → api/routes/underwrite.py
 - `2.4 Dual Local SLM Inference Engine (`services/agent/`)` --references--> `LocalTransformersEngine`  [INFERRED]
   docs/PROJECT_REPORT_AND_POSTMORTEM.md → services/agent/local_transformers.py
 - `6. LLM Connection Security & Data Privacy` --references--> `LocalTransformersEngine`  [INFERRED]
   docs/security.md → services/agent/local_transformers.py
+- `5.2 Dual Local SLM Inference Engine` --references--> `LocalTransformersEngine`  [INFERRED]
+  docs/system.md → services/agent/local_transformers.py
+- `What Was Already Built & Tested for You (The Implemented Backbone)` --references--> `UnderwritingDossierResponse`  [INFERRED]
+  docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → api/routes/underwrite.py
+- `What Was Already Built & Tested for You (The Implemented Backbone)` --references--> `UnderwritingDossierResponse`  [INFERRED]
+  SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md → api/routes/underwrite.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (355 total, 64 thin omitted)
+## Communities (363 total, 75 thin omitted)
 
 ### Community 0 - "DCF Model Troubleshooting Guide"
 Cohesion: 0.17
@@ -423,7 +430,7 @@ Nodes (15): Balance Sheet Structure, Cash Flow Statement Structure, Check Formul
 
 ### Community 6 - "tools.py"
 Cohesion: 0.05
-Nodes (63): _normalize_statement_bytes(), Any, Decimal, Typed deterministic tool wrappers for the Autonomous AI Copilot Agent. Adheres…, Calculate Customer Lifetime Value (LTV) and LTV to CAC Ratio for subscription…, Calculate CAC Payback Period (Months) indicating how quickly gross margin…, Calculate Net Revenue Retention (NRR) and Gross Revenue Retention (GRR) cohorts., Deterministically convert an amount between any world currencies. If… (+55 more)
+Nodes (96): _format_money(), Any, Decimal, Typed deterministic tool wrappers for the Autonomous AI Copilot Agent. Adheres…, Calculate Customer Lifetime Value (LTV) and LTV to CAC Ratio for subscription…, Calculate CAC Payback Period (Months) indicating how quickly gross margin…, Calculate Net Revenue Retention (NRR) and Gross Revenue Retention (GRR) cohorts., Deterministically convert an amount between any world currencies. If… (+88 more)
 
 ### Community 7 - "What You Must Do When Invoked"
 Cohesion: 0.07
@@ -454,8 +461,8 @@ Cohesion: 0.08
 Nodes (24): 0. Project Truth & Engineering Documentation, 1.1 Knowledge Graph Synchronization (`graphify`), 1.2 Internet Research Routing (`agent-reach`), 1.3 Anti-Slop & Writing Discipline (`antislop` & `no-ai-slop`), 1.4 Senior Developer Ladder (`ponytail`), 1.5 Domain Alignment & ADR Protocol (`domain-alignment`), 1.6 Frontend Design Engineering (`frontend-craft`), 1.7 ADHD-Friendly Communication Protocol (`i-have-adhd`) (+16 more)
 
 ### Community 14 - "typing"
-Cohesion: 0.06
-Nodes (45): ABC, DCF Model Validation Script Validates Excel DCF models for formula errors and…, dataclasses, io, logging, numpy, pathlib, re (+37 more)
+Cohesion: 0.08
+Nodes (30): DecisionEnginesResponse, EngineMetadata, list_registered_engines(), BaseModel, get, Returns all registered pluggable decision engines, their priorities, and their…, Triggers zero-downtime hot-reloading across all compiled JDM policy tables., reload_decision_tables() (+22 more)
 
 ### Community 15 - "视频/播客"
 Cohesion: 0.20
@@ -809,9 +816,9 @@ Nodes (5): code-reviewer (Global Specialist Agent), Connected Skills & Squad Han
 Cohesion: 0.33
 Nodes (5): Connected Skills & Squad Handoffs, cross-platform-engineer (Global Specialist Agent), Mission, Operational Workflow, Protocols & Standards
 
-### Community 103 - "supervisor.py"
-Cohesion: 0.08
-Nodes (47): decimal, evaluate_persona_policy(), get_base_persona(), get_conversational_system_prompt(), get_missing_param_guidance(), get_missing_statement_guidance(), get_missing_statement_prompt(), get_off_topic_reply() (+39 more)
+### Community 103 - ".handle_sub_intent"
+Cohesion: 0.10
+Nodes (25): AgentMatchedOption, AgentMetricsSummary, CopilotResponse, CreditSubagent, Specialist subagent for debt affordability, credit underwriting, and financing…, Runs full digital underwriting dossier generation and financing options…, Subagent Specialists Package for the Autonomous SME Finance Copilot. Includes:…, LiquiditySubagent (+17 more)
 
 ### Community 104 - "penetration-tester (Global Specialist Agent)"
 Cohesion: 0.33
@@ -989,9 +996,9 @@ Nodes (3): The Gate Protocol, The Iron Law, Verification Before Completion
 Cohesion: 0.50
 Nodes (3): Overview, Structure, Writing Plans
 
-### Community 149 - "calculate_cash_analysis"
-Cohesion: 0.30
-Nodes (13): calculate_cash_analysis(), CashAnalysisResult, date, Calculate a historical-average burn/runway indicator; this is not a forecast., Verify gross inflows (credits) and gross outflows (debits) are independently…, row(), test_cash_analysis_dynamic_modes_live_vs_historical(), test_cash_analysis_gross_inflows_and_outflows_decomposition() (+5 more)
+### Community 149 - "extract_quick_ratio_params"
+Cohesion: 0.20
+Nodes (4): extract_quick_ratio_params(), Extracts current assets, inventory, current liabilities, and prepaid expenses…, Verifies regex extraction and history backfilling in param_extractor.py., TestParameterExtraction
 
 ### Community 153 - "Section 11: Formulas Reference Guide"
 Cohesion: 0.67
@@ -1130,8 +1137,8 @@ Cohesion: 0.50
 Nodes (4): Core Credit Metrics to Include, Covenant Compliance Tracking, Credit Metric Hierarchy Checks, Credit Metrics
 
 ### Community 195 - "extract_cash_drag_params"
-Cohesion: 0.18
-Nodes (8): extract_cash_drag_params(), extract_dupont_params(), extract_lease_vs_buy_params(), Extracts current balance, monthly burn, benchmark yield %, and reserve target…, Extracts net income, revenue, total assets, and total equity for 3-Stage DuPont…, Extracts purchase price, lease payment, term years, discount rate, tax rate,…, Verifies conversational extraction and multi-turn state retention., TestParameterExtractors
+Cohesion: 0.22
+Nodes (4): extract_cash_drag_params(), Extracts current balance, monthly burn, benchmark yield %, and reserve target…, Verifies conversational extraction and multi-turn state retention., TestParameterExtractors
 
 ### Community 196 - "Model Structure"
 Cohesion: 0.50
@@ -1157,17 +1164,17 @@ Nodes (13): FinancingOptionResponse, _format_money(), BaseModel, Decimal, JSONRe
 Cohesion: 0.18
 Nodes (11): Critical Constraints - Read These First, DCF Model Builder, Deliverables Structure, Excel File Creation, Final Output Checklist, Input Requirements, Minimum Required Inputs, Overview (+3 more)
 
-### Community 202 - "test_security_gate.py"
-Cohesion: 0.07
-Nodes (37): cbor2, cryptography_hazmat_primitives, cryptography_hazmat_primitives_asymmetric, hashlib, struct, Validates the complete SME user journey orchestrated through the Autonomous AI…, test_complete_conversational_agent_user_journey(), test_complete_sme_copilot_user_journey() (+29 more)
+### Community 202 - "test_csv_upload_e2e.py"
+Cohesion: 0.29
+Nodes (9): fixture, End-to-End user flow test validating the complete SME Copilot journey: 1.…, Validates the complete SME user journey orchestrated through the Autonomous AI…, test_complete_conversational_agent_user_journey(), test_complete_sme_copilot_user_journey(), test_actions_staging_and_tier_3_execution_flow(), execute_with_passkey(), Runs the full API passkey ceremony (register, challenge, sign, execute) for one… (+1 more)
 
 ### Community 203 - "Excel Model Structure"
 Cohesion: 0.25
 Nodes (8): Border Standards (REQUIRED for Professional Appearance), DCF Sheet Detailed Structure, Excel Model Structure, Formatting Standards, Formula Recalculation (MANDATORY), Sensitivity Analysis (Bottom of DCF Sheet), Sheet Architecture, WACC Sheet Structure
 
 ### Community 204 - "DecisionRequest"
-Cohesion: 0.06
-Nodes (52): parametrize, classify_sub_intent_dynamic(), Classifies cash diagnostic sub-intent dynamically by reference via…, Any, Pluggable GoRules ZEN Engine adapter for deterministic financial compliance.…, Convert input state into JSON-serializable context for ZEN evaluation., ZenRulesAdapter, Check if this engine can process the given decision request. (+44 more)
+Cohesion: 0.12
+Nodes (38): classify_sub_intent_dynamic(), Classifies cash diagnostic sub-intent dynamically by reference via…, Pluggable GoRules ZEN Engine adapter for deterministic financial compliance.…, ZenRulesAdapter, DecisionRequest, test_agent_persona_base_parity(), test_agent_persona_missing_param_guidance_parity(), test_agent_persona_missing_statement_and_off_topic_parity() (+30 more)
 
 ### Community 205 - "Workflow Integration"
 Cohesion: 0.40
@@ -1186,8 +1193,8 @@ Cohesion: 0.50
 Nodes (4): Best Practices, Documentation, Model Construction, Quality Control
 
 ### Community 209 - "SessionStore"
-Cohesion: 0.06
-Nodes (39): model_validator, generate_deterministic_summary(), Any, Condenses older conversation turns into an objective narrative summary without…, ChatHistoryItem, Any, BaseModel, Stores statement CSV and cached calculation metrics in the session. (+31 more)
+Cohesion: 0.05
+Nodes (57): model_validator, pytest, generate_deterministic_summary(), Any, Condenses older conversation turns into an objective narrative summary without…, ChatHistoryItem, Any, BaseModel (+49 more)
 
 ### Community 215 - "SME Finance Copilot — Complete Master Architecture & Beginner's Guide"
 Cohesion: 0.14
@@ -1197,9 +1204,9 @@ Nodes (13): 1. The Real-World Business Problem, 2. What is an AI Financial Parti
 Cohesion: 0.10
 Nodes (26): b64urlToBuffer(), bufferToB64url(), CASH_STATUS_LABELS, ChartPoint, CreationOptionsJSON, CredentialDescriptorJSON, CustomChartTooltip(), DEFAULT_WELCOME_MESSAGE (+18 more)
 
-### Community 217 - "DCFModelValidator"
-Cohesion: 0.12
-Nodes (13): DCFModelValidator, main(), Validate DCF-specific logic and calculations, Critical check: Terminal growth must be less than WACC, Validates DCF models for errors and quality issues, Check if WACC is in reasonable range, Check if terminal value is reasonable proportion of enterprise value, Validate a DCF model Excel file Args: excel_path: Path to Excel DCF model… (+5 more)
+### Community 217 - "calculate_client_concentration"
+Cohesion: 0.22
+Nodes (10): calculate_client_churn_impact(), calculate_client_concentration(), calculate_revenue_attrition_impact(), Any, Decimal, Assess cash flow and burn expansion impact if a major customer churns.…, Calculate client revenue concentration (Top 1 %, Top 3 %, and HHI score).…, Calculate the runway impact of client departures or monthly revenue churn.… (+2 more)
 
 ### Community 218 - "HomePage"
 Cohesion: 0.09
@@ -1217,17 +1224,13 @@ Nodes (4): _DynamicPersonaBase, Any, str, Dynamic string proxy that evaluates CO
 Cohesion: 0.14
 Nodes (13): 1. The Real-World Business Problem, 2. What is an AI Financial Participant?, 3. The 5-Tier System Architecture, 4. The Three-Tier Security Gate, 7. Physical Code Map & Verified Test Baseline, SME Finance Copilot — Complete Master Architecture & Beginner's Guide, Table of Contents, The Coffee Roastery Scenario (+5 more)
 
-### Community 222 - "test_blockchain_registry.py"
+### Community 222 - "invoice_hasher.py"
 Cohesion: 0.09
-Nodes (26): calculate_canonical_invoice_hash(), ConsortiumInvoiceRegistry, InvoiceAlreadyPledgedError, InvoiceNotPledgedError, InvoicePledgeRecord, InvoiceStatus, BaseModel, Enum (+18 more)
+Nodes (27): calculate_canonical_invoice_hash(), ConsortiumInvoiceRegistry, InvoiceAlreadyPledgedError, InvoiceNotPledgedError, InvoicePledgeRecord, InvoiceStatus, BaseModel, Enum (+19 more)
 
-### Community 223 - "CurrencyRegistry"
+### Community 223 - "test_currency_calculations.py"
 Cohesion: 0.09
-Nodes (33): generate_multi_currency_and_fx_records(), Teaches handling of 160+ world currencies across all continents and dynamic…, calculate_currency_conversion(), calculate_fx_exposure(), Any, Decimal, _quantize_currency(), Deterministic Multi-Currency Conversion and FX Exposure Calculation Engine.… (+25 more)
-
-### Community 224 - "test_analyze_api.py"
-Cohesion: 0.05
-Nodes (18): FastAPI routes package., fastapi_testclient, _create_synthetic_bank_pdf(), Decimal_valid(), Integration tests for PDF bank statement ingestion across FastAPI REST…, Helper to generate in-memory synthetic PDF with text content., test_agent_chat_with_pdf_statement(), test_analyze_endpoint_hybrid_upload() (+10 more)
+Nodes (32): generate_multi_currency_and_fx_records(), Teaches handling of 160+ world currencies across all continents and dynamic…, Fetch live spot foreign exchange (FX) market rate between any two world…, Safely and deterministically evaluates an arithmetic expression using pure…, tool_evaluate_financial_math(), _eval(), tool_get_live_exchange_rate(), calculate_currency_conversion() (+24 more)
 
 ### Community 225 - "fintech-engineer (Suite: 2-fintech-engine)"
 Cohesion: 0.40
@@ -1237,13 +1240,13 @@ Nodes (5): Connected Skills & Squad Handoffs, Enforced Invariants & Guidelines, 
 Cohesion: 0.17
 Nodes (11): Integration tests for the Autonomous SME Finance Copilot Agent API. Verifies:…, Verify offline provider connection probe succeeds immediately with 0ms latency., Verify chat agent computes break-even sales revenue threshold., Verify Fixed Charge Coverage Ratio calculation and underwriting approval tier., Verify follow-up query inherits fixed operating costs when contribution margin…, Verify agent invokes digital underwriting and pre-qualified matching with true…, test_agent_chat_break_even_calculation(), test_agent_chat_break_even_parameter_inheritance() (+3 more)
 
-### Community 227 - "BankPDFParser"
-Cohesion: 0.07
-Nodes (27): PdfReader, pypdf, pypdf_errors, BankPDFParser, parse_pdf_statement(), PDFStatementResult, Any, Decimal (+19 more)
+### Community 227 - "pdf_parser.py"
+Cohesion: 0.06
+Nodes (39): csv, io, PdfReader, pypdf, pypdf_errors, BankPDFParser, parse_pdf_statement(), PDFStatementResult (+31 more)
 
 ### Community 228 - "staging_ledger.py"
-Cohesion: 0.05
-Nodes (61): clear_action_intents(), execute_action_intent(), get_action_intent(), intent_passkey_options(), list_action_intents(), passkey_registration_options(), delete, get (+53 more)
+Cohesion: 0.06
+Nodes (56): clear_action_intents(), execute_action_intent(), get_action_intent(), intent_passkey_options(), list_action_intents(), passkey_registration_options(), delete, get (+48 more)
 
 ### Community 229 - "Domain A: Backend API, Security Gatekeeper & Container Platform"
 Cohesion: 0.25
@@ -1257,9 +1260,9 @@ Nodes (4): 1. Context & Problem Statement, 2. Decision: 1 Supervisor + 4 Determi
 Cohesion: 0.25
 Nodes (8): Phase 2: Analysis (2-3 hours), Step 10: Update Valuation & Price Target, Step 11: Assess Rating Impact, Step 5: Beat/Miss Analysis, Step 6: Segment/Geographic/Product Analysis, Step 7: Margin Analysis, Step 8: Guidance Analysis, Step 9: Update Financial Model
 
-### Community 235 - "passkeys.py"
-Cohesion: 0.12
-Nodes (16): PasskeyAlreadyRegisteredError, PasskeyError, PasskeyNotRegisteredError, PasskeyRegistry, Any, Exception, WebAuthn passkey registration and assertion verification for Tier 3 HITL…, Returns the verified credential ID (base64url) as the audit proof for the… (+8 more)
+### Community 235 - "test_security_gate.py"
+Cohesion: 0.07
+Nodes (40): Verifies the attestation from navigator.credentials.create() and stores the…, register_passkey(), PasskeyAlreadyRegisteredError, PasskeyError, PasskeyNotRegisteredError, PasskeyOptionsRequest, PasskeyRegistrationRequest, PasskeyRegistry (+32 more)
 
 ### Community 236 - "calculate_cash_drag"
 Cohesion: 0.25
@@ -1269,9 +1272,9 @@ Nodes (6): calculate_cash_drag(), Any, Decimal, Calculate idle cash and annualiz
 Cohesion: 0.40
 Nodes (5): Connected Skills & Squad Handoffs, Enforced Invariants & Guidelines, Mission & Domain Focus, Operational Workflow, test-automator (Suite: 5-security-qa)
 
-### Community 238 - "analyze_csv"
-Cohesion: 0.24
-Nodes (11): AccountSummary, analyze_csv(), CashAnalysisResponse, ContraTransferSummary, BaseModel, date, JSONResponse, post (+3 more)
+### Community 238 - "analyze.py"
+Cohesion: 0.11
+Nodes (24): get, FastAPI Main Application Entrypoint. Configures CORS, Security Headers, and…, root(), AccountSummary, analyze_csv(), CashAnalysisResponse, ContraTransferSummary, _format_money() (+16 more)
 
 ### Community 239 - "app/layout.tsx"
 Cohesion: 0.29
@@ -1298,12 +1301,8 @@ Cohesion: 0.17
 Nodes (12): scripts, build, dev, docker:build, docker:down, docker:up, graph:update, lint (+4 more)
 
 ### Community 245 - "2. Complete Technical Capabilities & Architecture Breakdown"
-Cohesion: 0.14
-Nodes (14): 1. Executive Summary & Current Operational Baseline, 2.1 Multi-Format Bank Statement Ingestion (`services/ingestion/`), 2.2 Deterministic FinTech Engine (25+ Core Routines in `services/calculations/`), 2.3 Policy Decision Tables (`contracts/decision_tables/`), 2.4 Dual Local SLM Inference Engine (`services/agent/`), 2.5 Universal LLM Bridge (`services/agent/llm_bridge.py`), 2.6 Dynamic Semantic Vector Routing (`services/agent/dynamic_router.py`), 2.7 Three-Tier Security Gate (`services/security/`) (+6 more)
-
-### Community 246 - "test_download_model.py"
 Cohesion: 0.11
-Nodes (25): fetch_remote_models(), Dynamically queries the target provider's live models endpoint to discover…, FetchModelsRequest, Unit tests for explicit model downloading, cache verification, and exception…, Ensures discovery endpoint lists only the fine-tuned 3B adapter, omitting base…, Verifies download_model passes local_dir to snapshot_download to store weights…, Verifies that discovery message prompts the user to download a model first when…, Verifies supervisor prompts the user to download a model first when in local… (+17 more)
+Nodes (19): 1. Executive Summary & Current Operational Baseline, 2.1 Multi-Format Bank Statement Ingestion (`services/ingestion/`), 2.2 Deterministic FinTech Engine (25+ Core Routines in `services/calculations/`), 2.3 Policy Decision Tables (`contracts/decision_tables/`), 2.4 Dual Local SLM Inference Engine (`services/agent/`), 2.5 Universal LLM Bridge (`services/agent/llm_bridge.py`), 2.6 Dynamic Semantic Vector Routing (`services/agent/dynamic_router.py`), 2.7 Three-Tier Security Gate (`services/security/`) (+11 more)
 
 ### Community 247 - "5. Digital Underwriting & Truth-in-Lending"
 Cohesion: 0.40
@@ -1317,17 +1316,17 @@ Nodes (4): 1. Intent & Spec Gate, 2. Root Cause Debugging Invariant, 3. Verifica
 Cohesion: 0.25
 Nodes (8): Copy-Ready AI Prompt for Domain C, Domain C: Multi-Format Ingestion & Blockchain QA, Key Starter Code Backbone, Owned Directories & Files, Plain-English Role, Stop-Ship Rules, Verification & Test Commands, What Was Already Built & Tested for You (The Implemented Backbone)
 
-### Community 250 - "agent.py"
-Cohesion: 0.16
-Nodes (23): agent_delete_model(), agent_download_model(), agent_fetch_models(), agent_test_connection(), post, FastAPI router for the Autonomous AI Copilot Agent. Exposes conversational…, Sends a lightweight verification probe to the target LLM provider., Dynamically queries the target provider's models catalog. (+15 more)
+### Community 250 - "schema.py"
+Cohesion: 0.07
+Nodes (50): agent_chat(), agent_delete_model(), agent_download_model(), agent_fetch_models(), agent_test_connection(), clear_session(), clear_session_statement(), FastAPI router for the Autonomous AI Copilot Agent. Exposes conversational… (+42 more)
 
 ### Community 251 - "Domain D: Quantitative FinTech Engine & Decision Tables"
 Cohesion: 0.25
 Nodes (8): Copy-Ready AI Prompt for Domain D, Domain D: Quantitative FinTech Engine & Decision Tables, Key Starter Code Backbone, Owned Directories & Files, Plain-English Role, Stop-Ship Rules, Verification & Test Commands, What Was Already Built & Tested for You (The Implemented Backbone)
 
 ### Community 252 - "param_extractor.py"
-Cohesion: 0.06
-Nodes (69): backfill_missing_params(), extract_altman_z_params(), extract_amortization_params(), extract_attrition_params(), extract_break_even_params(), extract_break_even_units_params(), extract_cac_payback_params(), extract_currency_conversion_params() (+61 more)
+Cohesion: 0.07
+Nodes (77): backfill_missing_params(), extract_altman_z_params(), extract_amortization_params(), extract_attrition_params(), extract_break_even_params(), extract_break_even_units_params(), extract_cac_payback_params(), extract_currency_conversion_params() (+69 more)
 
 ### Community 253 - "first-principles-thinking (Suite: 6-product-pitch)"
 Cohesion: 0.40
@@ -1357,9 +1356,9 @@ Nodes (8): Copy-Ready AI Prompt for Domain C, Domain C: Multi-Format Ingestion &
 Cohesion: 0.11
 Nodes (32): CSVIngestionError, parse_bank_csv(), parse_multiple_bank_csv(), ValueError, Universal bank statement and financial table CSV parser. Dynamically infers…, A file-level input error with a stable response code., Parses and consolidates multiple CSV statements across accounts or sequential…, Verify end-to-end ingestion of a multi-column banking CSV resolved by Decision… (+24 more)
 
-### Community 262 - ".get_instance"
-Cohesion: 0.10
-Nodes (27): calculate_client_churn_impact(), calculate_client_concentration(), calculate_revenue_attrition_impact(), Any, Decimal, Deterministic Client Concentration Risk and Revenue Attrition Calculation…, Assess cash flow and burn expansion impact if a major customer churns.…, Calculate client revenue concentration (Top 1 %, Top 3 %, and HHI score).… (+19 more)
+### Community 262 - "calculations/__init__.py"
+Cohesion: 0.13
+Nodes (24): calculate_break_even(), calculate_break_even_units(), calculate_contribution_margin(), calculate_margin_of_safety(), calculate_operating_margins(), Decimal, Deterministic SME Unit Economics, Break-Even, and Margin Calculation Engine.…, Calculate Gross Margin (%) and Operating Margin (%). Formulas: Gross Margin (%)… (+16 more)
 
 ### Community 263 - "Domain Alignment & Grilling Protocol"
 Cohesion: 0.50
@@ -1370,16 +1369,16 @@ Cohesion: 0.25
 Nodes (8): Copy-Ready AI Prompt for Domain D, Domain D: Quantitative FinTech Engine & Decision Tables, Key Starter Code Backbone, Owned Directories & Files, Plain-English Role, Stop-Ship Rules, Verification & Test Commands, What Was Already Built & Tested for You (The Implemented Backbone)
 
 ### Community 265 - "DemoTransaction"
-Cohesion: 0.26
-Nodes (18): DemoTransaction, IngestionResult, _parse_standard_csv(), Parses standard schema while preserving strict test invariants., RejectedRow, AccountStatementProfile, consolidate_multi_statement_treasury(), ConsolidatedTreasuryResult (+10 more)
+Cohesion: 0.14
+Nodes (33): datetime, calculate_cash_analysis(), CashAnalysisResult, date, Deterministic historical cash analysis and burn rate calculations., Calculate a historical-average burn/runway indicator; this is not a forecast., DemoTransaction, IngestionResult (+25 more)
 
 ### Community 266 - "test_prompts.py"
 Cohesion: 0.06
-Nodes (49): Match, is_ai_disclaimer(), Detects whether generated text is an unhelpful AI disclaimer or refusal using…, _figures(), get_cash_diagnostic_prompt(), get_credit_underwriting_prompt(), numbers_are_grounded(), _preserve_case_replace() (+41 more)
+Nodes (44): Match, is_ai_disclaimer(), Detects whether generated text is an unhelpful AI disclaimer or refusal using…, mask_pii(), Sanitizes sensitive identifiers before external transmission., _figures(), numbers_are_grounded(), _preserve_case_replace() (+36 more)
 
 ### Community 267 - "LocalTransformersEngine"
-Cohesion: 0.16
-Nodes (14): download_single_model(), list_models(), main(), Standalone CLI utility to download and verify local SLM/LoRA models for SME…, LocalTransformersEngine, Any, Checks if target model is present on disk locally with zero network calls., Returns the primary path or repo_id for local model weights. (+6 more)
+Cohesion: 0.06
+Nodes (46): Mistake 2: Test Suite Breakage from Modifying Model Alias Normalizer, os, download_single_model(), list_models(), main(), Standalone CLI utility to download and verify local SLM/LoRA models for SME…, _query_llm_for_intent(), Queries either local on-device SLM or cloud LLM to classify user intent… (+38 more)
 
 ### Community 268 - "Domain B: Frontend Dashboard & Executive UI"
 Cohesion: 0.25
@@ -1390,16 +1389,16 @@ Cohesion: 0.29
 Nodes (7): Python 调用示例, V2EX (公开 API), 主题回复, 主题详情, 热门主题, 用户信息, 节点主题
 
 ### Community 270 - "train_local_model.py"
-Cohesion: 0.10
-Nodes (25): argparse, datasets, google_colab, SME Finance Copilot — Google Colab Cloud Training Script. Engineered to run on…, run_colab_training(), peft, main(), parse_args() (+17 more)
+Cohesion: 0.05
+Nodes (39): DCFModelValidator, main(), Validate DCF-specific logic and calculations, Critical check: Terminal growth must be less than WACC, Validates DCF models for errors and quality issues, Check if WACC is in reasonable range, Check if terminal value is reasonable proportion of enterprise value, DCF Model Validation Script Validates Excel DCF models for formula errors and… (+31 more)
 
 ### Community 271 - "convert_factor_rate_to_apr"
 Cohesion: 0.14
 Nodes (13): 1. Lead Orchestrator (Supervisor), 1. Runtime Topology Matrix, 2. Squad 1: Ingestion & Privacy Squad, 2. Squad Role, Tools, and Security Invariant Specifications, 3. Squad 2: Diagnostic CFO Engine, 4. Squad 3: Risk Forecasting & Alerting Squad, 5. Squad 4: Underwriting & Matching Squad, 6. The Three-Tier Security Gatekeeper (The Enforcer) (+5 more)
 
-### Community 272 - "load_security_policy_config"
-Cohesion: 0.11
-Nodes (13): Path, Explicitly reloads and recompiles all policy tables without server restart., Lightweight check to hot-reload if file modified on disk., Pre-compile JDM policy tables into in-memory ZenDecision graphs with mtime…, load_security_policy_config(), load_semantic_prototypes(), Any, Path (+5 more)
+### Community 272 - ".evaluate"
+Cohesion: 0.13
+Nodes (8): Any, Path, Explicitly reloads and recompiles all policy tables without server restart., Lightweight check to hot-reload if file modified on disk., Convert input state into JSON-serializable context for ZEN evaluation., Pre-compile JDM policy tables into in-memory ZenDecision graphs with mtime…, Any, Triggers hot-reloading across all registered adapters that support dynamic…
 
 ### Community 273 - "calculate_dupont_roe"
 Cohesion: 0.24
@@ -1409,21 +1408,21 @@ Nodes (6): calculate_dupont_roe(), Any, Decimal, Calculate 3-Stage DuPont Analys
 Cohesion: 0.28
 Nodes (6): calculate_lease_vs_buy(), Any, Decimal, Calculate Net Present Value trade-off between leasing vs purchasing commercial…, Test suite for Commercial Equipment Lease vs. Buy Net Present Value (NPV)., TestLeaseVsBuyCalculations
 
-### Community 275 - "generate_local_reply"
-Cohesion: 0.20
-Nodes (11): 3. Engineering Postmortem: Mistakes Made, Root Causes & Fixes, Mistake 1: 3B CPU Token Generation Freezing the FastAPI Event Loop, Mistake 2: Test Suite Breakage from Modifying Model Alias Normalizer, Mistake 3: Pydantic v2 `extra="forbid"` Strictness Dropping Requests, Mistake 4: Cold-Start Library Import Timeouts, Mistake 5: Hardcoded Template Repetition in Initial LoRA Datasets, Mistake 6: Non-Institutional Terminology in Project Documentation, generate_local_reply() (+3 more)
+### Community 275 - "passkey_authenticator.py"
+Cohesion: 0.25
+Nodes (7): cbor2, cryptography_hazmat_primitives, cryptography_hazmat_primitives_asymmetric, hashlib, struct, Software FIDO2 authenticator for tests: produces real WebAuthn registration and…, webauthn_helpers
 
-### Community 276 - "FastEmbedSemanticRouter"
-Cohesion: 0.16
-Nodes (11): FastEmbedSemanticRouter, is_in_domain_finance_query(), Any, Determines if query is out of domain using semantic distance., Determines if text is an unhelpful AI capability disclaimer or refusal via…, Classifies cash diagnostic sub-intent via semantic prototype matching., Evaluates whether user message is within the SME Finance & Copilot domain., Zero-keyword vector semantic router using on-device FastEmbed embeddings (ONNX). (+3 more)
+### Community 276 - "dynamic_router.py"
+Cohesion: 0.11
+Nodes (17): numpy, classify_intent_dynamic(), FastEmbedSemanticRouter, is_in_domain_finance_query(), _parse_intent_label(), Any, Dynamic Vector Semantic & LLM Intent Router for Autonomous SME Finance Copilot.…, Determines if query is out of domain using semantic distance. (+9 more)
 
 ### Community 277 - "Comprehensive Quality Control Checklist"
 Cohesion: 0.29
 Nodes (7): Accuracy Checklist, Citations & Sources Checklist ⭐⭐⭐ MANDATORY, Comprehensive Quality Control Checklist, Content & Analysis Checklist, Format & Length Checklist, Timeliness Checklist, Writing Style Checklist
 
 ### Community 278 - "csv_parser.py"
-Cohesion: 0.11
-Nodes (26): csv, mask_pii(), Sanitizes sensitive identifiers before external transmission., _parse_universal_csv(), _profiled_to_col_map(), Universal bank statement and financial table data ingestion and sanitization…, Parses universal columns, normalizes notations, backfills balances and hashes…, _find_best_text_col() (+18 more)
+Cohesion: 0.07
+Nodes (42): dataclasses, pydantic, re, Universal ISO 4217 Global Currency Registry and Smart Symbol Resolver. Provides…, _detect_columns(), NormalizedTransaction, parse_bank_records(), _parse_universal_csv() (+34 more)
 
 ### Community 279 - "Critical Requirements"
 Cohesion: 0.33
@@ -1437,13 +1436,13 @@ Nodes (6): High-Level Workflow, Phase 1: Data Collection (30-60 minutes), Phase 
 Cohesion: 0.18
 Nodes (13): calculate_dcf_valuation(), calculate_enterprise_value_multiples(), calculate_free_cash_flow(), calculate_wacc(), Any, Decimal, Deterministic Enterprise Valuation, Cost of Capital & Free Cash Flow Engine.…, Calculate Weighted Average Cost of Capital (WACC). Args: equity_value: Market… (+5 more)
 
-### Community 282 - "_query_llm_for_intent"
-Cohesion: 0.18
-Nodes (9): _parse_intent_label(), _query_llm_for_intent(), Queries either local on-device SLM or cloud LLM to classify user intent…, Extracts valid intent enum name from raw LLM output., LocalSLMEngine, Any, Singleton runner for local ONNX Small Language Model., Checks if model files are present on disk. (+1 more)
+### Community 282 - "LocalSLMEngine"
+Cohesion: 0.28
+Nodes (5): LocalSLMEngine, Any, Singleton runner for local ONNX Small Language Model., Checks if model files are present on disk., Generates contextual natural response using local engine.
 
-### Community 283 - ".handle_sub_intent"
-Cohesion: 0.18
-Nodes (9): extract_current_ratio_params(), extract_quick_ratio_params(), extract_trade_credit_params(), Extracts current assets and current liabilities for Current Ratio calculation., Extracts current assets, inventory, current liabilities, and prepaid expenses…, Extracts discount %, discount days, net days, invoice amount, and benchmark…, Dispatches liquidity and working capital calculations to specialized tools., Verifies regex extraction and history backfilling in param_extractor.py. (+1 more)
+### Community 283 - "supervisor.py"
+Cohesion: 0.07
+Nodes (42): decimal, evaluate_persona_policy(), get_base_persona(), get_cash_diagnostic_prompt(), get_conversational_system_prompt(), get_credit_underwriting_prompt(), get_missing_param_guidance(), get_missing_statement_guidance() (+34 more)
 
 ### Community 284 - "intent_prototypes"
 Cohesion: 0.33
@@ -1453,37 +1452,25 @@ Nodes (6): intent_prototypes, ACTION_STAGING, CASH_DIAGNOSTIC, CREDIT_UNDERWRITI
 Cohesion: 0.29
 Nodes (7): 1. Page 1 Requirements, 2. All Tables Requirements, 3. All Charts Requirements, 4. Year Notation, 5. Writing Style, 6. Hyperlink Requirements ⭐⭐⭐, FORMATTING REQUIREMENTS
 
-### Community 286 - "llm_bridge.py"
-Cohesion: 0.24
-Nodes (10): httpx, _extract_history_turn(), Any, query_external_llm(), Universal LLM Bridge for the Autonomous SME Finance Copilot. Supports: 1.…, Resolves target endpoint URL and model identifier for a given provider., Queries configured external or local LLM with PII redaction, multi-turn…, Safely extracts role and text from either Pydantic model or dictionary turn. (+2 more)
+### Community 286 - "tool_calculate_dupont_roe"
+Cohesion: 0.29
+Nodes (4): Perform 3-Stage DuPont Analysis decomposing ROE into Net Margin, Asset…, tool_calculate_dupont_roe(), Verifies string parsing, sanitization, and typing in tools.py., TestToolWrappers
 
 ### Community 287 - "Citation Examples for Specific Content"
 Cohesion: 0.50
 Nodes (4): Citation Examples for Specific Content, For Beat/Miss Analysis:, For Guidance:, For Key Metrics:
 
-### Community 288 - "test_currency_calculations.py"
-Cohesion: 0.20
-Nodes (10): pytest, Safely and deterministically evaluates an arithmetic expression using pure…, tool_evaluate_financial_math(), _eval(), Unit tests for deterministic multi-currency conversion, FX exposure, and ISO…, test_calculate_currency_conversion_explicit_rate_with_spread(), test_calculate_currency_conversion_with_symbols_and_live_fallback(), test_calculate_fx_exposure_cross_border() (+2 more)
-
-### Community 289 - "clear_session"
-Cohesion: 0.40
-Nodes (5): clear_session(), clear_session_statement(), delete, Clears session record from memory and removes serialized disk cache., Clears statement CSV and cached calculation metrics for the session.
-
-### Community 290 - "decision.py"
-Cohesion: 0.23
-Nodes (12): DecisionEnginesResponse, EngineMetadata, evaluate_decision(), list_registered_engines(), BaseModel, get, post, Returns all registered pluggable decision engines, their priorities, and their… (+4 more)
+### Community 290 - ".get_instance"
+Cohesion: 0.12
+Nodes (10): evaluate_decision(), post, Direct evaluation sandbox. Accepts financial facts and returns deterministic or…, inspect_for_prompt_injection(), Detects adversarial prompt injection and jailbreak override attempts via…, MockCrashingEngine, test_registry_recovers_gracefully_from_engine_crash(), test_zen_adapter_and_registry_hot_reloading() (+2 more)
 
 ### Community 291 - "小红书 / XiaoHongShu（多后端）"
 Cohesion: 0.40
 Nodes (5): 后端 A：OpenCLI（桌面首选）, 后端 B：xiaohongshu-mcp（服务器场景）, 后端 C：xhs-cli（存量备选，上游 2026-03 起停更）, 小红书 / XiaoHongShu（多后端）, 通用注意事项
 
 ### Community 292 - "generate_finetune_dataset.py"
-Cohesion: 0.10
-Nodes (49): random, _fmt_dec(), generate_action_staging_records(), generate_altman_z_records(), generate_break_even_records(), generate_cash_conversion_cycle_records(), generate_client_concentration_records(), generate_conversational_onboarding_records() (+41 more)
-
-### Community 293 - "test_enterprise_finance_tools.py"
-Cohesion: 0.09
-Nodes (29): Calculate Return on Invested Capital (ROIC) assessing operating return vs total…, Calculate Return on Assets (ROA) evaluating net earnings efficiency per balance…, Calculate Economic Value Added (EVA) measuring surplus economic profit…, tool_calculate_eva(), tool_calculate_roa(), tool_calculate_roic(), calculate_eva(), calculate_roa() (+21 more)
+Cohesion: 0.15
+Nodes (37): random, _fmt_dec(), generate_action_staging_records(), generate_altman_z_records(), generate_break_even_records(), generate_cash_conversion_cycle_records(), generate_client_concentration_records(), generate_conversational_onboarding_records() (+29 more)
 
 ### Community 294 - "Sprint Workflow & Engineering Lifecycle"
 Cohesion: 0.40
@@ -1494,12 +1481,12 @@ Cohesion: 0.40
 Nodes (5): 1. Operating Model: Lead Architect & AI Specialist Squads, 2. The 4 Unified Architectural Domains, 3. How to Execute Specialist Tasks, 4. Standing Engineering Invariants, Operational Guide: AI Agent Squad Orchestration
 
 ### Community 297 - "FallbackRuleAdapter"
-Cohesion: 0.23
-Nodes (6): FallbackRuleAdapter, Any, Zero-dependency deterministic rule fallback. Guarantees financial invariants…, Evaluate the decision request and produce a calibrated DecisionResult., DecisionResult, BaseModel
+Cohesion: 0.26
+Nodes (5): FallbackRuleAdapter, Any, Zero-dependency deterministic rule fallback. Guarantees financial invariants…, DecisionResult, BaseModel
 
-### Community 298 - "solvency.py"
+### Community 298 - "calculate_current_ratio"
 Cohesion: 0.15
-Nodes (12): calculate_current_ratio(), calculate_debt_to_equity(), calculate_interest_coverage(), calculate_quick_ratio(), Decimal, Deterministic Solvency, Balance Sheet Liquidity, and Leverage Calculation…, Calculate Debt-to-Equity (D/E) Ratio and capital structure financial leverage.…, Calculate Interest Coverage Ratio (Times Interest Earned - TIE). Formula: EBIT… (+4 more)
+Nodes (11): calculate_current_ratio(), calculate_debt_to_equity(), calculate_interest_coverage(), calculate_quick_ratio(), Decimal, Calculate Debt-to-Equity (D/E) Ratio and capital structure financial leverage.…, Calculate Interest Coverage Ratio (Times Interest Earned - TIE). Formula: EBIT…, Calculate Current Ratio (Current Assets / Current Liabilities) and liquidity… (+3 more)
 
 ### Community 299 - "liquidity_score.py"
 Cohesion: 0.50
@@ -1509,9 +1496,13 @@ Nodes (4): calculate_continuous_liquidity_score(), Decimal, Continuous Liquidity
 Cohesion: 0.25
 Nodes (8): Copy-Ready AI Prompt for Domain B, Domain B: Frontend Dashboard & Executive UI, Key Starter Code Backbone, Owned Directories & Files, Plain-English Role, Stop-Ship Rules, Verification & Test Commands, What Was Already Built & Tested for You (The Implemented Backbone)
 
-### Community 304 - "analyze.py"
-Cohesion: 0.08
-Nodes (26): get, FastAPI Main Application Entrypoint. Configures CORS, Security Headers, and…, root(), _format_money(), Decimal, Bank statement CSV analysis endpoint; processes transactions in-memory without…, get_health_status(), HealthStatus (+18 more)
+### Community 303 - "AbstractDecisionEngine"
+Cohesion: 0.11
+Nodes (19): ABC, logging, pathlib, AbstractDecisionEngine, Unique identifier and version of the decision engine backend., List of domains this engine is qualified to evaluate., Check if this engine can process the given decision request., Evaluate the decision request and produce a calibrated DecisionResult. (+11 more)
+
+### Community 304 - "get_session"
+Cohesion: 0.50
+Nodes (4): get_session(), SessionRecord, Retrieves session record from the persistent store., get
 
 ### Community 305 - "calculate_trade_credit_apr"
 Cohesion: 0.25
@@ -1521,21 +1512,21 @@ Nodes (6): calculate_trade_credit_apr(), Any, Decimal, Calculate the implied Ann
 Cohesion: 0.67
 Nodes (3): 8. System Architecture & Subagent Specialist Execution Guide, Architectural Domain Ownership Matrix, Unified Architecture Verification Protocol
 
-### Community 307 - "test_invariants.py"
-Cohesion: 0.13
-Nodes (17): NormalizedTransaction, parse_bank_records(), Any, BaseModel, Existing finance-ingestion schema retained for existing callers/tests., Masks basic IBAN-shaped values and US phone numbers in transaction text., Parse legacy transaction objects using the original Pydantic boundary., redact_pii_string() (+9 more)
-
 ### Community 308 - "semantic_intent_prototypes.json"
 Cohesion: 0.40
 Nodes (4): description, disclaimer_prototype, $schema, title
 
-### Community 316 - "get_session"
-Cohesion: 0.67
-Nodes (3): get_session(), get, Retrieves session record from the persistent store.
-
 ### Community 318 - "run_copilot_supervisor"
-Cohesion: 0.06
-Nodes (39): agent_chat(), Dispatches user prompt to the Agent Supervisor with authoritative header-based…, classify_intent_dynamic(), is_off_topic_query(), Detects if a user message is non-financial and off-topic using vector semantic…, Dynamically classifies user message into a financial intent using vector…, AgentChatRequest, LLMConfig (+31 more)
+Cohesion: 0.08
+Nodes (27): is_off_topic_query(), Detects if a user message is non-financial and off-topic using vector semantic…, AgentChatRequest, detect_intent(), inspect_for_api_key(), Detects raw API keys, passwords, PINs, or credential secrets pasted into chat…, Classifies user chat message into structured financial intent categories…, Core reasoning supervisor dispatching requests to deterministic tools and… (+19 more)
+
+### Community 320 - "saas_unit_economics.py"
+Cohesion: 0.20
+Nodes (11): calculate_cac_payback(), calculate_ltv_cac(), calculate_net_revenue_retention(), Any, Decimal, Deterministic Subscription & Modern SME Unit Economics Calculation Engine.…, Calculate CAC Payback Period in months. Args: monthly_arpu: Average Monthly…, Calculate Net Revenue Retention (NRR) and Gross Revenue Retention (GRR). Args:… (+3 more)
+
+### Community 322 - "test_pdf_decision_policies.py"
+Cohesion: 0.15
+Nodes (11): parametrize, Reset singleton for testing isolation., fixture, reset_registry(), fallback_engine(), fixture, registry(), TestBankStatementProfilePolicy (+3 more)
 
 ### Community 324 - "6. Consortium Blockchain & Double-Financing Defense"
 Cohesion: 0.50
@@ -1553,30 +1544,34 @@ Nodes (3): Non-autoregressive System-One AI decision adapter (Kev / ModernBERT /
 Cohesion: 0.67
 Nodes (3): 8. System Architecture & Subagent Specialist Execution Guide, Architectural Domain Ownership Matrix, Unified Architecture Verification Protocol
 
+### Community 348 - "get_live_exchange_rate"
+Cohesion: 0.15
+Nodes (16): _fetch_rates_from_api(), _format_spot_rate(), FxRateService, get_live_exchange_rate(), Any, Decimal, Live Foreign Exchange (FX) Rate Service with In-Memory Caching and Free Public…, Service facade for live foreign exchange queries and cache management. (+8 more)
+
 ### Community 356 - "calculate_altman_z_score"
 Cohesion: 0.20
 Nodes (10): calculate_altman_z_score(), calculate_debt_service_burden(), calculate_net_debt_to_ebitda(), Any, Decimal, Calculate Net Debt to EBITDA commercial leverage covenant ratio. Args:…, Calculate Debt Service Burden (% of annual gross revenue claimed by debt…, Calculate Altman Z'-Score for private non-public SME enterprises. Args:… (+2 more)
 
-### Community 357 - "test_financial_metrics.py"
-Cohesion: 0.06
-Nodes (54): _format_money(), Compute Debt Service Coverage Ratio (DSCR) and banking risk classification., Calculate commercial loan monthly payment, total interest, and remaining…, Calculate Break-Even Revenue ($), Contribution Margin Ratio, and Margin of…, Calculate invoice factoring net cash advance, discount fee, and true annualized…, Calculate Defensive Interval Ratio (DIR) in days of liquid operational coverage., Calculate Fixed Charge Coverage Ratio (FCCR) and credit tier., Calculate Working Capital Requirement (WCR = AR + Inventory - AP). (+46 more)
+### Community 357 - "debt_service.py"
+Cohesion: 0.13
+Nodes (18): calculate_factoring_proceeds(), calculate_fccr(), calculate_loan_amortization(), calculate_prudent_debt_capacity(), Decimal, Deterministic Debt Affordability & Commercial Underwriting Calculation Engine.…, Calculate invoice factoring advance, rebate, net proceeds, and true annualized…, Calculate maximum prudent debt capacity without violating underwriting… (+10 more)
 
 ## Knowledge Gaps
-- **1412 isolated node(s):** `config.sh script`, `SUBAGENT_CATALOG_TTL_SECONDS`, `SUBAGENT_CATALOG_CACHE_FILE`, `SUBAGENT_CATALOG_REPO_URL`, `metadata` (+1407 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2225 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **64 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1412 isolated node(s):** `CredentialDescriptorJSON`, `CreationOptionsJSON`, `RequestOptionsJSON`, `ChartPoint`, `RUNWAY_HORIZON_PRESETS` (+1407 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2232 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **75 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `1. Verified System Capabilities` connect `1. Verified System Capabilities` to `test_matcher.py`, `liquidity_matcher.py`, `LocalTransformersEngine`, `test_calculations.py`, `calculate_cash_analysis`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
+- **Why does `1. Verified System Capabilities` connect `1. Verified System Capabilities` to `test_matcher.py`, `liquidity_matcher.py`, `DemoTransaction`, `LocalTransformersEngine`, `test_calculations.py`?**
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
 - **Why does `Engineering Execution Plan & Technical Contract` connect `1. Verified System Capabilities` to `AGENTS.md`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
-- **Why does `LocalTransformersEngine` connect `LocalTransformersEngine` to `run_copilot_supervisor`, `supervisor.py`, `2. Subagent Suites Directory (57 Specialized Subagents)`, `_query_llm_for_intent`, `typing`, `analyze.py`, `1. Verified System Capabilities`, `generate_local_reply`, `2. Complete Technical Capabilities & Architecture Breakdown`, `2. Deterministic FinTech Engine (25+ Core Routines)`, `test_download_model.py`, `agent.py`, `SME Finance Copilot: Master Security Architecture (`security.md`)`, `llm_bridge.py`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Are the 9 inferred relationships involving `DecisionRequest` (e.g. with `FallbackRuleAdapter` and `SystemOneModelAdapter`) actually correct?**
-  _`DecisionRequest` has 9 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
+- **Why does `calculate_cash_analysis()` connect `DemoTransaction` to `.get_instance`, `tools.py`, `.handle_sub_intent`, `Domain D: Quantitative FinTech Engine & Decision Tables`, `2. Subagent Suites Directory (57 Specialized Subagents)`, `DecisionRequest`, `analyze.py`, `1. Verified System Capabilities`, `2. Complete Technical Capabilities & Architecture Breakdown`, `Domain D: Quantitative FinTech Engine & Decision Tables`?**
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
+- **Are the 12 inferred relationships involving `DecisionRequest` (e.g. with `inspect_for_api_key()` and `inspect_for_prompt_injection()`) actually correct?**
+  _`DecisionRequest` has 12 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 6 inferred relationships involving `run_copilot_supervisor()` (e.g. with `agent_chat()` and `LocalSLMEngine`) actually correct?**
   _`run_copilot_supervisor()` has 6 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 11 inferred relationships involving `DecisionDomain` (e.g. with `FallbackRuleAdapter` and `SystemOneModelAdapter`) actually correct?**
