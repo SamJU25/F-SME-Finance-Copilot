@@ -9,10 +9,11 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from services.security.passkeys import PasskeyError, PasskeyRegistry, passkey_registry
 from services.security.three_tier_gate import StagedActionIntent, requires_biometric_execution
 
 
@@ -35,7 +36,7 @@ class IntentStateError(StagingLedgerError):
 
 
 class BiometricVerificationError(StagingLedgerError):
-    """Raised when Tier 3 action lacks a valid biometric or 2FA confirmation token."""
+    """Raised when a Tier 3 action lacks a verified WebAuthn passkey assertion."""
 
 
 class StagingRequest(BaseModel):
@@ -50,16 +51,17 @@ class StagingRequest(BaseModel):
 class ExecutionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    biometric_signature: Optional[str] = Field(
+    webauthn_assertion: Optional[dict[str, Any]] = Field(
         default=None,
-        description="Cryptographic confirmation token (e.g. FIDO2 WebAuthn signature or hardware-backed OTP token)"
+        description="PublicKeyCredential JSON from navigator.credentials.get() over this intent's challenge",
     )
 
 
 class StagingLedger:
     """Thread-safe in-memory staging ledger for autonomous agent financial actions."""
 
-    def __init__(self) -> None:
+    def __init__(self, passkeys: Optional[PasskeyRegistry] = None) -> None:
+        self._passkeys = passkeys or passkey_registry
         self._intents: dict[str, StagedActionIntent] = {}
         self._lock = threading.Lock()
 
@@ -97,10 +99,12 @@ class StagingLedger:
             return [i for i in all_intents if i.tenant_id == tenant_id]
         return all_intents
 
-    def execute_intent(self, intent_id: str, biometric_signature: Optional[str] = None) -> StagedActionIntent:
+    def execute_intent(
+        self, intent_id: str, webauthn_assertion: Optional[dict[str, Any]] = None
+    ) -> StagedActionIntent:
         """
         Executes a staged intent.
-        Enforces Tier 3 Human-in-the-Loop check: requires biometric token for Tier 3 actions.
+        Tier 3 actions require a passkey assertion signed over this intent's challenge.
         """
         with self._lock:
             intent = self._intents.get(intent_id)
@@ -110,16 +114,23 @@ class StagingLedger:
             if intent.status != ActionStatus.STAGED_PENDING_HITL.value:
                 raise IntentStateError(f"Cannot execute intent in status {intent.status}")
 
+            proof = None
             if requires_biometric_execution(intent.action_type):
-                if not biometric_signature or not self._verify_biometric_token(biometric_signature):
+                if not webauthn_assertion:
                     raise BiometricVerificationError(
-                        f"Tier 3 action '{intent.action_type}' requires physical biometric/2FA verification."
+                        f"Tier 3 action '{intent.action_type}' requires biometric passkey verification."
                     )
+                try:
+                    proof = self._passkeys.verify_assertion(intent.tenant_id, intent_id, webauthn_assertion)
+                except PasskeyError as exc:
+                    raise BiometricVerificationError(
+                        f"Tier 3 action '{intent.action_type}' biometric passkey verification failed: {exc}"
+                    ) from exc
 
             executed_intent = intent.model_copy(
                 update={
                     "status": ActionStatus.EXECUTED.value,
-                    "biometric_signature": biometric_signature,
+                    "biometric_signature": proof,
                 }
             )
             self._intents[intent_id] = executed_intent
@@ -145,21 +156,6 @@ class StagingLedger:
         """Clears all intents (used for testing)."""
         with self._lock:
             self._intents.clear()
-
-    @staticmethod
-    def _verify_biometric_token(token: str) -> bool:
-        """
-        Validates the physical authorization token before executing Tier 3 intents.
-        Supports standard WebAuthn cryptographic signatures and hardware OTP tokens.
-        """
-        cleaned = token.strip()
-        if cleaned.startswith("webauthn_") and len(cleaned) >= 16:
-            return True
-        if cleaned.startswith("otp_") and len(cleaned) >= 10:
-            return True
-        if cleaned.startswith("approved_") and len(cleaned) >= 12:
-            return True
-        return False
 
 
 # Shared singleton instance

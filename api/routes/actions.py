@@ -6,13 +6,22 @@ Manages Tier 2 proposal staging and Tier 3 Human-in-the-Loop execution.
 from __future__ import annotations
 
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
+from services.security.passkeys import (
+    passkey_registry,
+    PasskeyError,
+    PasskeyAlreadyRegisteredError,
+    PasskeyNotRegisteredError,
+    PasskeyOptionsRequest,
+    PasskeyRegistrationRequest,
+)
 from services.security.staging_ledger import (
     staging_ledger,
     StagingRequest,
     ExecutionRequest,
     StagedActionIntent,
+    ActionStatus,
     IntentNotFoundError,
     IntentStateError,
     BiometricVerificationError,
@@ -25,6 +34,28 @@ router = APIRouter(prefix="/api/v1/actions", tags=["Security Gate & Action Inten
 async def stage_action_intent(request: StagingRequest) -> StagedActionIntent:
     """Stages an action proposal in Tier 2. No funds or commitments move."""
     return staging_ledger.stage_intent(request)
+
+
+@router.post("/passkeys/register/options")
+async def passkey_registration_options(request: PasskeyOptionsRequest) -> Response:
+    """Issues WebAuthn creation options for a tenant's first (and only) Tier 3 passkey."""
+    try:
+        options = passkey_registry.registration_options(request.tenant_id)
+    except PasskeyAlreadyRegisteredError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    return Response(content=options, media_type="application/json")
+
+
+@router.post("/passkeys/register", status_code=status.HTTP_201_CREATED)
+async def register_passkey(request: PasskeyRegistrationRequest) -> dict[str, bool]:
+    """Verifies the attestation from navigator.credentials.create() and stores the public key."""
+    try:
+        passkey_registry.register(request.tenant_id, request.credential)
+    except PasskeyAlreadyRegisteredError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except PasskeyError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return {"registered": True}
 
 
 @router.get("", response_model=list[StagedActionIntent])
@@ -44,6 +75,25 @@ async def get_action_intent(intent_id: str) -> StagedActionIntent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
+@router.post("/{intent_id}/passkey-options")
+async def intent_passkey_options(intent_id: str) -> Response:
+    """
+    Issues a single-use WebAuthn challenge bound to this intent.
+    428 means the tenant has no passkey yet and must register one first.
+    """
+    try:
+        intent = staging_ledger.get_intent(intent_id)
+    except IntentNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    if intent.status != ActionStatus.STAGED_PENDING_HITL.value:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Cannot sign intent in status {intent.status}")
+    try:
+        options = passkey_registry.authentication_options(intent.tenant_id, intent_id)
+    except PasskeyNotRegisteredError as exc:
+        raise HTTPException(status_code=status.HTTP_428_PRECONDITION_REQUIRED, detail=str(exc))
+    return Response(content=options, media_type="application/json")
+
+
 @router.post("/{intent_id}/execute", response_model=StagedActionIntent)
 async def execute_action_intent(
     intent_id: str,
@@ -51,11 +101,11 @@ async def execute_action_intent(
 ) -> StagedActionIntent:
     """
     Executes a staged proposal.
-    Tier 3 irreversible actions require a valid biometric signature (WebAuthn/OTP).
+    Tier 3 irreversible actions require a WebAuthn assertion over the intent's passkey challenge.
     """
-    biometric_sig = request.biometric_signature if request else None
+    assertion = request.webauthn_assertion if request else None
     try:
-        return staging_ledger.execute_intent(intent_id, biometric_signature=biometric_sig)
+        return staging_ledger.execute_intent(intent_id, webauthn_assertion=assertion)
     except IntentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except IntentStateError as exc:

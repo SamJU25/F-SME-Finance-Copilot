@@ -7,6 +7,7 @@ Integration tests for new Backbone APIs:
 from fastapi.testclient import TestClient
 from api.main import app
 from services.security.staging_ledger import staging_ledger
+from tests.passkey_authenticator import execute_with_passkey
 
 client = TestClient(app)
 
@@ -48,15 +49,19 @@ def test_actions_staging_and_tier_3_execution_flow():
     assert unauth_resp.status_code == 403
     assert "biometric" in unauth_resp.json()["detail"].lower()
 
-    # 4. Execute with valid WebAuthn mock token -> HTTP 200 OK
-    auth_resp = client.post(
+    # 4. Prefix tokens from the old mock gate are rejected
+    forged = client.post(
         f"/api/v1/actions/{intent_id}/execute",
-        json={"biometric_signature": "webauthn_passkey_signed_9921"},
+        json={"webauthn_assertion": {"id": "webauthn_passkey_signed_9921"}},
     )
+    assert forged.status_code == 403
+
+    # 5. Execute with a signed passkey assertion -> HTTP 200 OK
+    auth_resp = execute_with_passkey(client, intent_id)
     assert auth_resp.status_code == 200
     executed = auth_resp.json()
     assert executed["status"] == "EXECUTED"
-    assert executed["biometric_signature"] == "webauthn_passkey_signed_9921"
+    assert executed["biometric_signature"]
 
 
 def test_actions_reject_flow():

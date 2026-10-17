@@ -12,6 +12,7 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from api.main import app
 from services.security.staging_ledger import staging_ledger
+from tests.passkey_authenticator import execute_with_passkey
 
 client = TestClient(app)
 
@@ -93,14 +94,11 @@ def test_complete_sme_copilot_user_journey():
     assert "biometric" in unauthorized_exec.json()["detail"].lower()
 
     # Attempt execution with validated biometric passkey -> Succeeds HTTP 200 OK
-    authorized_exec = client.post(
-        f"/api/v1/actions/{intent_id}/execute",
-        json={"biometric_signature": "webauthn_passkey_signed_coffee_roastery"},
-    )
+    authorized_exec = execute_with_passkey(client, intent_id)
     assert authorized_exec.status_code == 200
     exec_data = authorized_exec.json()
     assert exec_data["status"] == "EXECUTED"
-    assert exec_data["biometric_signature"] == "webauthn_passkey_signed_coffee_roastery"
+    assert exec_data["biometric_signature"]
 
 
 def test_complete_conversational_agent_user_journey():
@@ -191,13 +189,10 @@ def test_complete_conversational_agent_user_journey():
     assert "biometric" in unauthorized.json()["detail"].lower()
 
     # 5b. Authorized execution with WebAuthn biometric passkey -> 200 OK
-    authorized = client.post(
-        f"/api/v1/actions/{staged_intent_id}/execute",
-        json={"biometric_signature": "webauthn_passkey_signed_roastery_founder"},
-    )
+    authorized = execute_with_passkey(client, staged_intent_id)
     assert authorized.status_code == 200
     auth_data = authorized.json()
     assert auth_data["status"] == "EXECUTED"
     assert auth_data["id"] == staged_intent_id
-    assert auth_data["biometric_signature"] == "webauthn_passkey_signed_roastery_founder"
+    assert auth_data["biometric_signature"]
 

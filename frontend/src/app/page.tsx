@@ -27,6 +27,104 @@ const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 const CSV_HEADER = 'transaction_id,posted_on,amount,currency,description,closing_balance';
 const SESSION_MESSAGE_LIMIT = 20;
 
+// WebAuthn options arrive from py_webauthn as JSON with base64url strings where the
+// browser API needs ArrayBuffers; these helpers convert in both directions.
+type CredentialDescriptorJSON = { id: string; type: 'public-key'; transports?: AuthenticatorTransport[] };
+type CreationOptionsJSON = Omit<PublicKeyCredentialCreationOptions, 'challenge' | 'user' | 'excludeCredentials'> & {
+  challenge: string;
+  user: { id: string; name: string; displayName: string };
+  excludeCredentials?: CredentialDescriptorJSON[];
+};
+type RequestOptionsJSON = Omit<PublicKeyCredentialRequestOptions, 'challenge' | 'allowCredentials'> & {
+  challenge: string;
+  allowCredentials?: CredentialDescriptorJSON[];
+};
+
+function b64urlToBuffer(value: string): ArrayBuffer {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+  return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)).buffer;
+}
+
+function bufferToB64url(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function toDescriptor(c: CredentialDescriptorJSON): PublicKeyCredentialDescriptor {
+  return { ...c, id: b64urlToBuffer(c.id) };
+}
+
+async function postJson(path: string, body?: unknown): Promise<{ res: Response; data: Record<string, any> }> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { res, data: await res.json().catch(() => ({})) };
+}
+
+async function registerPasskey(tenantId: string): Promise<void> {
+  const { res, data } = await postJson('/api/v1/actions/passkeys/register/options', { tenant_id: tenantId });
+  if (!res.ok) throw new Error(data.detail ?? 'Could not start passkey registration.');
+  const options = data as CreationOptionsJSON;
+  const credential = (await navigator.credentials.create({
+    publicKey: {
+      ...options,
+      challenge: b64urlToBuffer(options.challenge),
+      user: { ...options.user, id: b64urlToBuffer(options.user.id) },
+      excludeCredentials: (options.excludeCredentials ?? []).map(toDescriptor),
+    },
+  })) as PublicKeyCredential | null;
+  if (!credential) throw new Error('Passkey registration was cancelled.');
+  const response = credential.response as AuthenticatorAttestationResponse;
+  const saved = await postJson('/api/v1/actions/passkeys/register', {
+    tenant_id: tenantId,
+    credential: {
+      id: credential.id,
+      rawId: bufferToB64url(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: bufferToB64url(response.clientDataJSON),
+        attestationObject: bufferToB64url(response.attestationObject),
+      },
+    },
+  });
+  if (!saved.res.ok) throw new Error(saved.data.detail ?? 'Passkey registration failed.');
+}
+
+async function signIntentWithPasskey(intentId: string): Promise<Record<string, unknown>> {
+  let challenge = await postJson(`/api/v1/actions/${intentId}/passkey-options`);
+  if (challenge.res.status === 428) {
+    const intent = await fetch(`${API_URL}/api/v1/actions/${intentId}`).then((r) => r.json());
+    await registerPasskey(intent.tenant_id);
+    challenge = await postJson(`/api/v1/actions/${intentId}/passkey-options`);
+  }
+  if (!challenge.res.ok) throw new Error(challenge.data.detail ?? 'Could not start passkey approval.');
+  const options = challenge.data as RequestOptionsJSON;
+  const assertion = (await navigator.credentials.get({
+    publicKey: {
+      ...options,
+      challenge: b64urlToBuffer(options.challenge),
+      allowCredentials: (options.allowCredentials ?? []).map(toDescriptor),
+    },
+  })) as PublicKeyCredential | null;
+  if (!assertion) throw new Error('Passkey approval was cancelled.');
+  const response = assertion.response as AuthenticatorAssertionResponse;
+  return {
+    id: assertion.id,
+    rawId: bufferToB64url(assertion.rawId),
+    type: assertion.type,
+    response: {
+      clientDataJSON: bufferToB64url(response.clientDataJSON),
+      authenticatorData: bufferToB64url(response.authenticatorData),
+      signature: bufferToB64url(response.signature),
+      ...(response.userHandle ? { userHandle: bufferToB64url(response.userHandle) } : {}),
+    },
+  };
+}
+
 export interface ChartPoint {
   date: string;
   displayDate: string;
@@ -1577,11 +1675,11 @@ export default function HomePage() {
 
   async function executeAction(intentId: string) {
     try {
-      await fetch(`${API_URL}/api/v1/actions/${intentId}/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ biometric_signature: 'approved_founder_session' }),
-      });
+      if (!window.PublicKeyCredential) throw new Error('This browser does not support passkeys.');
+      const webauthnAssertion = await signIntentWithPasskey(intentId);
+      const executed = await postJson(`/api/v1/actions/${intentId}/execute`, { webauthn_assertion: webauthnAssertion });
+      if (!executed.res.ok) throw new Error(executed.data.detail ?? 'Execution was refused by the security gate.');
+      setError(null);
       setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
       setStagedIntents((prev) =>
         prev.map((item) =>
@@ -1592,14 +1690,7 @@ export default function HomePage() {
       );
     } catch (err) {
       console.error('Execution error:', err);
-      setExecutedIntents((prev) => ({ ...prev, [intentId]: true }));
-      setStagedIntents((prev) =>
-        prev.map((item) =>
-          item.id === intentId
-            ? { ...item, status: 'EXECUTED' as const }
-            : item
-        )
-      );
+      setError(err instanceof Error ? err.message : 'Passkey approval failed. Try again.');
     }
   }
 

@@ -5,7 +5,7 @@ Scope: All software development, research, financial engineering, and testing in
 ---
 
 ## 0. Project Truth & Instruction Precedence
-- Start with [`AGENTS.md`](AGENTS.md) and the current user request. It defines the authority order, verified implementation baseline (416 passing tests), and known gaps.
+- Start with [`AGENTS.md`](AGENTS.md) and the current user request. It defines the authority order, verified implementation baseline (424 passing tests), and known gaps.
 - Use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) as the verified technical contract and operational plan. Read only the relevant sections of the architecture/security blueprints and applicable ADRs.
 - The project pairs the Lead Architect with specialized AI subagents across direct execution loops without committee handoffs.
 - Verify implementation claims against source and tests (`pytest -q`). Treat `graphify-out/` as generated navigation data whose freshness must be checked.
