@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   ".agent/rules/multi-agent-orchestrator.md": {
-    "mtime": 1792229309.150354,
-    "seen": 1792229779.8315618,
-    "ast_hash": "6ac6178d3357dde8f6e09641d8b34d7f",
+    "mtime": 1792247497.5763917,
+    "seen": 1792247557.9412196,
+    "ast_hash": "a6482cb0f6eefcc9ee43be3bbb98bd04",
     "semantic_hash": ""
   },
   ".agent/rules/no-ai-slop.md": {
@@ -384,9 +384,9 @@
     "semantic_hash": ""
   },
   ".agent/rules/ponytail.md": {
-    "mtime": 1791905684.2339494,
-    "seen": 1791905727.1806266,
-    "ast_hash": "78151cc6f2dcf79fa69bcc4e743ddd37",
+    "mtime": 1792247493.0240693,
+    "seen": 1792247557.941338,
+    "ast_hash": "3858255e7fa9bcf5792f3cd8d421ac53",
     "semantic_hash": ""
   },
   ".agent/rules/superpowers.md": {
@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792229191.4141026,
-    "seen": 1792229779.8419774,
-    "ast_hash": "d521523efa00f2a336a243a65e303bce",
+    "mtime": 1792247116.9177446,
+    "seen": 1792247159.790356,
+    "ast_hash": "e3e757f8795e86d104c0aeed55af9c5f",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -984,9 +984,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1792229262.458942,
-    "seen": 1792229779.84198,
-    "ast_hash": "ddc5f844f0ed8de4f5a7fcc5889e934c",
+    "mtime": 1792248044.3003998,
+    "seen": 1792248570.7386122,
+    "ast_hash": "c86236b12a7e58038e47f2c3b33515fb",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1315,8 +1315,8 @@
   },
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
-    "seen": 1792052544.9530206,
-    "ast_hash": "",
+    "seen": 1792248570.7381473,
+    "ast_hash": "571b58b08346dc437d70e4123ec7925c",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {

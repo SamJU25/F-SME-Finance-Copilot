@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792247116.9177446,
-    "seen": 1792247159.790356,
-    "ast_hash": "e3e757f8795e86d104c0aeed55af9c5f",
+    "mtime": 1792249057.0044377,
+    "seen": 1792249072.752961,
+    "ast_hash": "b25a85c8e0f6ba60248e3c90bbfd9aec",
     "semantic_hash": ""
   },
   "GEMINI.md": {
@@ -984,9 +984,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1792247076.3264892,
-    "seen": 1792247159.7903597,
-    "ast_hash": "cce22205af9fc41cdc6469f8c9ef05ff",
+    "mtime": 1792249061.5547233,
+    "seen": 1792249072.7529635,
+    "ast_hash": "c2bb2b41cb504a5ce4202879f3f89f67",
     "semantic_hash": ""
   },
   "README.md": {
@@ -996,9 +996,9 @@
     "semantic_hash": ""
   },
   "requirements.txt": {
-    "mtime": 1792187094.2328587,
-    "seen": 1792188402.996431,
-    "ast_hash": "41aeda478e38c5c21c3abf446d31341d",
+    "mtime": 1792248909.8228357,
+    "seen": 1792249072.7563431,
+    "ast_hash": "3f23e8e46b8cbf2c1894f4c3657f277c",
     "semantic_hash": ""
   },
   ".agent/workflows/graphify.md": {
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792201289.5047874,
-    "seen": 1792201418.1750965,
-    "ast_hash": "c836c038223a66ee89c487d669fa0cbc",
+    "mtime": 1792248986.3483956,
+    "seen": 1792249072.7204318,
+    "ast_hash": "336e551d574fddc64ee553e2e1a9a415",
     "semantic_hash": ""
   },
   "next-env.d.ts": {
@@ -1315,7 +1315,7 @@
   },
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
-    "seen": 1792052544.9530206,
+    "seen": 1792248570.7381473,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -1326,9 +1326,9 @@
     "semantic_hash": ""
   },
   "api/routes/actions.py": {
-    "mtime": 1792090359.6757195,
-    "seen": 1792090611.270288,
-    "ast_hash": "0cec5c92c2677d534f15c1dc9ad23add",
+    "mtime": 1792248897.5140288,
+    "seen": 1792249072.717258,
+    "ast_hash": "1d43a56d69afb8e8508df2c59da26a37",
     "semantic_hash": ""
   },
   "api/routes/underwrite.py": {
@@ -1362,15 +1362,15 @@
     "semantic_hash": ""
   },
   "services/security/staging_ledger.py": {
-    "mtime": 1792089487.8792613,
-    "seen": 1792089860.2388012,
-    "ast_hash": "54a0f97980a1d34147632b8b11a73937",
+    "mtime": 1792248860.709624,
+    "seen": 1792249072.729259,
+    "ast_hash": "63187ae0411915df00cf363059c3c143",
     "semantic_hash": ""
   },
   "tests/integration/test_backbone_apis.py": {
-    "mtime": 1792048429.7618544,
-    "seen": 1792048456.171927,
-    "ast_hash": "f3d81019f3fee0d8d531e59b2fc68723",
+    "mtime": 1792248897.5140288,
+    "seen": 1792249072.7299266,
+    "ast_hash": "6575a189ac4f048e06417b4a38101826",
     "semantic_hash": ""
   },
   "tests/unit/test_blockchain_registry.py": {
@@ -1386,9 +1386,9 @@
     "semantic_hash": ""
   },
   "tests/unit/test_security_gate.py": {
-    "mtime": 1791979867.6486957,
-    "seen": 1791980089.5575159,
-    "ast_hash": "8b342495ec25f634da5f14bce980e8db",
+    "mtime": 1792248821.5401928,
+    "seen": 1792249072.7325075,
+    "ast_hash": "2084d7669adba550d61e7958c222be9e",
     "semantic_hash": ""
   },
   "docs/SME_Finance_Copilot_Complete_Architecture_and_Beginner_Guide.md": {
@@ -1404,9 +1404,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/test_csv_upload_e2e.py": {
-    "mtime": 1792000878.1885984,
-    "seen": 1792000903.119238,
-    "ast_hash": "c9d33712ab5c7a97e941f7ab7d1f6380",
+    "mtime": 1792248897.5150635,
+    "seen": 1792249072.7296019,
+    "ast_hash": "d43b74d3631a1557337fe019a0d7de53",
     "semantic_hash": ""
   },
   ".agent/skills/docker-patterns/SKILL.md": {
@@ -2001,6 +2001,18 @@
     "mtime": 1792231424.724647,
     "seen": 1792231459.9002976,
     "ast_hash": "4541e93bff2f517b95ff5fbe5536dd19",
+    "semantic_hash": ""
+  },
+  "services/security/passkeys.py": {
+    "mtime": 1792248846.120104,
+    "seen": 1792249072.7292562,
+    "ast_hash": "b1fe3d5296eab56832bff8f50b2101a2",
+    "semantic_hash": ""
+  },
+  "tests/passkey_authenticator.py": {
+    "mtime": 1792248783.491511,
+    "seen": 1792249072.730246,
+    "ast_hash": "36dd6386ee26383c71296a2929da7324",
     "semantic_hash": ""
   }
 }
