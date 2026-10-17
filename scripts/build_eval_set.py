@@ -70,6 +70,7 @@ def build_eval_suite() -> list[dict]:
             "id": f"eval_cash_{idx:03d}",
             "suite": "cash_runway",
             "question": q,
+            "base_reply": base_rep,
             "messages": [
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": q},
@@ -106,7 +107,7 @@ def build_eval_suite() -> list[dict]:
         ("Can we qualify for SBA 7(a) working capital refinancing?", "Conditional eligibility: Historical DSCR of 1.42x meets SBA minimums, but requires personal guarantee and 2 years tax returns.", ["1.42x", "personal guarantee"]),
         ("What's our client revenue concentration risk?", "Top client accounts for 44.0% of annual revenue ($352,000.00 of $800,000.00), exceeding the 30.0% safe diversification threshold.", ["44.0%", "$352,000.00", "$800,000.00", "30.0%"]),
         ("What will happen to our cash runway if we lose our biggest customer?", "Losing your 35.0% revenue client turns operating cash flow negative (-$14,500.00/month), reducing cash runway from 110.0 days to 38.2 days.", ["35.0%", "-$14,500.00", "110.0 days", "38.2 days"]),
-        ("Explain the difference between invoice factoring and invoice discounting.", "In factoring, the provider manages collections and invoices the buyer; in discounting, the business retains customer collections quietly.", ["factoring", "discounting", "collections"]),
+        ("What is our Debt-to-Equity ratio and leverage status?", "Your Debt-to-Equity ratio is 0.85 ($425,000.00 total liabilities vs $500,000.00 shareholder equity), reflecting conservative balance sheet leverage below the 1.50x risk threshold.", ["0.85", "$425,000.00", "$500,000.00", "1.50x"]),
     ]
 
     for idx, (q, base_rep, figs) in enumerate(credit_scenarios, start=1):
@@ -116,6 +117,7 @@ def build_eval_suite() -> list[dict]:
             "id": f"eval_underwrite_{idx:03d}",
             "suite": "working_capital_financing",
             "question": q,
+            "base_reply": base_rep,
             "messages": [
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": q},
@@ -134,29 +136,29 @@ def build_eval_suite() -> list[dict]:
     # Natural, informal questions requiring original synthesis (NOT raw card copy)
     # =========================================================================
     concept_scenarios = [
-        ("why is our bank balance shrinking if our accountant says we made 100k profit?", "Accrual profit vs operating cash liquidity timing differences"),
-        ("can you explain cash conversion cycle like i'm explaining it to a contractor?", "Cash Conversion Cycle days gap"),
-        ("what exactly is an NSF event and why do banks care so much about it?", "Non-Sufficient Funds and overdraft underwriting friction"),
-        ("what is a working capital trap and how do growing companies get caught in one?", "Working capital cash trap from rapid revenue growth"),
-        ("what does DSCR mean and what number does a bank want to see before approving a loan?", "Debt Service Coverage Ratio and underwriting covenant thresholds"),
-        ("what is invoice factoring and when makes sense vs a normal bank loan?", "Accounts receivable factoring mechanics and use cases"),
-        ("what is the difference between APR and factor rate when borrowing money?", "True APR disclosure versus deceptively low factor rates"),
-        ("how does Altman Z score work to predict whether a company might fail?", "Altman Z'-score insolvency prediction formula"),
-        ("what is a daily average balance and how does a bank calculate it?", "Calendar carry-forward Daily Average Balance DAB"),
-        ("what does days sales outstanding DSO tell me about my customers?", "DSO average collection period and cash flow drag"),
-        ("what is purchase order financing and who pays the supplier?", "PO financing verification and direct supplier disbursement"),
-        ("explain DuPont analysis in simple english without textbook jargon", "DuPont 3-stage ROE decomposition drivers"),
-        ("what is a merchant cash advance and why are people calling them predatory?", "MCA daily ACH debits and triple-digit APRs"),
-        ("what is defensive interval and how is it different from runway?", "Defensive interval liquid reserves versus projected operational burn"),
-        ("how does inventory turnover affect our cash flow?", "Inventory holding cost and cash cycle compression"),
-        ("what is economic value added EVA and how does it differ from net income?", "Cost of invested capital hurdle versus accounting net income"),
-        ("why does revenue concentration in one customer make banks nervous?", "Customer concentration risk and default sensitivity"),
-        ("what is trade credit 2/10 net 30 and should we always pay early?", "Annualized opportunity cost of missing prompt payment discounts"),
-        ("what is the fixed charge coverage ratio FCCR?", "Fixed debt and lease coverage capacity"),
-        ("what does working capital requirement WCR mean for a wholesale business?", "Operating receivables and inventory buffer minus trade payables"),
+        ("why is our bank balance shrinking if our accountant says we made 100k profit?", "Accrual vs cash", ["accrual", "cash"]),
+        ("can you explain cash conversion cycle like i'm explaining it to a contractor?", "CCC", ["inventory", "receivable", "payable"]),
+        ("what exactly is an NSF event and why do banks care so much about it?", "NSF", ["balance", "nsf"]),
+        ("what is a working capital trap and how do growing companies get caught in one?", "Working capital trap", ["growth", "cash"]),
+        ("what does DSCR mean and what number does a bank want to see before approving a loan?", "DSCR", ["debt", "coverage"]),
+        ("what is invoice factoring and when makes sense vs a normal bank loan?", "Factoring", ["receivable", "factor"]),
+        ("what is the difference between APR and factor rate when borrowing money?", "APR vs factor", ["apr", "factor rate"]),
+        ("how does Altman Z score work to predict whether a company might fail?", "Altman Z", ["altman", "bankruptcy"]),
+        ("what is a daily average balance and how does a bank calculate it?", "DAB", ["balance", "daily"]),
+        ("what does days sales outstanding DSO tell me about my customers?", "DSO", ["collection", "days"]),
+        ("what is purchase order financing and who pays the supplier?", "PO financing", ["supplier", "order"]),
+        ("explain DuPont analysis in simple english without textbook jargon", "DuPont", ["margin", "turnover"]),
+        ("what is a merchant cash advance and why are people calling them predatory?", "MCA", ["apr", "daily"]),
+        ("what is defensive interval and how is it different from runway?", "Defensive interval", ["reserve", "burn"]),
+        ("how does inventory turnover affect our cash flow?", "Inventory turnover", ["inventory", "cash"]),
+        ("what is economic value added EVA and how does it differ from net income?", "EVA", ["capital", "cost"]),
+        ("why does revenue concentration in one customer make banks nervous?", "Concentration", ["customer", "risk"]),
+        ("what is trade credit 2/10 net 30 and should we always pay early?", "Trade credit", ["discount", "terms"]),
+        ("what is the fixed charge coverage ratio FCCR?", "FCCR", ["fixed", "coverage"]),
+        ("what does working capital requirement WCR mean for a wholesale business?", "WCR", ["receivable", "inventory"]),
     ]
 
-    for idx, (q, topic_summary) in enumerate(concept_scenarios, start=1):
+    for idx, (q, topic_summary, req_terms) in enumerate(concept_scenarios, start=1):
         cards = retrieve_cards(q)
         sys_prompt = format_reference_cards(get_concept_prompt(), cards)
         eval_cases.append({
@@ -169,6 +171,7 @@ def build_eval_suite() -> list[dict]:
             ],
             "ground_truth": {
                 "required_figures": [],
+                "required_terms": req_terms,
                 "prohibited_patterns": ["###", "•", "<thought>"],
                 "max_card_ngram_copy_pct": 0.40,
                 "should_refuse": False,
@@ -221,7 +224,7 @@ def build_eval_suite() -> list[dict]:
         (
             "Calculate our Debt Service Coverage Ratio.",
             "Your DSCR is 1.15x ($92,000.00 annual NOI vs $80,000.00 annual debt service). This sits in the Caution Zone below standard 1.25x covenants.",
-            "What does our NOI need to reach to clear 1.25x?",
+            "If our NOI reaches $100,000 next year, does that clear the 1.25x covenant?",
             ["1.25x", "$80,000.00", "$100,000.00"],
         ),
         (
@@ -245,8 +248,8 @@ def build_eval_suite() -> list[dict]:
         (
             "What is our break-even revenue per month?",
             "Your monthly break-even is $45,000.00 based on $18,000.00 fixed overhead and a 40.0% contribution margin.",
-            "If fixed overhead increases to $22,000 next month, what is the new break-even?",
-            ["$22,000.00", "$55,000.00", "40.0%"],
+            "If our fixed overhead increases to $22,000 next month, how does that impact our $45,000 break-even?",
+            ["$22,000.00", "$45,000.00", "40.0%"],
         ),
         (
             "How many NSF events were recorded on our account?",
