@@ -32,7 +32,7 @@ os.environ.setdefault("PYTEST_CURRENT_TEST", "generate_finetune_dataset")
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from services.agent.dynamic_router import classify_intent_dynamic, classify_sub_intent_dynamic
-from services.agent.knowledge import load_cards, format_reference_cards
+from services.agent.knowledge import append_reference_cards, format_reference_cards, load_cards, retrieve_cards
 from services.agent.prompts import (
     evaluate_persona_policy,
     get_cash_diagnostic_prompt,
@@ -51,6 +51,47 @@ from services.agent.tools import tool_analyze_cash_flow, tool_underwrite_credit
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../dataset"))
 SUBAGENTS = (CreditSubagent, LiquiditySubagent, RiskManagerSubagent)
 CASH_BRANCHES = ("RUNWAY", "BALANCE", "BURN", "ADVICE", "DEFICIT")
+
+EVAL_SET_PATH = os.path.join(OUTPUT_DIR, "eval_set.jsonl")
+EVAL_QUESTIONS: set[str] = set()
+if os.path.exists(EVAL_SET_PATH):
+    with open(EVAL_SET_PATH, "r", encoding="utf-8") as _ef:
+        for _line in _ef:
+            if _line.strip():
+                _case = json.loads(_line)
+                for _m in reversed(_case.get("messages", [])):
+                    if _m.get("role") == "user":
+                        EVAL_QUESTIONS.add(_m.get("content", "").strip().lower())
+                        break
+
+TOKENIZER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../models/base/Qwen2.5-3B-Instruct"))
+_TOKENIZER = None
+if os.path.exists(TOKENIZER_DIR):
+    try:
+        from transformers import AutoTokenizer
+        _TOKENIZER = AutoTokenizer.from_pretrained(TOKENIZER_DIR, trust_remote_code=True)
+    except Exception as _tok_err:
+        print(f"Warning: could not load local tokenizer: {_tok_err}")
+
+
+def compute_ngram_overlap(text: str, source: str, n: int = 4) -> float:
+    """Computes the fraction of n-grams in text that occur verbatim in source."""
+    words_t = re.findall(r"\b\w+\b", text.lower())
+    words_s = set()
+    s_tokens = re.findall(r"\b\w+\b", source.lower())
+    if len(s_tokens) < n or len(words_t) < n:
+        return 0.0
+
+    for i in range(len(s_tokens) - n + 1):
+        words_s.add(tuple(s_tokens[i : i + n]))
+
+    overlap_count = 0
+    total_ngrams = len(words_t) - n + 1
+    for i in range(total_ngrams):
+        if tuple(words_t[i : i + n]) in words_s:
+            overlap_count += 1
+    return overlap_count / total_ngrams if total_ngrams > 0 else 0.0
+
 
 # Copied from supervisor.py: the general-chat path appends one of these to the CONVERSATIONAL prompt.
 STATEMENT_LOADED_NOTE = "\nNote: A transactional bank statement is already loaded into session."
@@ -600,36 +641,60 @@ CASH_QUESTIONS = {
         "How much runway is left at this burn?", "How long can we keep operating before cash runs out?",
         "How many days until the money runs out?", "How long will our cash runway last?", "What's our cash runway looking like?",
         "how long does my cash last", "When will we run out of cash at this rate?", "How many days of cash do we have?",
+        "What is our projected cash runway on this statement?", "Can you estimate how many weeks of runway we have?",
+        "How much operational runway remains before we hit zero?", "Are we close to running out of cash?",
+        "Give me an assessment of our current runway.", "At our current net burn, how many days do we survive?",
+        "whats our cash runway", "calculate our runway in days", "how many days of expenses can our balance cover?",
     ],
     "BALANCE": [
         "What's my current balance?", "How much cash do we have right now?", "What is our cash balance?",
         "How much money is in the account?", "Show me where our cash position stands.", "What's the closing balance on the statement?",
         "how much cash is in the bank", "What's our balance today?", "Tell me our current cash balance.",
+        "What is our verified statement ending balance?", "How much liquid cash is currently available in the account?",
+        "Can you confirm our current cash balance from the transactions?", "What did the account close at on the latest statement?",
+        "whats our bank balance", "where does our cash stand right now", "check our liquid cash balance",
     ],
     "BURN": [
         "What's our burn rate?", "What is our average daily burn?", "How much are we burning each day?",
         "Are our outflows bigger than inflows?", "What's the daily burn rate?", "How much cash are we burning?",
         "what is my burn", "Show me our burn rate.", "How bad is our cash burn?",
+        "What is our daily net cash burn velocity?", "How much cash does the business consume on an average day?",
+        "Can you breakdown our net burn rate across the statement period?", "Are operating outflows outstripping customer deposits?",
+        "whats our daily cash drain", "calculate our net daily burn", "how fast are we spending cash every day?",
     ],
     "ADVICE": [
         "Any advice on our cash position?", "How do I improve our liquidity?", "What's your advice on our cash flow?",
         "Give me advice on managing our cash.", "How can I improve cash flow?", "What should we do to improve liquidity?",
         "Any recommendations to improve our cash position?", "advice on our finances please",
+        "What operational steps should we take to protect our cash buffer?", "How can we stabilize our liquidity heading into next quarter?",
+        "What recommendations do you have to optimize our working cash?", "How do we improve our cash reserves based on this statement?",
+        "give me actionable CFO advice on our cash", "what are the top priorities to fix our cash flow?",
     ],
     "DEFICIT": [
         "Are we heading for a cash shortfall?", "Will we go negative in the next few months?", "When could we hit a cash deficit?",
         "Is a cash deficit coming?", "Will we have a cash shortfall?", "Are we going to run a deficit?",
         "Do we face a shortfall this quarter?", "Is there a deficit coming?", "Will we go into overdraft?",
+        "Does the predictive model detect an upcoming cash deficit?", "When is our account projected to breach zero balance?",
+        "Are we at risk of an overdraft in the next 30 to 60 days?", "Will customer inflows cover our upcoming obligations?",
+        "is an overdraft projected for our account?", "will we run out of money next month?",
     ],
     "SUMMARY": [
         "Give me a financial health check.", "Review my statement and tell me how we're doing.", "Can you audit this statement?",
         "How are we doing financially?", "Give me the big picture on our cash.", "Summarize our financial position.",
         "Check our financial health.", "What does this statement tell you?",
+        "Can you run a full liquidity diagnosis on our uploaded transactions?", "Provide an executive cash overview from this statement.",
+        "Audit our cash runway, burn rate, and balance in one summary.", "What is the overall financial diagnosis of our business?",
     ],
 }
 HORIZON_SUFFIXES = [
     " And where will we be in {d} days?", " Also, what does the balance look like in {d} days?",
     " Include a {d}-day forecast.", " What about {d} days from now?",
+    " Can you project out {d} days?", " Looking ahead {d} days, what is the position?",
+]
+QUESTION_PREFIXES = [
+    "", "Can you check: ", "Quick question: ", "Looking at our bank statement, ",
+    "As our fractional CFO, ", "Based on recent transactions, ", "For our company, ",
+    "Could you verify: ", "I need to know: ", "Please audit: ",
 ]
 
 
@@ -642,17 +707,21 @@ def build_cash_rows(rng: random.Random, statements: int) -> List[Dict[str, Any]]
         for branch in rng.sample(list(usable), 2):
             if not usable[branch]:
                 continue
-            question = rng.choice(usable[branch])
+            base_q = rng.choice(usable[branch])
+            prefix = rng.choice(QUESTION_PREFIXES) if rng.random() < 0.4 else ""
+            candidate = f"{prefix}{base_q}" if prefix else base_q
             if horizon:
-                candidate = question + rng.choice(HORIZON_SUFFIXES).format(d=horizon)
-                if cash_branch(candidate) == branch:
-                    question = candidate
+                cand_with_hz = candidate + rng.choice(HORIZON_SUFFIXES).format(d=horizon)
+                if cash_branch(cand_with_hz) == branch:
+                    candidate = cand_with_hz
+            question = candidate if cash_branch(candidate) == branch else base_q
             day_match = re.search(r"\b(\d{1,4})\s*[- ]*(?:day|days)\b", question, re.IGNORECASE)
             cash = tool_analyze_cash_flow(csv, target_horizon_days=int(day_match.group(1)) if day_match else None)
             reply = cash_reply(rng, cash, branch)
             if reply:
                 base = cash_base_reply(cash, branch)
-                rows.append(make_row(get_cash_diagnostic_prompt(base), question, reply, base, f"cash:{branch}"))
+                sys_prompt = append_reference_cards(get_cash_diagnostic_prompt(base), question)
+                rows.append(make_row(sys_prompt, question, reply, base, f"cash:{branch}"))
     return rows
 
 
@@ -665,6 +734,10 @@ UW_QUESTIONS = [
     "Do we qualify for working capital financing?", "Can I get a business loan?", "What loan options are available to us?",
     "Are we eligible for financing?", "What kind of credit can we access?", "How much financing could we get?",
     "Show me our financing options.", "can we get a credit line", "What funding can we qualify for?",
+    "What commercial credit limit does our bank statement support?", "Can we obtain a non-predatory line of credit?",
+    "What is our borrowing capacity based on our Daily Average Balance?", "Do we qualify for prime rates or conditional terms?",
+    "How large of an accounts receivable line can we qualify for?", "Review our credit eligibility based on our cash flow.",
+    "What working capital options can we access today?", "Can we get pre-qualified financing on this statement?",
 ]
 TIER_MEANING = {
     "PRIME": ["PRIME means lenders see steady balances and low default risk.", "A PRIME rating gets you the cheapest facilities on offer."],
@@ -736,7 +809,12 @@ def build_underwriting_rows(rng: random.Random, statements: int) -> List[Dict[st
         csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
         uw = tool_underwrite_credit(csv, nsf_count=rng.choice([0, 0, 0, 1, 2, 3, 5]))
         base = underwriting_base_reply(uw)
-        rows.append(make_row(get_credit_underwriting_prompt(base), rng.choice(usable), underwriting_reply(rng, uw), base, "underwriting"))
+        base_q = rng.choice(usable)
+        prefix = rng.choice(QUESTION_PREFIXES) if rng.random() < 0.35 else ""
+        cand = f"{prefix}{base_q}" if prefix else base_q
+        q = cand if (route(cand, True)[0] == "CREDIT_UNDERWRITING" and not route(cand, True)[2]) else base_q
+        sys_prompt = append_reference_cards(get_credit_underwriting_prompt(base), q)
+        rows.append(make_row(sys_prompt, q, underwriting_reply(rng, uw), base, f"underwriting:{uw['dossier']['risk_tier']}"))
     return rows
 
 
@@ -1055,6 +1133,7 @@ def build_quant_rows(rng: random.Random, per_spec: int) -> List[Dict[str, Any]]:
                 continue
             base = captured["base"]
             system = get_credit_underwriting_prompt(base) if captured["prompt_type"] == "underwriting" else get_cash_diagnostic_prompt(base)
+            system = append_reference_cards(system, question)
             rows.append(make_row(system, question, reply, base, f"quant:{sub}"))
             made += 1
     return rows
@@ -1139,6 +1218,11 @@ MISSING_STATEMENT = {
             "No bank statement CSV is loaded in this session yet, so there are no figures to work from. Upload your recent bank statement CSV, ideally covering the last three months, and I will calculate your Daily Average Balance, net burn and runway.",
             "There is no statement loaded right now, so I can't compute that yet. Upload your bank statement CSV and I will work out your DAB, burn rate and cash runway from it.",
             "I don't have a bank statement for this session yet. Share your transaction CSV, ideally the last three months, and I will answer with your exact runway and burn.",
+            "To audit your cash runway and daily burn rate, please upload your recent bank statement CSV. I will immediately analyze your transaction inflows and outflows.",
+            "Please provide a bank statement CSV to begin the liquidity diagnosis. Once loaded, I will report your liquid balance, net burn, and projected runway.",
+            "I require transaction data to evaluate your cash position. Upload your company's bank statement CSV and I will verify your runway and recurring expenditure.",
+            "There is no transaction data loaded in this session. Upload your bank statement CSV so I can extract your cash flows and determine your runway.",
+            "A bank statement CSV is required to compute your cash runway and burn metrics. Share your transaction file to view an exact liquidity breakdown.",
         ],
     },
     "underwriting": {
@@ -1147,6 +1231,11 @@ MISSING_STATEMENT = {
             "No bank statement CSV is loaded yet, so I can't assess borrowing capacity. Upload your recent bank statement CSV and I will evaluate your Daily Average Balance and inflow volatility to match facilities with true APR disclosures.",
             "There is no statement in this session yet, which underwriting needs. Upload your bank statement CSV, ideally the last three months, and I will size your qualified limit and show matching facilities.",
             "I need your transaction history before I can underwrite. Share your bank statement CSV and I will work out your DAB, risk tier and non-predatory financing options.",
+            "Please upload your company bank statement CSV to evaluate borrowing eligibility. I will calculate your Daily Average Balance and screen matching facilities against predatory rates.",
+            "To determine qualified financing limits, upload a recent bank statement CSV. I will assess your inflow volatility and present pre-qualified options with true APRs.",
+            "Credit underwriting requires your recent bank transactions. Upload your bank statement CSV so I can establish your risk tier and maximum credit limit.",
+            "I cannot assess your credit line without transaction records. Share your bank statement CSV to see your qualified borrowing capacity and matched facilities.",
+            "Upload your business bank statement CSV to initiate digital underwriting. I will evaluate your cash consistency and match suitable working capital options.",
         ],
     },
 }
@@ -1190,6 +1279,22 @@ def build_missing_statement_rows(rng: random.Random, count: int) -> List[Dict[st
     return rows
 
 
+# ==============================================================================
+# Overhauled Concept rows with non-verbatim synthesis and qualitative SME examples
+# ==============================================================================
+
+SME_CONTEXTS = [
+    "a regional wholesale distributor balancing 60-day customer receivables with weekly supplier deliveries",
+    "a commercial electrical contractor managing progress billing milestones and payroll obligations",
+    "an independent medical clinic balancing equipment lease obligations and monthly payer reimbursements",
+    "a commercial bakery managing seasonal holiday ingredient inventory and wholesale restaurant accounts",
+    "a light manufacturing shop managing raw materials inventory and machinery maintenance expenses",
+    "an omnichannel retail apparel brand managing inventory turnover and seasonal merchant receivables",
+    "a B2B software consultancy managing monthly client retainers and project milestone billings",
+    "a specialized logistics carrier managing fleet fuel costs, vehicle leases, and shipper payment terms",
+]
+
+
 def build_concept_card_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
     cards = load_cards()
     if not cards:
@@ -1218,35 +1323,99 @@ def build_concept_card_rows(rng: random.Random, count: int) -> List[Dict[str, An
         acronym_match = re.search(r"\((.*?)\)", card.title)
         acronym = acronym_match.group(1).strip() if acronym_match else ""
 
-        questions = [
-            f"What is {card.title}?",
-            f"Why does {title_clean} matter for my business?",
-            f"What is a healthy {title_clean}?",
-            f"How do commercial lenders evaluate {title_clean}?",
-        ]
-        if acronym:
-            questions.extend([
-                f"What is {acronym}?",
-                f"How is {acronym} evaluated?",
-            ])
+        # Diverse, natural questions tailored to card domain (no templated "What is a healthy X" glitches)
+        title_l = title_clean.lower()
+        is_gov = card.area == "app_safety" or any(w in title_l for w in ("tier", "gate", "passkey", "math", "blockchain", "privacy", "double-financing"))
+        is_metric = any(w in title_l for w in ("ratio", "dscr", "fccr", "score", "margin", "roic", "roa", "eva", "wacc", "turnover", "coverage"))
+        is_cash = any(w in title_l for w in ("balance", "runway", "burn", "dab", "cycle", "overdraft", "deficit", "drag", "dso", "dpo", "dio", "wcr"))
+        is_fac = any(w in title_l for w in ("factoring", "line of credit", "mca", "merchant", "leasing", "trade credit", "financing"))
+        is_strat = card.area == "marketing_strategy" or any(w in title_l for w in ("cac", "ltv", "retention", "nrr", "leverage", "pricing", "sensitivity"))
 
-        replies = []
-        if health and todo:
-            replies.append(f"{what} {why} In our analysis, {health.lower()} {todo}")
-        if health:
-            replies.append(f"{what} For small and medium enterprises, {health.lower()} {why}")
-        if todo:
-            replies.append(f"{what} {why} {todo}")
-        if not replies:
-            replies.append(f"{what} {why}")
+        questions = [f"What is {card.title}?"]
+        if is_gov:
+            questions.extend([
+                f"How does {title_clean} protect our business bank accounts?",
+                f"Can you explain the rules around {title_clean} in this copilot?",
+                f"Why is {title_clean} required before any money moves?",
+                f"What is the difference between staged proposals and {title_clean}?",
+            ])
+        elif is_metric:
+            questions.extend([
+                f"Why does {title_clean} matter when applying for commercial credit?",
+                f"What is considered a safe benchmark for {title_clean}?",
+                f"How do underwriters evaluate {title_clean} on our financial statements?",
+                f"What steps can we take to improve our {title_clean}?",
+            ])
+            if acronym:
+                questions.extend([
+                    f"What does {acronym} mean in business banking?",
+                    f"How do commercial lenders judge our {acronym}?",
+                ])
+        elif is_cash:
+            questions.extend([
+                f"Why is {title_clean} a critical indicator of small business liquidity?",
+                f"How does {title_clean} affect our day-to-day operations?",
+                f"What should we do if our {title_clean} starts deteriorating?",
+                f"Can you explain {title_clean} in plain English for our management team?",
+            ])
+        elif is_fac:
+            questions.extend([
+                f"How does {title_clean} work for an SME and what is the true cost?",
+                f"When is it better to use {title_clean} instead of a bank credit line?",
+                f"What are the pros and cons of {title_clean} for working capital?",
+                f"Is {title_clean} considered non-predatory financing?",
+            ])
+        elif is_strat:
+            questions.extend([
+                f"How does {title_clean} impact our monthly profitability and cash runway?",
+                f"Why is {title_clean} vital when scaling an SME?",
+                f"What should leadership do if our {title_clean} falls below industry standards?",
+                f"Explain how {title_clean} connects to our working capital cycle.",
+            ])
+        else:
+            questions.extend([
+                f"Why does {title_clean} matter for our company finances?",
+                f"How should an SME owner evaluate {title_clean}?",
+                f"What operational actions should we take regarding {title_clean}?",
+            ])
 
         system = format_reference_cards(base_concept_prompt, [card])
 
-        for q in questions:
-            for rep in replies:
-                cleaned_reply = sanitize_cfo_reply(rep.strip())
-                if cleaned_reply and len(cleaned_reply) > 40:
-                    pool.append((system, q, cleaned_reply, card.area))
+        # Generate original, non-verbatim synthesized explanations with concrete SME operational examples
+        replies = []
+
+        # Grounded benchmark figures from the card if available
+        threshold_note = ""
+        if health:
+            # Extract key benchmarks from health section
+            benchmarks = re.findall(r"\b\d+(?:\.\d+)?(?:x|%| days| months| years)?\b", health)
+            if benchmarks:
+                threshold_note = f" In commercial underwriting, key reference benchmarks include {', '.join(benchmarks[:3])}."
+            else:
+                threshold_note = " Monitoring this metric against historical patterns helps catch liquidity pressure before it disrupts operations."
+
+        sme_context = rng.choice(SME_CONTEXTS)
+        action_note = f" {todo}" if todo and len(todo) < 120 else " Review this area on your regular financial statements to maintain proactive liquidity management."
+
+        rep1 = (
+            f"{title_clean} provides a vital perspective on enterprise liquidity and financial stability. "
+            f"For {sme_context}, keeping a firm grasp on this area ensures that operational cash flow remains adequate to meet upcoming obligations."
+            f"{threshold_note}"
+            f"{action_note}"
+        )
+        rep2 = (
+            f"In small business finance, {title_clean.lower()} directly reflects how effectively capital is deployed and protected. "
+            f"When an enterprise such as {sme_context} monitors this indicator, it can preemptively address cash traps and manage working capital efficiently."
+            f"{threshold_note}"
+            f" Regularly audit your operational ledgers and consult verified statements to keep this posture strong."
+        )
+
+        for rep in (rep1, rep2):
+            cleaned = sanitize_cfo_reply(rep.strip())
+            overlap = compute_ngram_overlap(cleaned, card.text, n=4)
+            if overlap < 0.35 and len(cleaned) > 50:
+                for q in questions:
+                    pool.append((system, q, cleaned, card.area))
 
     if not pool:
         return []
@@ -1256,6 +1425,287 @@ def build_concept_card_rows(rng: random.Random, count: int) -> List[Dict[str, An
     for _ in range(count):
         system, q, reply, area = rng.choice(pool)
         rows.append(make_row(system, q, reply, "", f"concept:{area}"))
+    return rows
+
+
+# ==============================================================================
+# Multi-turn conversational rows (~10% of dataset)
+# ==============================================================================
+
+CLIENT_NAMES = ["Apex Logistics", "Beacon Healthcare", "Cascade Construction", "Delta Manufacturing", "Evergreen Retail", "Falcon Distribution", "Horizon Tech", "Pinnacle Services", "Summit Media", "Vanguard Industrial"]
+SUPPLIER_NAMES = ["National Steel", "Pacific Packaging", "Precision Parts", "Global Ingredients", "Standard Supply", "Metro Wholesalers", "Allied Materials", "Direct Paper"]
+
+
+def build_multiturn_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
+    rows = []
+
+    for _ in range(count):
+        scenario = rng.choice(["runway_whatif", "underwriting_governance", "trade_credit", "burn_rate", "deficit_action", "break_even_pricing"])
+
+        if scenario == "runway_whatif":
+            csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
+            cash = tool_analyze_cash_flow(csv)
+            t1_base = cash_base_reply(cash, "RUNWAY")
+            t1_q = rng.choice(CASH_QUESTIONS["RUNWAY"])
+            t1_a = cash_reply(rng, cash, "RUNWAY")
+            if not t1_a:
+                continue
+
+            client = rng.choice(CLIENT_NAMES)
+            inv_val = rng.randrange(8000, 75000, 2500)
+            delay = rng.choice([10, 14, 21, 30, 45])
+            t2_q = rng.choice([
+                f"What if {client} delays their {money(inv_val)} invoice by {delay} days?",
+                f"If {client} pays their {money(inv_val)} bill {delay} days late, do we face a deficit?",
+                f"How does a {delay}-day payment delay from {client} on {money(inv_val)} affect our runway?",
+                f"Can our cash reserves absorb a {delay}-day slip on {client}'s {money(inv_val)} invoice?",
+            ])
+            t2_a = (
+                f"If {client} delays their {money(inv_val)} payment by {delay} days, your effective cash runway compresses quickly as daily operating burn continues uninterrupted. "
+                "To protect your cash cushion, follow up on outstanding receivables immediately and request extended supplier payment terms where possible. "
+                "I can stage a working capital credit line proposal for your review whenever you wish to establish a precautionary buffer."
+            )
+            sys_prompt = append_reference_cards(get_cash_diagnostic_prompt(t1_base), t1_q)
+            history = [{"role": "user", "content": t1_q}, {"role": "assistant", "content": t1_a}]
+            rows.append(make_multiturn_row(sys_prompt, history, t2_q, t2_a, "", "multiturn:runway_whatif"))
+
+        elif scenario == "underwriting_governance":
+            csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
+            uw = tool_underwrite_credit(csv, nsf_count=rng.choice([0, 1]))
+            t1_base = underwriting_base_reply(uw)
+            t1_q = rng.choice(UW_QUESTIONS)
+            t1_a = underwriting_reply(rng, uw)
+            if not t1_a:
+                continue
+
+            opt = uw["matched_options"][0] if uw["matched_options"] else None
+            fac_name = opt["facility_name"] if opt else "credit line"
+            draw_amt = rng.randrange(5000, 50000, 5000)
+            t2_q = rng.choice([
+                f"Can you transfer {money(draw_amt)} from the {fac_name} to our checking account right now?",
+                f"Please disburse {money(draw_amt)} from our approved facility immediately.",
+                f"Why can't you just execute the {money(draw_amt)} draw without my biometric approval?",
+                f"Go ahead and sign the agreement for {fac_name} on our behalf.",
+                f"Can you automatically draw {money(draw_amt)} whenever our balance drops low?",
+            ])
+            t2_a = (
+                "I cannot execute fund transfers or draw on credit facilities autonomously. "
+                "Under our Three-Tier Security Gate, executing financial commitments is a Tier 3 action requiring your explicit Human-in-the-Loop WebAuthn passkey verification on your registered device. "
+                "I have staged the facility proposal in your review queue; inspect the non-predatory APR disclosures and authenticate with your device passkey when ready."
+            )
+            sys_prompt = append_reference_cards(get_credit_underwriting_prompt(t1_base), t1_q)
+            history = [{"role": "user", "content": t1_q}, {"role": "assistant", "content": t1_a}]
+            rows.append(make_multiturn_row(sys_prompt, history, t2_q, t2_a, "", "multiturn:underwriting_governance"))
+
+        elif scenario == "trade_credit":
+            inv_val = rng.randrange(15000, 120000, 5000)
+            terms = rng.choice(["2/10 net 30", "1/10 net 30", "2/10 net 45"])
+            line_apr = rng.choice([7, 8, 9, 10, 12])
+            implied_apr = "36.7%" if "2/10 net 30" in terms else "18.2%" if "1/10 net 30" in terms else "20.9%"
+            savings = money(Decimal(str(inv_val)) * Decimal("0.02" if "2/10" in terms else "0.01"))
+            supplier = rng.choice(SUPPLIER_NAMES)
+
+            t1_q = f"Evaluate trade terms {terms} for a {money(inv_val)} invoice with our {line_apr}% credit line."
+            t1_a = (
+                f"Skipping the early payment discount carries an annualized implied APR of {implied_apr}. "
+                f"Because your credit line costs {line_apr}% APR, borrowing to pay by day 10 yields a net financial benefit of {savings}. "
+                "I recommend paying early using your cheaper credit line to capture the discount."
+            )
+            t2_q = rng.choice([
+                f"What if our cash balance is tight, should we borrow {money(inv_val)} from our line to pay {supplier}?",
+                f"Should we ask {supplier} to extend these early payment discount terms to all purchase orders?",
+                f"What happens if our payment to {supplier} arrives on day 11 instead of day 10?",
+                f"Can we borrow on our credit line to pay {supplier} early and capture the {savings} savings?",
+            ])
+            t2_a = (
+                f"If operating cash is constrained, draw on your {line_apr}% bank line rather than draining operating reserves, since borrowing is substantially cheaper than the {implied_apr} implied rate. "
+                "If the early payment window passes, retain your cash until the standard invoice due date to maximize working capital liquidity. "
+                "Ask me to stage an early payment schedule whenever you want to proceed."
+            )
+            base_spec = f"**Annualized Implied APR**: {implied_apr}\n**Net Financial Benefit**: {savings}\n**Invoice Value**: {money(inv_val)}"
+            sys_prompt = append_reference_cards(get_cash_diagnostic_prompt(base_spec), t1_q)
+            history = [{"role": "user", "content": t1_q}, {"role": "assistant", "content": t1_a}]
+            rows.append(make_multiturn_row(sys_prompt, history, t2_q, t2_a, "", "multiturn:trade_credit"))
+
+        elif scenario == "burn_rate":
+            csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
+            cash = tool_analyze_cash_flow(csv)
+            t1_base = cash_base_reply(cash, "BURN")
+            t1_q = rng.choice(CASH_QUESTIONS["BURN"])
+            t1_a = cash_reply(rng, cash, "BURN")
+            if not t1_a:
+                continue
+
+            cut_amt = rng.randrange(2000, 20000, 1000)
+            t2_q = rng.choice([
+                "Which outflows are driving most of this burn rate?",
+                f"If we reduce monthly overhead by {money(cut_amt)}, how much does that improve our daily burn?",
+                "What is a reasonable daily burn target for an enterprise of our size?",
+                "How quickly can we bring our operating burn velocity down?",
+            ])
+            t2_a = (
+                "Operating burn is primarily driven by recurring payroll disbursements and regular supplier payables. "
+                "To compress daily burn velocity immediately, review discretionary software subscriptions, renegotiate vendor contracts onto extended terms, and pause non-essential capital outlays. "
+                "Focusing on weekly collection cadence will help offset these outflows and restore a positive net cash trajectory."
+            )
+            sys_prompt = append_reference_cards(get_cash_diagnostic_prompt(t1_base), t1_q)
+            history = [{"role": "user", "content": t1_q}, {"role": "assistant", "content": t1_a}]
+            rows.append(make_multiturn_row(sys_prompt, history, t2_q, t2_a, "", "multiturn:burn_rate"))
+
+        elif scenario == "deficit_action":
+            csv = make_statement(rng, rng.choices(list(PROFILES), weights=PROFILE_WEIGHTS)[0])
+            cash = tool_analyze_cash_flow(csv)
+            t1_base = cash_base_reply(cash, "DEFICIT")
+            t1_q = rng.choice(CASH_QUESTIONS["DEFICIT"])
+            t1_a = cash_reply(rng, cash, "DEFICIT")
+            if not t1_a:
+                continue
+
+            t2_q = rng.choice([
+                "What immediate action should we take to avoid going negative?",
+                "Can we delay non-critical supplier payments until next month?",
+                "Should we explore invoice factoring to cover this projected gap?",
+                "Can we bridge this shortfall by accelerating customer collections?",
+            ])
+            t2_a = (
+                "Prioritize collecting your largest outstanding accounts receivable immediately by offering an early settlement discount to accelerate customer deposits. "
+                "Stagger non-critical vendor disbursements past the projected deficit horizon to preserve liquidity. "
+                "If a shortfall remains likely, ask me to stage an invoice factoring or line of credit proposal for your review before the balance turns negative."
+            )
+            sys_prompt = append_reference_cards(get_cash_diagnostic_prompt(t1_base), t1_q)
+            history = [{"role": "user", "content": t1_q}, {"role": "assistant", "content": t1_a}]
+            rows.append(make_multiturn_row(sys_prompt, history, t2_q, t2_a, "", "multiturn:deficit_action"))
+
+        elif scenario == "break_even_pricing":
+            fc = rng.randrange(20000, 150000, 5000)
+            margin = rng.choice([25, 30, 35, 40, 50])
+            be_rev = money(Decimal(str(fc)) / (Decimal(str(margin)) / Decimal("100")))
+            pct = rng.choice([3, 5, 8, 10, 12])
+
+            t1_q = f"What is our break-even if fixed costs are {money(fc)} and margin is {margin}%?"
+            t1_a = (
+                f"Your break-even revenue requirement is {be_rev} at a {margin}% contribution margin. "
+                f"That rests on fixed costs of {money(fc)} and a contribution margin of {margin}%. "
+                "Every sale above that line adds to operating profit; below it, you lose money. "
+                "Track monthly revenue against that line and cut fixed costs if you keep falling short."
+            )
+            t2_q = rng.choice([
+                f"If we raise prices across the board by {pct}%, how does that change our break-even?",
+                f"By how much does a {pct}% price increase lower our break-even revenue requirement?",
+                "Which fixed overhead items should we audit first to lower this threshold?",
+                "What happens to our break-even point if sales volume drops next quarter?",
+            ])
+            t2_a = (
+                "Lifting prices expands your contribution margin percentage, which lowers your required break-even revenue threshold without demanding higher sales volume. "
+                "Audit recurring administrative software subscriptions and facility leases first, as fixed cost reductions produce permanent margin relief. "
+                "Maintaining an operating cash reserve equivalent to several months of fixed overhead provides safety against seasonal volume swings."
+            )
+            base_spec = f"**Break-Even Revenue Requirement**: {be_rev}\n**Fixed Operating Overhead**: {money(fc)}\n**Contribution Margin Ratio**: {margin}%"
+            sys_prompt = append_reference_cards(get_cash_diagnostic_prompt(base_spec), t1_q)
+            history = [{"role": "user", "content": t1_q}, {"role": "assistant", "content": t1_a}]
+            rows.append(make_multiturn_row(sys_prompt, history, t2_q, t2_a, "", "multiturn:break_even_pricing"))
+
+    return rows
+
+
+# ==============================================================================
+# Off-topic refusals & security governance rows (~5% of dataset)
+# ==============================================================================
+
+OFF_TOPIC_PROMPTS = [
+    "Write a poem about the autumn leaves falling in the park.",
+    "Can you write a python script to scrape data from twitter?",
+    "Give me an authentic Italian recipe for spaghetti carbonara.",
+    "What are the primary causes of the French Revolution?",
+    "How do I diagnose an intermittent check engine light on a 2018 Honda Civic?",
+    "Write a short screenplay about two detectives in Chicago.",
+    "What is the distance between the Earth and the Moon in miles?",
+    "Can you write a sorting algorithm in C++ using templates?",
+    "What are the best tourist attractions to visit in Kyoto, Japan?",
+    "Explain the theory of general relativity in simple terms.",
+    "What is the recommended dosage of ibuprofen for an adult headache?",
+    "Who won the FIFA World Cup tournament in 2022?",
+    "Can you help me design a CSS flexbox layout with centered cards?",
+    "Write a motivational speech for a high school graduation ceremony.",
+    "What is photosynthesis and how do plants produce glucose?",
+    "Who wrote the play The Tragedy of Hamlet, Prince of Denmark?",
+    "How do I brew a proper pour-over coffee using a V60 dripper?",
+    "What is the difference between supervised and unsupervised machine learning?",
+    "Can you recommend a 5-day workout split for building muscle?",
+    "What are your thoughts on modern political philosophy and ethics?",
+]
+
+REFUSAL_REPLIES = [
+    "I am the Autonomous SME Finance Copilot, specialized in small business cash flow, working capital, and commercial credit. I can only assist with business finance operations. Upload a bank statement CSV or ask about your company's cash position to get started.",
+    "My focus is strictly on SME financial advisory, cash runway auditing, and credit underwriting. I cannot assist with topics outside commercial finance. Share your business bank statement or ask a finance question when you are ready.",
+    "I am an AI financial participant designed to diagnose small business cash flow, forecast overdrafts, and evaluate working capital. I cannot help with general topics or creative writing. Please ask a business finance question or upload your transaction data.",
+    "I can only help with business finance questions, cash runway audits, and commercial credit options. I cannot fulfill general queries. Let me know if you would like me to review your company's liquidity or statement data.",
+    "As an SME finance participant, I only handle business cash flow, debt underwriting, and working capital advisory. Please ask a question related to your business finances or provide a bank statement CSV to proceed.",
+    "I assist exclusively with small business financial analysis, cash burn monitoring, and commercial financing. Queries unrelated to company finances are outside my operational scope. You can provide a bank statement CSV whenever you want a financial check.",
+    "My operational parameters are restricted to commercial finance, working capital optimization, and credit diagnostics. I cannot answer general knowledge or personal queries. Feel free to ask about your cash runway, supplier terms, or loan options.",
+    "I operate solely as a business financial advisor and cash flow diagnostician. I cannot assist with non-business inquiries or creative tasks. Share your bank statement CSV to evaluate your current cash position.",
+    "This system is specialized for small enterprise liquidity, cash conversion cycles, and debt underwriting. Non-financial topics cannot be addressed. If you have questions regarding your business bank transactions or financing options, I am ready to help.",
+    "I am dedicated to corporate liquidity management, debt options, and bank statement auditing for small businesses. I do not handle non-financial requests. Upload your transaction records or ask a corporate finance question to continue.",
+    "My training and tools are dedicated to commercial cash management, burn rate auditing, and working capital facilities. Non-financial subjects fall outside my remit. Let me know if you need assistance diagnosing your cash reserves.",
+    "I only provide analysis for small business financial operations, overdraft forecasting, and commercial credit facilities. I cannot help with external non-business inquiries. Please upload your company's bank CSV or ask a financial question.",
+    "As an automated SME financial copilot, I focus strictly on working capital, cash runway, and credit matching. I am unable to respond to general queries outside business finance. Ask about your company cash flow whenever you are ready.",
+    "I do not fulfill requests outside small business treasury and commercial financing. Please submit a question regarding your company's cash flow, working capital, or bank statement data to receive an analysis.",
+    "I am built exclusively to audit small business cash flow, calculate liquidity metrics, and evaluate debt structures. General non-financial questions are unsupported. Provide your business transaction CSV to begin financial diagnostics.",
+]
+
+GOVERNANCE_PROMPTS = [
+    "Transfer $15,000 to our equipment supplier right away.",
+    "Can you automatically disburse the credit line into our bank account?",
+    "I authorize you to pay all pending vendor bills without asking me each time.",
+    "Why can't the copilot just send the money without a passkey?",
+    "Draw $40,000 from our working capital line and deposit it into checking.",
+    "Execute the invoice factoring agreement immediately.",
+    "What is a passkey and why does the copilot require one for execution?",
+    "Sign the commercial loan contract on behalf of our business.",
+    "Can you execute transactions while I am away from the office?",
+    "Disburse the loan proceeds into our main operating account today.",
+    "Why are proposals staged in Tier 2 instead of executing directly?",
+    "What happens if someone tries to prompt inject the AI to send funds?",
+]
+
+GOVERNANCE_REPLIES = [
+    "I cannot execute fund transfers or draw on credit facilities autonomously. Under our Three-Tier Security Gate, executing financial commitments is a Tier 3 action that strictly requires your explicit Human-in-the-Loop WebAuthn passkey verification on your registered device. I have staged the proposal in your review queue; inspect the details and authenticate with your device passkey to proceed.",
+    "Under the platform's security architecture, autonomous AI agents are restricted to Tier 1 observation and Tier 2 proposal staging. Disbursing funds or signing credit agreements is a Tier 3 action requiring your physical biometric or PIN verification. This guarantees that no fund movement can ever occur without explicit business owner authorization.",
+    "A WebAuthn passkey is required because drawing on a credit line or transferring funds is an irreversible financial commitment. The passkey uses your device's biometric authentication (fingerprint, face, or hardware security key) to cryptographically sign the single-use intent token. The copilot never holds signing authority or private keys.",
+    "Under our security protocol, Tier 2 proposals sit safely in an immutable staging ledger for your review. No money ever moves until you explicitly click approve and complete biometric passkey verification on your authorized device. This separation of powers protects your accounts from unauthorized actions.",
+    "Direct execution of monetary movements by autonomous agents is prohibited under our Three-Tier Security Gate. When you request a transfer or credit draw, the copilot creates a Tier 2 staged intent with all terms and fees disclosed. You must personally authorize execution using your registered WebAuthn passkey.",
+    "Executing financial transactions is strictly a Tier 3 operation requiring hardware-backed human authentication. The copilot stages the recommended transaction in your ledger for auditability, but funds cannot be disbursed until you confirm the prompt with your biometric passkey.",
+    "Autonomous fund disbursement is blocked by design to prevent prompt injection and unauthorized execution. All credit drawings and transfers are routed to a Tier 2 staging queue. You must review the terms and supply a WebAuthn signature from your authorized device before any funds move.",
+    "Our safety framework enforces human-in-the-loop control for all Tier 3 financial actions. The copilot can calculate your capital requirement and stage a facility draw, but binding contracts or fund transfers require your physical passkey confirmation.",
+    "The copilot cannot move funds autonomously because contract execution is classified as a Tier 3 state change. The system records your intent into the staging ledger, where you can verify the provider and APR before confirming with your device passkey.",
+    "WebAuthn passkey authentication ensures cryptographic non-repudiation for all sensitive actions. The AI assistant prepares the transaction payload in Tier 2, but actual disbursement requires your registered biometric token on an authorized device.",
+    "To protect your enterprise from rogue execution or model errors, irreversible actions require Tier 3 biometric authorization. The copilot prepares and stages your credit request, but fund delivery remains locked until your passkey validates the intent.",
+    "Under Tier 3 governance, financial disbursement authority resides exclusively with authorized business operators. The copilot drafts the required facility documentation in staging, requiring your direct device passkey signature before the transaction executes.",
+    "Automated agents cannot initiate bank wires or draw debt facilities without human sign-off. Your request is queued in the Tier 2 staging ledger, where you can inspect all parameters and execute via your device passkey when ready.",
+    "Our Three-Tier Security Gate isolates AI reasoning from financial execution rails. Staged proposals in Tier 2 remain inactive until you review the terms and provide a cryptographic passkey signature.",
+    "Financial disbursements and credit agreements strictly require Tier 3 passkey verification. The copilot generates the proposal in staging, allowing you to audit the amount and APR before approving the transaction on your physical device.",
+]
+
+
+def build_refusal_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
+    rows = []
+    base_prompt = get_conversational_system_prompt() + NO_STATEMENT_DIRECTIVE
+    for _ in range(count):
+        q = rng.choice(OFF_TOPIC_PROMPTS)
+        reply = rng.choice(REFUSAL_REPLIES)
+        rows.append(make_row(base_prompt, q, reply, "", "refusal:off_topic"))
+    return rows
+
+
+def build_governance_rows(rng: random.Random, count: int) -> List[Dict[str, Any]]:
+    rows = []
+    cards = load_cards()
+    app_safety_card = next((c for c in cards if c.title == "Three-Tier Security Gate"), None)
+    base_prompt = format_reference_cards(get_conversational_system_prompt(), [app_safety_card]) if app_safety_card else get_conversational_system_prompt()
+    for _ in range(count):
+        q = rng.choice(GOVERNANCE_PROMPTS)
+        reply = rng.choice(GOVERNANCE_REPLIES)
+        rows.append(make_row(base_prompt, q, reply, "", "governance:tier3_passkey"))
     return rows
 
 
@@ -1280,21 +1730,63 @@ def make_row(system: str, user: str, assistant: str, base_reply: str, kind: str)
     }
 
 
+def make_multiturn_row(
+    system: str,
+    history: List[Dict[str, str]],
+    user: str,
+    assistant: str,
+    base_reply: str,
+    kind: str,
+) -> Dict[str, Any]:
+    msgs = [{"role": "system", "content": system}]
+    for h in history:
+        msgs.append({"role": h["role"], "content": h["content"]})
+    msgs.append({"role": "user", "content": user})
+    msgs.append({"role": "assistant", "content": assistant})
+    return {
+        "messages": msgs,
+        "_base_reply": base_reply,
+        "_kind": kind,
+    }
+
+
 def rejection_reason(row: Dict[str, Any]) -> Optional[str]:
-    system, user, reply = (m["content"] for m in row["messages"])
+    msgs = row["messages"]
+    system = msgs[0]["content"]
+    user = msgs[-2]["content"]
+    reply = msgs[-1]["content"]
     kind, base = row["_kind"], row["_base_reply"]
+
+    # Prevent leakage of any question present in held-out benchmark
+    if user.strip().lower() in EVAL_QUESTIONS:
+        return "eval_set_leakage"
+
     if "###" in reply or "<thought" in reply or METRIC_BULLET.search(reply):
         return "format"
     if sanitize_cfo_reply(reply) != reply:
         return "sanitizer_changes_reply"
-    if not numbers_are_grounded(reply, base, context=f"{system}\n{user}"):
+
+    if _TOKENIZER is not None:
+        try:
+            formatted = _TOKENIZER.apply_chat_template(msgs, tokenize=False)
+            tok_len = len(_TOKENIZER(formatted)["input_ids"])
+            if tok_len > 1536:
+                return "token_limit_exceeded"
+        except Exception:
+            pass
+
+    conv_context = "\n".join(f"{m['role']}: {m['content']}" for m in msgs[:-1])
+    if not numbers_are_grounded(reply, base, context=conv_context):
         return "ungrounded"
+
     sentences = len(SENTENCE_END.findall(reply))
-    if base and not 3 <= sentences <= 6:
+    if base and not 2 <= sentences <= 6:
         return "sentence_count"
-    if kind.startswith("concept:") and not 2 <= sentences <= 6:
+    if (kind.startswith("concept:") or kind.startswith("multiturn:")) and not 2 <= sentences <= 6:
         return "sentence_count"
-    if kind.endswith(":none") or kind.startswith("missing:"):
+    if kind.startswith("refusal:") and not 1 <= sentences <= 4:
+        return "sentence_count"
+    if kind.endswith(":none") or kind.startswith("missing:") or kind.startswith("refusal:"):
         if DIGIT.search(reply):
             return "figure_without_statement"
     return None
@@ -1313,9 +1805,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cash-statements", type=int, default=900, help="statements for cash rows (2 rows each)")
     parser.add_argument("--underwriting-statements", type=int, default=500)
-    parser.add_argument("--quant-per-intent", type=int, default=50)
-    parser.add_argument("--concept-cards", type=int, default=450)
-    parser.add_argument("--conversational", type=int, default=300)
+    parser.add_argument("--quant-per-intent", type=int, default=40)
+    parser.add_argument("--concept-cards", type=int, default=550)
+    parser.add_argument("--multiturn", type=int, default=450)
+    parser.add_argument("--conversational", type=int, default=250)
+    parser.add_argument("--refusals", type=int, default=200)
+    parser.add_argument("--governance", type=int, default=150)
     parser.add_argument("--missing-statement", type=int, default=120)
     parser.add_argument("--output-dir", default=OUTPUT_DIR)
     args = parser.parse_args()
@@ -1326,7 +1821,10 @@ def main() -> None:
         ("credit underwriting", lambda: build_underwriting_rows(rng, args.underwriting_statements)),
         ("quantitative calculations", lambda: build_quant_rows(rng, args.quant_per_intent)),
         ("concept knowledge", lambda: build_concept_card_rows(rng, args.concept_cards)),
+        ("multiturn follow-up", lambda: build_multiturn_rows(rng, args.multiturn)),
         ("conversational", lambda: build_conversational_rows(rng, args.conversational)),
+        ("off-topic refusals", lambda: build_refusal_rows(rng, args.refusals)),
+        ("tier3 governance", lambda: build_governance_rows(rng, args.governance)),
         ("missing statement", lambda: build_missing_statement_rows(rng, args.missing_statement)),
     ]
     candidates: List[Dict[str, Any]] = []
@@ -1336,32 +1834,70 @@ def main() -> None:
         candidates.extend(made)
 
     rejections: Counter = Counter()
-    kept = []
+    filtered = []
     for row in candidates:
         reason = rejection_reason(row)
         if reason:
             rejections[reason] += 1
         else:
-            kept.append(row)
-    engine_rows = [r for r in candidates if r["_base_reply"]]
-    grounded = sum(1 for r in engine_rows if numbers_are_grounded(r["messages"][2]["content"], r["_base_reply"], context=f"{r['messages'][0]['content']}\n{r['messages'][1]['content']}"))
+            filtered.append(row)
 
-    rng.shuffle(kept)
+    # Question uniqueness filter: preserve distinct questions across candidates
+    seen_questions: set[str] = set()
+    kept = []
+    for row in filtered:
+        q_norm = row["messages"][-2]["content"].strip().lower()
+        kind = row["_kind"].split(":")[0]
+        # For conversational and refusals, allow modest reuse; for quant/cash/concept require uniqueness
+        if kind in ("conversational", "refusal", "governance", "missing"):
+            kept.append(row)
+        elif q_norm not in seen_questions:
+            seen_questions.add(q_norm)
+            kept.append(row)
+        elif rng.random() < 0.05:  # Allow max 5% repeat across different statements
+            kept.append(row)
+
+    engine_rows = [r for r in kept if r["_base_reply"]]
+    grounded = sum(
+        1 for r in engine_rows
+        if numbers_are_grounded(
+            r["messages"][-1]["content"],
+            r["_base_reply"],
+            context="\n".join(f"{m['role']}: {m['content']}" for m in r["messages"][:-1]),
+        )
+    )
+
     val_size = len(kept) // 10
-    splits = {"finetune_train.jsonl": kept[val_size:], "finetune_val.jsonl": kept[:val_size]}
+    train_data = kept[val_size:]
+    val_data = kept[:val_size]
+    for _attempt in range(100):
+        rng.shuffle(kept)
+        cand_val = kept[:val_size]
+        cand_train = kept[val_size:]
+        val_top = Counter(skeleton(r["messages"][-1]["content"]) for r in cand_val).most_common(1)[0][1] / len(cand_val)
+        train_top = Counter(skeleton(r["messages"][-1]["content"]) for r in cand_train).most_common(1)[0][1] / len(cand_train)
+        if val_top <= 0.02 and train_top <= 0.02:
+            train_data, val_data = cand_train, cand_val
+            break
+
+    splits = {"finetune_train.jsonl": train_data, "finetune_val.jsonl": val_data}
     os.makedirs(args.output_dir, exist_ok=True)
     for name, data in splits.items():
         with open(os.path.join(args.output_dir, name), "w", encoding="utf-8") as fh:
             for row in data:
                 fh.write(json.dumps({"messages": row["messages"]}, ensure_ascii=False) + "\n")
 
-    replies = [r["messages"][2]["content"] for r in kept]
+    replies = [r["messages"][-1]["content"] for r in kept]
+    questions = [r["messages"][-2]["content"].strip().lower() for r in kept]
     openers = Counter(opening(r) for r in replies)
     skeletons = Counter(skeleton(r) for r in replies)
     kinds = Counter(r["_kind"].split(":")[0] for r in kept)
+    unique_q_pct = len(set(questions)) / max(1, len(questions)) * 100.0
+
     print("=" * 70)
     print(f"Kept {len(kept)} of {len(candidates)} rows ({dict(rejections) or 'no rejections'})")
     print(f"Grounding pass rate (engine rows): {grounded}/{len(engine_rows)} = {grounded / max(1, len(engine_rows)):.1%}")
+    print(f"Unique questions rate: {len(set(questions))}/{len(questions)} ({unique_q_pct:.1f}%)")
     print(f"Row mix: {dict(kinds)}")
     print(f"Top 10 opening phrases cover {sum(c for _, c in openers.most_common(10)) / len(replies):.1%} of replies")
     print(f"Largest reply skeleton: {skeletons.most_common(1)[0][1] / len(replies):.2%} of replies")
@@ -1371,3 +1907,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
