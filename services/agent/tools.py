@@ -40,6 +40,49 @@ from services.calculations.concentration_risk import (
     calculate_revenue_attrition_impact as calc_attrition,
     calculate_client_churn_impact as calc_client_churn,
 )
+from services.calculations.solvency import (
+    calculate_current_ratio as calc_current_ratio,
+    calculate_quick_ratio as calc_quick_ratio,
+    calculate_debt_to_equity as calc_debt_to_equity,
+    calculate_interest_coverage as calc_interest_coverage,
+)
+from services.calculations.trade_credit import (
+    calculate_trade_credit_apr as calc_trade_credit_apr,
+)
+from services.calculations.currency import (
+    calculate_currency_conversion as calc_currency_conversion,
+    calculate_fx_exposure as calc_fx_exposure,
+)
+from services.calculations.treasury import (
+    calculate_cash_drag as calc_cash_drag,
+)
+from services.calculations.dupont import (
+    calculate_dupont_roe as calc_dupont_roe,
+)
+from services.calculations.lease_vs_buy import (
+    calculate_lease_vs_buy as calc_lease_vs_buy,
+)
+from services.calculations.credit_distress import (
+    calculate_altman_z_score as calc_altman_z,
+    calculate_net_debt_to_ebitda as calc_net_debt_to_ebitda,
+    calculate_debt_service_burden as calc_debt_service_burden,
+)
+from services.calculations.capital_efficiency import (
+    calculate_roic as calc_roic,
+    calculate_roa as calc_roa,
+    calculate_eva as calc_eva,
+)
+from services.calculations.valuation import (
+    calculate_free_cash_flow as calc_free_cash_flow,
+    calculate_wacc as calc_wacc,
+    calculate_enterprise_value_multiples as calc_ev_multiples,
+    calculate_dcf_valuation as calc_dcf_valuation,
+)
+from services.calculations.saas_unit_economics import (
+    calculate_ltv_cac as calc_ltv_cac,
+    calculate_cac_payback as calc_cac_payback,
+    calculate_net_revenue_retention as calc_nrr,
+)
 from services.blockchain.invoice_hasher import (
     calculate_canonical_invoice_hash,
     invoice_registry,
@@ -55,11 +98,32 @@ from services.security.staging_ledger import StagingRequest, staging_ledger
 def _to_decimal(val: Any) -> Decimal:
     if isinstance(val, Decimal):
         return val
-    return Decimal(str(val).replace("$", "").replace(",", "").strip())
+    return Decimal(str(val).replace("$", "").replace(",", "").replace("%", "").strip())
 
 
 def _format_money(val: Decimal) -> str:
     return f"{val:.2f}"
+
+
+def _normalize_statement_bytes(content_str: str) -> bytes:
+    """Decodes string or base64 into raw bytes, converting PDF to canonical CSV bytes if needed."""
+    if not content_str:
+        return b""
+    trimmed = content_str.strip()
+    raw_bytes = content_str.encode("utf-8")
+    if trimmed.startswith("JVBERi0"):
+        import base64
+        try:
+            decoded = base64.b64decode(trimmed)
+            if decoded.startswith(b"%PDF"):
+                raw_bytes = decoded
+        except Exception:
+            pass
+    if raw_bytes.startswith(b"%PDF") or trimmed.startswith("%PDF"):
+        from services.ingestion.pdf_parser import parse_pdf_statement
+        pdf_res = parse_pdf_statement(raw_bytes)
+        return pdf_res.csv_text.encode("utf-8")
+    return raw_bytes
 
 
 def tool_analyze_cash_flow(
@@ -83,7 +147,7 @@ def tool_analyze_cash_flow(
     Returns:
         Structured dictionary containing balance, burn, runway, and forward predictive shortfall metrics.
     """
-    raw_bytes = csv_content.encode("utf-8")
+    raw_bytes = _normalize_statement_bytes(csv_content)
     ingestion = parse_bank_csv(raw_bytes)
     result = calculate_cash_analysis(
         ingestion.accepted_rows,
@@ -152,7 +216,7 @@ def tool_underwrite_credit(csv_content: str, nsf_count: int = 0) -> Dict[str, An
     Returns:
         Dossier scoring and filtered pre-qualified financing facilities with true APR.
     """
-    raw_bytes = csv_content.encode("utf-8")
+    raw_bytes = _normalize_statement_bytes(csv_content)
     ingestion = parse_bank_csv(raw_bytes)
     dossier = underwrite_sme_transactions(ingestion.accepted_rows, nsf_count=nsf_count)
     options = match_financing_options(dossier)
@@ -343,7 +407,7 @@ def tool_calculate_client_concentration(
     total_inflow = Decimal("0.00")
 
     if csv_content:
-        raw_bytes = csv_content.encode("utf-8")
+        raw_bytes = _normalize_statement_bytes(csv_content)
         ingestion = parse_bank_csv(raw_bytes)
         for row in ingestion.accepted_rows:
             if row.amount > Decimal("0.00"):
@@ -606,3 +670,487 @@ def tool_calculate_predictive_cash(
         "days_until_deficit": cf.get("days_until_deficit"),
         "forecast_target_balance": cf.get("forecast_target_balance"),
     }
+
+
+def tool_calculate_current_ratio(
+    current_assets: Any,
+    current_liabilities: Any,
+) -> Dict[str, Any]:
+    """Calculate Current Ratio (Current Assets / Current Liabilities) and working capital liquidity tier."""
+    ca = _to_decimal(current_assets)
+    cl = _to_decimal(current_liabilities)
+    ratio, tier, rationale = calc_current_ratio(ca, cl)
+    return {
+        "current_assets": _format_money(ca),
+        "current_liabilities": _format_money(cl),
+        "current_ratio": str(ratio),
+        "liquidity_tier": tier,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_quick_ratio(
+    current_assets: Any,
+    inventory: Any,
+    current_liabilities: Any,
+    prepaid_expenses: Any = "0.00",
+) -> Dict[str, Any]:
+    """Calculate Quick Ratio / Acid Test and immediate liquidity readiness."""
+    ca = _to_decimal(current_assets)
+    inv = _to_decimal(inventory)
+    cl = _to_decimal(current_liabilities)
+    prep = _to_decimal(prepaid_expenses) if prepaid_expenses is not None else Decimal("0.00")
+    ratio, tier, rationale = calc_quick_ratio(ca, inv, cl, prep)
+    quick_assets = ca - inv - prep
+    return {
+        "current_assets": _format_money(ca),
+        "inventory": _format_money(inv),
+        "prepaid_expenses": _format_money(prep),
+        "quick_assets": _format_money(quick_assets),
+        "current_liabilities": _format_money(cl),
+        "quick_ratio": str(ratio),
+        "liquidity_tier": tier,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_debt_to_equity(
+    total_debt: Any,
+    total_equity: Any,
+) -> Dict[str, Any]:
+    """Calculate Debt-to-Equity (D/E) Ratio and capital structure financial leverage tier."""
+    debt = _to_decimal(total_debt)
+    equity = _to_decimal(total_equity)
+    ratio, tier, rationale = calc_debt_to_equity(debt, equity)
+    return {
+        "total_debt": _format_money(debt),
+        "total_equity": _format_money(equity),
+        "debt_to_equity_ratio": str(ratio),
+        "leverage_tier": tier,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_interest_coverage(
+    ebit: Any,
+    interest_expense: Any,
+) -> Dict[str, Any]:
+    """Calculate Interest Coverage Ratio (Times Interest Earned - TIE) and debt covenant risk tier."""
+    eb = _to_decimal(ebit)
+    ie = _to_decimal(interest_expense)
+    ratio, tier, rationale = calc_interest_coverage(eb, ie)
+    return {
+        "ebit": _format_money(eb),
+        "interest_expense": _format_money(ie),
+        "interest_coverage_ratio": str(ratio),
+        "covenant_tier": tier,
+        "rationale": rationale,
+    }
+
+
+def tool_calculate_trade_credit_apr(
+    discount_pct: Any,
+    discount_days: int,
+    net_days: int,
+    invoice_amount: Optional[Any] = None,
+    benchmark_borrowing_rate_pct: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate implied Annual Percentage Rate (APR) of early payment trade terms (e.g. 2/10 Net 30)."""
+    disc_pct = _to_decimal(discount_pct)
+    inv_amt = _to_decimal(invoice_amount) if invoice_amount is not None else None
+    bench_rate = _to_decimal(benchmark_borrowing_rate_pct) if benchmark_borrowing_rate_pct is not None else None
+    return calc_trade_credit_apr(
+        discount_pct=disc_pct,
+        discount_days=int(discount_days),
+        net_days=int(net_days),
+        invoice_amount=inv_amt,
+        benchmark_borrowing_rate_pct=bench_rate,
+    )
+
+
+def tool_calculate_cash_drag(
+    current_balance: Any,
+    monthly_burn: Optional[Any] = None,
+    benchmark_annual_yield_pct: Any = "4.50",
+    target_reserve_months: Any = "2.0",
+    explicit_reserve_target: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate Treasury Cash Drag opportunity cost and idle cash yield loss against money market benchmarks."""
+    cb = _to_decimal(current_balance)
+    mb = _to_decimal(monthly_burn) if monthly_burn is not None else None
+    yield_pct = _to_decimal(benchmark_annual_yield_pct) if benchmark_annual_yield_pct is not None else Decimal("4.50")
+    reserve_months = _to_decimal(target_reserve_months) if target_reserve_months is not None else Decimal("2.0")
+    explicit_res = _to_decimal(explicit_reserve_target) if explicit_reserve_target is not None else None
+    return calc_cash_drag(
+        current_balance=cb,
+        monthly_burn=mb,
+        benchmark_annual_yield_pct=yield_pct,
+        target_reserve_months=reserve_months,
+        explicit_reserve_target=explicit_res,
+    )
+
+
+def tool_calculate_dupont_roe(
+    net_income: Any,
+    revenue: Any,
+    total_assets: Any,
+    total_equity: Any,
+) -> Dict[str, Any]:
+    """Perform 3-Stage DuPont Analysis decomposing ROE into Net Margin, Asset Turnover, and Equity Multiplier."""
+    ni = _to_decimal(net_income)
+    rev = _to_decimal(revenue)
+    assets = _to_decimal(total_assets)
+    equity = _to_decimal(total_equity)
+    return calc_dupont_roe(
+        net_income=ni,
+        revenue=rev,
+        total_assets=assets,
+        total_equity=equity,
+    )
+
+
+def tool_calculate_lease_vs_buy(
+    purchase_price: Any,
+    annual_lease_payment: Any,
+    term_years: int,
+    discount_rate_pct: Any,
+    corporate_tax_rate_pct: Any = "21.0",
+    estimated_salvage_value: Any = "0.00",
+    annual_maintenance_if_bought: Any = "0.00",
+) -> Dict[str, Any]:
+    """Evaluate equipment Lease vs. Buy Net Present Value (NPV) comparing after-tax cash flows and depreciation tax shields."""
+    price = _to_decimal(purchase_price)
+    lease_pay = _to_decimal(annual_lease_payment)
+    disc_rate = _to_decimal(discount_rate_pct)
+    tax_rate = _to_decimal(corporate_tax_rate_pct) if corporate_tax_rate_pct is not None else Decimal("21.0")
+    salvage = _to_decimal(estimated_salvage_value) if estimated_salvage_value is not None else Decimal("0.00")
+    maint = _to_decimal(annual_maintenance_if_bought) if annual_maintenance_if_bought is not None else Decimal("0.00")
+    return calc_lease_vs_buy(
+        purchase_price=price,
+        annual_lease_payment=lease_pay,
+        term_years=int(term_years),
+        discount_rate_pct=disc_rate,
+        corporate_tax_rate_pct=tax_rate,
+        estimated_salvage_value=salvage,
+        annual_maintenance_if_bought=maint,
+    )
+
+
+def tool_calculate_altman_z_score(
+    working_capital: Any,
+    retained_earnings: Any,
+    ebit: Any,
+    book_value_equity: Any,
+    total_liabilities: Any,
+    total_assets: Any,
+    revenue: Any,
+) -> Dict[str, Any]:
+    """Calculate Altman Z'-Score for private manufacturing and service SMEs to evaluate credit distress and bankruptcy risk."""
+    return calc_altman_z(
+        working_capital=_to_decimal(working_capital),
+        retained_earnings=_to_decimal(retained_earnings),
+        ebit=_to_decimal(ebit),
+        book_value_equity=_to_decimal(book_value_equity),
+        total_liabilities=_to_decimal(total_liabilities),
+        total_assets=_to_decimal(total_assets),
+        revenue=_to_decimal(revenue),
+    )
+
+
+def tool_calculate_net_debt_to_ebitda(
+    total_debt: Any,
+    cash_and_equivalents: Any,
+    ebitda: Any,
+) -> Dict[str, Any]:
+    """Calculate Net Debt to EBITDA leverage ratio and benchmark credit risk."""
+    return calc_net_debt_to_ebitda(
+        total_debt=_to_decimal(total_debt),
+        cash_and_equivalents=_to_decimal(cash_and_equivalents),
+        ebitda=_to_decimal(ebitda),
+    )
+
+
+def tool_calculate_debt_service_burden(
+    annual_debt_service: Any,
+    gross_revenue: Any,
+) -> Dict[str, Any]:
+    """Calculate Debt Service Burden as a percentage of gross annual revenue."""
+    return calc_debt_service_burden(
+        annual_debt_service=_to_decimal(annual_debt_service),
+        annual_revenue=_to_decimal(gross_revenue),
+    )
+
+
+def tool_calculate_roic(
+    ebit: Any,
+    total_debt: Any,
+    total_equity: Any,
+    cash_and_equivalents: Any = "0.00",
+    tax_rate_pct: Any = "21.00",
+    nopat: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate Return on Invested Capital (ROIC) assessing operating return vs total invested capital."""
+    return calc_roic(
+        ebit=_to_decimal(ebit),
+        total_debt=_to_decimal(total_debt),
+        total_equity=_to_decimal(total_equity),
+        cash_and_equivalents=_to_decimal(cash_and_equivalents) if cash_and_equivalents is not None else Decimal("0.00"),
+        corporate_tax_rate_pct=_to_decimal(tax_rate_pct) if tax_rate_pct is not None else Decimal("21.00"),
+    )
+
+
+def tool_calculate_roa(
+    net_income: Any,
+    total_assets: Any,
+) -> Dict[str, Any]:
+    """Calculate Return on Assets (ROA) evaluating net earnings efficiency per balance sheet asset dollar."""
+    return calc_roa(
+        net_income=_to_decimal(net_income),
+        total_assets=_to_decimal(total_assets),
+    )
+
+
+def tool_calculate_eva(
+    ebit: Any,
+    invested_capital: Any,
+    wacc_pct: Any = "9.00",
+    tax_rate_pct: Any = "21.00",
+    nopat: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate Economic Value Added (EVA) measuring surplus economic profit generated above cost of capital."""
+    return calc_eva(
+        ebit=_to_decimal(ebit),
+        invested_capital=_to_decimal(invested_capital),
+        wacc_pct=_to_decimal(wacc_pct) if wacc_pct is not None else Decimal("9.00"),
+        corporate_tax_rate_pct=_to_decimal(tax_rate_pct) if tax_rate_pct is not None else Decimal("21.00"),
+    )
+
+
+def tool_calculate_free_cash_flow(
+    operating_cash_flow: Any,
+    capital_expenditures: Any,
+    interest_expense: Any = "0.00",
+    tax_rate_pct: Any = "21.00",
+    net_debt_issued: Any = "0.00",
+) -> Dict[str, Any]:
+    """Calculate Free Cash Flow to Firm (FCFF) and Free Cash Flow to Equity (FCFE)."""
+    return calc_free_cash_flow(
+        operating_cash_flow=_to_decimal(operating_cash_flow),
+        capex=_to_decimal(capital_expenditures),
+        interest_expense=_to_decimal(interest_expense) if interest_expense is not None else Decimal("0.00"),
+        corporate_tax_rate_pct=_to_decimal(tax_rate_pct) if tax_rate_pct is not None else Decimal("21.00"),
+        net_debt_issued=_to_decimal(net_debt_issued) if net_debt_issued is not None else Decimal("0.00"),
+    )
+
+
+def tool_calculate_wacc(
+    equity_value: Any,
+    total_debt: Any,
+    cost_of_equity_pct: Any,
+    pre_tax_cost_of_debt_pct: Any,
+    corporate_tax_rate_pct: Any = "21.00",
+) -> Dict[str, Any]:
+    """Calculate Weighted Average Cost of Capital (WACC) with after-tax cost of debt shield."""
+    return calc_wacc(
+        equity_value=_to_decimal(equity_value),
+        total_debt=_to_decimal(total_debt),
+        cost_of_equity_pct=_to_decimal(cost_of_equity_pct),
+        pre_tax_cost_of_debt_pct=_to_decimal(pre_tax_cost_of_debt_pct),
+        corporate_tax_rate_pct=_to_decimal(corporate_tax_rate_pct) if corporate_tax_rate_pct is not None else Decimal("21.00"),
+    )
+
+
+def tool_calculate_enterprise_value(
+    equity_value: Any,
+    total_debt: Any,
+    cash_and_equivalents: Any,
+    ebitda: Optional[Any] = None,
+    revenue: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Calculate Enterprise Value (EV) and valuation multiples (EV/EBITDA, EV/Revenue)."""
+    return calc_ev_multiples(
+        equity_value=_to_decimal(equity_value),
+        total_debt=_to_decimal(total_debt),
+        cash_and_equivalents=_to_decimal(cash_and_equivalents),
+        ebitda=_to_decimal(ebitda) if ebitda is not None else None,
+        revenue=_to_decimal(revenue) if revenue is not None else None,
+    )
+
+
+def tool_calculate_dcf_valuation(
+    projected_cash_flows: Sequence[Any],
+    wacc_discount_rate_pct: Any,
+    perpetual_growth_rate_pct: Any = "2.50",
+    total_debt: Any = "0.00",
+    cash_and_equivalents: Any = "0.00",
+) -> Dict[str, Any]:
+    """Perform Discounted Cash Flow (DCF) enterprise valuation with Gordon Growth perpetual terminal value."""
+    flows = [_to_decimal(f) for f in projected_cash_flows]
+    return calc_dcf_valuation(
+        projected_fcfs=flows,
+        wacc_pct=_to_decimal(wacc_discount_rate_pct),
+        terminal_growth_rate_pct=_to_decimal(perpetual_growth_rate_pct) if perpetual_growth_rate_pct is not None else Decimal("2.50"),
+        total_debt=_to_decimal(total_debt) if total_debt is not None else Decimal("0.00"),
+        cash_and_equivalents=_to_decimal(cash_and_equivalents) if cash_and_equivalents is not None else Decimal("0.00"),
+    )
+
+
+def tool_calculate_ltv_cac(
+    arpu: Any,
+    gross_margin_pct: Any,
+    churn_rate_pct: Any,
+    cac: Any,
+    period: str = "ANNUAL",
+) -> Dict[str, Any]:
+    """Calculate Customer Lifetime Value (LTV) and LTV to CAC Ratio for subscription and recurring SME business models."""
+    arpu_dec = _to_decimal(arpu)
+    if period.upper() == "MONTHLY":
+        annual_arpu = arpu_dec * Decimal("12")
+    else:
+        annual_arpu = arpu_dec
+    return calc_ltv_cac(
+        annual_arpu=annual_arpu,
+        gross_margin_pct=_to_decimal(gross_margin_pct),
+        annual_churn_rate_pct=_to_decimal(churn_rate_pct),
+        cac=_to_decimal(cac),
+    )
+
+
+def tool_calculate_cac_payback(
+    cac: Any,
+    monthly_arpu: Any,
+    gross_margin_pct: Any,
+) -> Dict[str, Any]:
+    """Calculate CAC Payback Period (Months) indicating how quickly gross margin recoups acquisition spend."""
+    return calc_cac_payback(
+        monthly_arpu=_to_decimal(monthly_arpu),
+        gross_margin_pct=_to_decimal(gross_margin_pct),
+        cac=_to_decimal(cac),
+    )
+
+
+def tool_calculate_nrr(
+    starting_mrr: Any,
+    expansion_mrr: Any = "0.00",
+    contraction_mrr: Any = "0.00",
+    churn_mrr: Any = "0.00",
+    period: str = "ANNUAL",
+) -> Dict[str, Any]:
+    """Calculate Net Revenue Retention (NRR) and Gross Revenue Retention (GRR) cohorts."""
+    return calc_nrr(
+        starting_arr=_to_decimal(starting_mrr),
+        expansion_arr=_to_decimal(expansion_mrr) if expansion_mrr is not None else Decimal("0.00"),
+        contraction_arr=_to_decimal(contraction_mrr) if contraction_mrr is not None else Decimal("0.00"),
+        churn_arr=_to_decimal(churn_mrr) if churn_mrr is not None else Decimal("0.00"),
+    )
+
+
+def tool_convert_currency(
+    amount: Any,
+    from_currency: str = "USD",
+    to_currency: str = "EUR",
+    exchange_rate: Optional[Any] = None,
+    spread_bps: Any = "0.00",
+) -> Dict[str, Any]:
+    """Deterministically convert an amount between any world currencies. If exchange_rate is omitted, fetches live market rate."""
+    return calc_currency_conversion(
+        amount=_to_decimal(amount),
+        exchange_rate=_to_decimal(exchange_rate) if exchange_rate is not None and str(exchange_rate).strip() else None,
+        from_currency=from_currency,
+        to_currency=to_currency,
+        spread_bps=_to_decimal(spread_bps) if spread_bps is not None else Decimal("0.00"),
+    )
+
+
+def tool_get_live_exchange_rate(
+    from_currency: str,
+    to_currency: str,
+) -> Dict[str, Any]:
+    """Fetch live spot foreign exchange (FX) market rate between any two world currencies."""
+    from services.calculations.fx_rate_service import get_live_exchange_rate
+    info = get_live_exchange_rate(from_currency=from_currency, to_currency=to_currency)
+    return {
+        "from_currency": info["from_currency"],
+        "to_currency": info["to_currency"],
+        "spot_rate": info["spot_rate"],
+        "source": info["source"],
+        "is_live_market": info["is_live_market"],
+    }
+
+
+def tool_calculate_fx_exposure(
+    foreign_receivables: Any,
+    foreign_payables: Any,
+    base_currency: str = "USD",
+    foreign_currency: str = "EUR",
+    current_spot_rate: Optional[Any] = None,
+    adverse_shock_pct: Any = "5.00",
+) -> Dict[str, Any]:
+    """Calculate Net Open Position (NOP) and potential cash flow loss under adverse FX volatility shock."""
+    return calc_fx_exposure(
+        foreign_receivables=_to_decimal(foreign_receivables),
+        foreign_payables=_to_decimal(foreign_payables),
+        base_currency=base_currency,
+        foreign_currency=foreign_currency,
+        current_spot_rate=_to_decimal(current_spot_rate) if current_spot_rate is not None and str(current_spot_rate).strip() else None,
+        adverse_shock_pct=_to_decimal(adverse_shock_pct) if adverse_shock_pct is not None else Decimal("5.00"),
+    )
+
+
+def tool_evaluate_financial_math(expression: str) -> Dict[str, Any]:
+    """Safely and deterministically evaluates an arithmetic expression using pure Decimal arithmetic.
+
+    Prevents LLM math hallucinations. Strictly allows +, -, *, /, //, %, ** on numeric constants.
+    """
+    import ast
+    import operator
+
+    safe_ops = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv,
+        ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    def _eval(node: ast.AST) -> Decimal:
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return Decimal(str(node.value))
+        elif isinstance(node, ast.BinOp):
+            left = _eval(node.left)
+            right = _eval(node.right)
+            op_cls = type(node.op)
+            if op_cls not in safe_ops:
+                raise ValueError(f"Unsupported binary operator: {op_cls.__name__}")
+            if op_cls in (ast.Div, ast.FloorDiv, ast.Mod) and right == Decimal("0"):
+                raise ZeroDivisionError("Division by zero in financial expression.")
+            res = safe_ops[op_cls](left, right)
+            return Decimal(str(res))
+        elif isinstance(node, ast.UnaryOp):
+            operand = _eval(node.operand)
+            op_cls = type(node.op)
+            if op_cls not in safe_ops:
+                raise ValueError(f"Unsupported unary operator: {op_cls.__name__}")
+            res = safe_ops[op_cls](operand)
+            return Decimal(str(res))
+        raise ValueError(f"Security Policy: Expression contains prohibited AST node '{type(node).__name__}'.")
+
+    clean_expr = expression.strip().replace(",", "")
+    tree = ast.parse(clean_expr, mode="eval")
+    val = _eval(tree)
+    is_int = (val % Decimal("1") == Decimal("0"))
+    return {
+        "expression": expression,
+        "result": str(int(val) if is_int else val.quantize(Decimal("0.0001"))),
+        "is_integer": is_int,
+        "integer_value": int(val) if is_int else None,
+    }
+
+
+

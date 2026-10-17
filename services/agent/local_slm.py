@@ -1,6 +1,6 @@
 """On-device local SLM inference engine powered by onnxruntime-genai.
 
-Runs Meta Llama-3.2-1B-Instruct (CPU INT4) locally with:
+Runs local on-device models with:
 - Zero external network requests
 - Zero API keys
 - 100% private on-device generation
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 MODEL_DIR = os.path.abspath(
     os.path.join(
         os.path.dirname(__file__),
-        "../../models/llama-3.2-1b-instruct-onnx/cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4",
+        "../../models/sme-finance-lora",
     )
 )
 
@@ -69,14 +69,14 @@ class LocalSLMEngine:
             try:
                 import onnxruntime_genai as og
 
-                logger.info("Loading Llama-3.2-1B ONNX model from %s...", MODEL_DIR)
+                logger.info("Loading local ONNX model from %s...", MODEL_DIR)
                 self._model = og.Model(MODEL_DIR)
                 self._tokenizer = og.Tokenizer(self._model)
                 self._is_ready = True
-                logger.info("Llama-3.2-1B ONNX model loaded successfully into memory.")
+                logger.info("Local ONNX model loaded successfully into memory.")
                 return True
             except Exception as exc:
-                logger.error("Failed to load Llama-3.2-1B ONNX model: %s", exc)
+                logger.error("Failed to load local ONNX model: %s", exc)
                 self._is_ready = False
                 return False
 
@@ -88,7 +88,7 @@ class LocalSLMEngine:
         max_new_tokens: int = 256,
         temperature: float = 0.2,
     ) -> Optional[str]:
-        """Generates contextual natural response using local Llama 3.2 1B."""
+        """Generates contextual natural response using local engine."""
         if "PYTEST_CURRENT_TEST" in os.environ:
             return None
         if not self._ensure_loaded():
@@ -109,7 +109,7 @@ class LocalSLMEngine:
 
             messages.append({"role": "user", "content": prompt})
 
-            # Format using Llama-3.2 chat template
+            # Format using model chat template
             json_messages = json.dumps(messages)
             formatted_prompt = self._tokenizer.apply_chat_template(
                 json_messages, add_generation_prompt=True
@@ -137,7 +137,7 @@ class LocalSLMEngine:
             generated_text = self._tokenizer.decode(output_tokens).strip()
 
             # Clean any trailing special tokens
-            for stop_tok in ["<|eot_id|>", "<|end_of_text|>", "</s>"]:
+            for stop_tok in ["<|im_end|>", "<|endoftext|>", "<|eot_id|>", "<|end_of_text|>", "</s>"]:
                 if stop_tok in generated_text:
                     generated_text = generated_text.replace(stop_tok, "").strip()
 
@@ -151,15 +151,42 @@ def generate_local_reply(
     prompt: str,
     system_instruction: str,
     history: Optional[List[Any]] = None,
-    max_new_tokens: int = 256,
+    max_new_tokens: int = 512,
     temperature: float = 0.1,
+    model_name: Optional[str] = None,
 ) -> Optional[str]:
-    """Convenience helper to generate an offline response using local Llama 3.2."""
+    """Generates an offline response using fine-tuned LoRA or mobile model with local engine."""
+    from services.agent.local_transformers import LocalTransformersEngine
+    trans_engine = LocalTransformersEngine.get_instance()
+
+    target_model = model_name
+    if not target_model:
+        has_cuda = False
+        try:
+            import torch
+            has_cuda = torch.cuda.is_available()
+        except Exception:
+            pass
+        if not has_cuda and trans_engine.is_available("sme-finance-mobile-lora"):
+            target_model = "sme-finance-mobile-lora"
+
+    if trans_engine.is_available(target_model):
+        return trans_engine.generate(
+            prompt=prompt,
+            system_instruction=system_instruction,
+            history=history,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            model_name=target_model,
+        )
+
     engine = LocalSLMEngine.get_instance()
-    return engine.generate(
-        prompt=prompt,
-        system_instruction=system_instruction,
-        history=history,
-        max_new_tokens=max_new_tokens,
-        temperature=temperature,
-    )
+    if engine.is_available():
+        return engine.generate(
+            prompt=prompt,
+            system_instruction=system_instruction,
+            history=history,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+        )
+    return None

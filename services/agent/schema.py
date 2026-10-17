@@ -58,6 +58,38 @@ class FetchModelsResponse(BaseModel):
     message: Optional[str] = None
 
 
+class DownloadModelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    model_name: str = Field(default="qwen-0.5b-mobile", description="Target model identifier: sme-finance-lora or qwen-0.5b-mobile")
+
+
+class DownloadModelResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    model_name: str
+    message: str
+    downloaded_path: Optional[str] = None
+    size_mb: Optional[float] = None
+
+
+class DeleteModelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    model_name: str = Field(default="sme-finance-lora", description="Target model identifier to remove from local storage")
+
+
+class DeleteModelResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    model_name: str
+    message: str
+    deleted_path: Optional[str] = None
+    freed_mb: Optional[float] = None
+
+
 
 class ChatHistoryItem(BaseModel):
     model_config = ConfigDict(extra="ignore")

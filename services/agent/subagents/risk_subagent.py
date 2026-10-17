@@ -17,6 +17,13 @@ from services.agent.param_extractor import (
     extract_attrition_params,
     extract_break_even_params,
     extract_break_even_units_params,
+    extract_cac_payback_params,
+    extract_dupont_params,
+    extract_eva_params,
+    extract_ltv_cac_params,
+    extract_nrr_params,
+    extract_roa_params,
+    extract_roic_params,
 )
 from services.agent.schema import (
     AgentChatRequest,
@@ -27,22 +34,22 @@ from services.agent.tools import (
     tool_analyze_cash_flow,
     tool_calculate_break_even,
     tool_calculate_break_even_units,
+    tool_calculate_cac_payback,
     tool_calculate_client_concentration,
+    tool_calculate_dupont_roe,
+    tool_calculate_eva,
+    tool_calculate_ltv_cac,
+    tool_calculate_nrr,
     tool_calculate_predictive_cash,
     tool_calculate_revenue_attrition_impact,
+    tool_calculate_roa,
+    tool_calculate_roic,
 )
 from services.agent.prompts import (
     get_missing_param_guidance,
     get_missing_statement_guidance,
     resolve_subagent_routing,
 )
-
-RISK_SUB_INTENTS = {
-    "BREAK_EVEN",
-    "BREAK_EVEN_UNITS",
-    "CONCENTRATION",
-    "ATTRITION",
-}
 
 
 class RiskManagerSubagent:
@@ -52,10 +59,8 @@ class RiskManagerSubagent:
     def can_handle(sub_intent: Optional[str]) -> bool:
         if not sub_intent:
             return False
-        try:
-            return resolve_subagent_routing(sub_intent) == "RiskManagerSubagent"
-        except Exception:
-            return sub_intent in RISK_SUB_INTENTS
+        return resolve_subagent_routing(sub_intent) == "RiskManagerSubagent"
+
 
     @classmethod
     def handle_sub_intent(
@@ -232,6 +237,314 @@ class RiskManagerSubagent:
 
             return CopilotResponse(
                 reply=get_missing_param_guidance("ATTRITION"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 5. 3-Stage DuPont ROE Decomposition
+        if sub_intent == "DUPONT_ROE":
+            p_dict = extract_dupont_params(request.message, history=request.history)
+            net_inc = p_dict["net_income"]
+            rev = p_dict["revenue"]
+            assets = p_dict["total_assets"]
+            equity = p_dict["total_equity"]
+
+            if net_inc is not None and rev is not None and assets is not None and equity is not None:
+                res = tool_calculate_dupont_roe(
+                    net_income=net_inc,
+                    revenue=rev,
+                    total_assets=assets,
+                    total_equity=equity,
+                )
+                base_reply = (
+                    f"### 3-Stage DuPont Return on Equity (ROE) Decomposition\n\n"
+                    f"- **Annual Net Income**: ${float(res['net_income']):,.2f}\n"
+                    f"- **Annual Gross Revenue**: ${float(res['revenue']):,.2f}\n"
+                    f"- **Total Assets**: ${float(res['total_assets']):,.2f}\n"
+                    f"- **Total Shareholder Equity**: ${float(res['total_equity']):,.2f}\n\n"
+                    f"**DuPont Pillar Breakdown**:\n"
+                    f"1. **Operational Profitability (Net Margin)**: {res['net_profit_margin_pct']}%\n"
+                    f"2. **Asset Efficiency (Asset Turnover)**: {res['asset_turnover']}x\n"
+                    f"3. **Financial Leverage (Equity Multiplier)**: {res['equity_multiplier']}x\n\n"
+                    f"- **Aggregate Return on Equity (ROE)**: {res['return_on_equity_pct']}%\n"
+                    f"- **Performance Policy Tier**: `{res['status']}`\n"
+                    f"- **Primary Catalyst Diagnosis**: {res['primary_driver']}\n"
+                    f"- **Policy Evaluation**: {res['rationale']}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("DUPONT_ROE"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 6. Return on Invested Capital (ROIC)
+        if sub_intent == "ROIC":
+            p_dict = extract_roic_params(request.message, history=request.history)
+            ebit = p_dict["ebit"]
+            debt = p_dict["total_debt"]
+            equity = p_dict["total_equity"]
+            cash = p_dict["cash_and_equivalents"]
+            tax_rate = p_dict["tax_rate_pct"]
+            nopat = p_dict["nopat"]
+
+            if (ebit is not None or nopat is not None) and debt is not None and equity is not None:
+                res = tool_calculate_roic(
+                    ebit=ebit or Decimal("0.00"),
+                    total_debt=debt,
+                    total_equity=equity,
+                    cash_and_equivalents=cash,
+                    tax_rate_pct=tax_rate,
+                    nopat=nopat,
+                )
+                roic_val = res.get("roic_pct") or res.get("roic_percent") or "0.00"
+                tier_val = res.get("tier") or "UNKNOWN"
+                rec_val = res.get("recommendation") or res.get("interpretation") or ""
+                base_reply = (
+                    f"### Return on Invested Capital (ROIC) Audit\n\n"
+                    f"- **Operating Income (EBIT)**: ${float(res['ebit']):,.2f}\n"
+                    f"- **Net Operating Profit After Tax (NOPAT)**: ${float(res['nopat']):,.2f}\n"
+                    f"- **Total Debt Obligations**: ${float(res['total_debt']):,.2f}\n"
+                    f"- **Total Shareholder Equity**: ${float(res['total_equity']):,.2f}\n"
+                    f"- **Cash Deductions**: ${float(res['cash_and_equivalents']):,.2f}\n"
+                    f"- **Total Invested Capital**: ${float(res['invested_capital']):,.2f}\n"
+                    f"- **Return on Invested Capital (ROIC)**: **{roic_val}%**\n"
+                    f"- **Capital Efficiency Tier**: `{tier_val}`\n"
+                    f"- **Capital Allocation Guidance**: {rec_val}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("ROIC"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 7. Return on Assets (ROA)
+        if sub_intent == "ROA":
+            p_dict = extract_roa_params(request.message, history=request.history)
+            ni = p_dict["net_income"]
+            assets = p_dict["total_assets"]
+
+            if ni is not None and assets is not None:
+                res = tool_calculate_roa(
+                    net_income=ni,
+                    total_assets=assets,
+                )
+                roa_val = res.get("roa_pct") or res.get("roa_percent") or "0.00"
+                tier_val = res.get("tier") or "UNKNOWN"
+                rec_val = res.get("recommendation") or res.get("interpretation") or ""
+                base_reply = (
+                    f"### Return on Assets (ROA) Audit\n\n"
+                    f"- **Annual Net Income**: ${float(res['net_income']):,.2f}\n"
+                    f"- **Total Balance Sheet Assets**: ${float(res['total_assets']):,.2f}\n"
+                    f"- **Return on Assets (ROA)**: **{roa_val}%**\n"
+                    f"- **Asset Productivity Tier**: `{tier_val}`\n"
+                    f"- **Asset Velocity Assessment**: {rec_val}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("ROA"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 8. Economic Value Added (EVA)
+        if sub_intent == "EVA":
+            p_dict = extract_eva_params(request.message, history=request.history)
+            ebit = p_dict["ebit"]
+            cap = p_dict["invested_capital"]
+            wacc = p_dict["wacc_pct"]
+            tax_rate = p_dict["tax_rate_pct"]
+            nopat = p_dict["nopat"]
+
+            if (ebit is not None or nopat is not None) and cap is not None and wacc is not None:
+                res = tool_calculate_eva(
+                    ebit=ebit or Decimal("0.00"),
+                    invested_capital=cap,
+                    wacc_pct=wacc,
+                    tax_rate_pct=tax_rate,
+                    nopat=nopat,
+                )
+                eva_val = res.get("eva_dollars") or res.get("economic_value_added") or "0.00"
+                rec_val = res.get("recommendation") or res.get("interpretation") or ""
+                base_reply = (
+                    f"### Economic Value Added (EVA) Audit\n\n"
+                    f"- **Operating Income (EBIT)**: ${float(res['ebit']):,.2f}\n"
+                    f"- **Net Operating Profit After Tax (NOPAT)**: ${float(res['nopat']):,.2f}\n"
+                    f"- **Total Invested Capital**: ${float(res['invested_capital']):,.2f}\n"
+                    f"- **Cost of Capital (WACC)**: {res['wacc_pct']}%\n"
+                    f"- **Capital Charge**: ${float(res['capital_charge']):,.2f}\n"
+                    f"- **Economic Value Added (EVA)**: **${float(eva_val):,.2f}**\n"
+                    f"- **Economic Profit Status**: `{res['status']}`\n"
+                    f"- **Value Creation Assessment**: {rec_val}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("EVA"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 9. Customer Lifetime Value & LTV to CAC Ratio
+        if sub_intent == "LTV_CAC":
+            p_dict = extract_ltv_cac_params(request.message, history=request.history)
+            arpu = p_dict["arpu"]
+            margin = p_dict["gross_margin_pct"]
+            churn = p_dict["churn_rate_pct"]
+            cac = p_dict["cac"]
+            period = p_dict["period"]
+
+            if arpu is not None and margin is not None and churn is not None and cac is not None:
+                res = tool_calculate_ltv_cac(
+                    arpu=arpu,
+                    gross_margin_pct=margin,
+                    churn_rate_pct=churn,
+                    cac=cac,
+                    period=period,
+                )
+                arpu_val = res.get("annual_arpu") or res.get("arpu") or "0.00"
+                ltv_val = res.get("lifetime_value") or res.get("customer_lifetime_value") or "0.00"
+                cac_val = res.get("cac") or res.get("customer_acquisition_cost") or "0.00"
+                tier_val = res.get("unit_economics_tier") or res.get("tier") or "UNKNOWN"
+                rec_val = res.get("recommendation") or res.get("interpretation") or ""
+                churn_val = res.get("annual_churn_rate_pct") or res.get("churn_rate_pct") or "0.00"
+
+                base_reply = (
+                    f"### Customer Lifetime Value (LTV) & LTV/CAC Audit\n\n"
+                    f"- **Annual Revenue Per User (ARPU)**: ${float(arpu_val):,.2f}\n"
+                    f"- **Gross Margin**: {res['gross_margin_pct']}%\n"
+                    f"- **Customer Churn Rate**: {churn_val}%\n"
+                    f"- **Customer Lifetime Value (LTV)**: ${float(ltv_val):,.2f}\n"
+                    f"- **Customer Acquisition Cost (CAC)**: ${float(cac_val):,.2f}\n"
+                    f"- **LTV to CAC Ratio**: **{res['ltv_to_cac_ratio']}x**\n"
+                    f"- **Unit Economics Tier**: `{tier_val}`\n"
+                    f"- **Acquisition Efficiency Assessment**: {rec_val}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("LTV_CAC"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 10. CAC Payback Period
+        if sub_intent == "CAC_PAYBACK":
+            p_dict = extract_cac_payback_params(request.message, history=request.history)
+            cac = p_dict["cac"]
+            arpu = p_dict["monthly_arpu"]
+            margin = p_dict["gross_margin_pct"]
+
+            if cac is not None and arpu is not None and margin is not None:
+                res = tool_calculate_cac_payback(
+                    cac=cac,
+                    monthly_arpu=arpu,
+                    gross_margin_pct=margin,
+                )
+                gp_val = res.get("monthly_gross_profit_per_user") or res.get("monthly_gross_profit_per_customer") or "0.00"
+                payback_val = res.get("payback_months") or res.get("cac_payback_months") or "0.0"
+                tier_val = res.get("payback_tier") or res.get("tier") or "UNKNOWN"
+                rec_val = res.get("recommendation") or res.get("interpretation") or ""
+
+                base_reply = (
+                    f"### CAC Payback Period Audit\n\n"
+                    f"- **Customer Acquisition Cost (CAC)**: ${float(res['cac']):,.2f}\n"
+                    f"- **Monthly ARPU**: ${float(res['monthly_arpu']):,.2f}\n"
+                    f"- **Gross Margin**: {res['gross_margin_pct']}%\n"
+                    f"- **Monthly Gross Profit per Account**: ${float(gp_val):,.2f}\n"
+                    f"- **CAC Payback Period**: **{payback_val} months**\n"
+                    f"- **Payback Velocity Tier**: `{tier_val}`\n"
+                    f"- **Capital Recycling Assessment**: {rec_val}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("CAC_PAYBACK"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+        # 11. Net Revenue Retention (NRR) & Cohort Expansion
+        if sub_intent == "NRR":
+            p_dict = extract_nrr_params(request.message, history=request.history)
+            start_rev = p_dict["starting_mrr"]
+            exp_rev = p_dict["expansion_mrr"]
+            con_rev = p_dict["contraction_mrr"]
+            churn_rev = p_dict["churn_mrr"]
+            period = p_dict["period"]
+
+            if start_rev is not None:
+                res = tool_calculate_nrr(
+                    starting_mrr=start_rev,
+                    expansion_mrr=exp_rev,
+                    contraction_mrr=con_rev,
+                    churn_mrr=churn_rev,
+                    period=period,
+                )
+                start_val = res.get("starting_arr") or res.get("starting_revenue") or "0.00"
+                exp_val = res.get("expansion_arr") or res.get("expansion_revenue") or "0.00"
+                con_val = res.get("contraction_arr") or res.get("contraction_revenue") or "0.00"
+                churn_val = res.get("churn_arr") or res.get("churn_revenue") or "0.00"
+                end_val = res.get("ending_arr") or res.get("ending_revenue") or "0.00"
+                nrr_val = res.get("nrr_pct") or res.get("net_revenue_retention_pct") or "0.00"
+                grr_val = res.get("grr_pct") or res.get("gross_revenue_retention_pct") or "0.00"
+                tier_val = res.get("retention_tier") or res.get("tier") or "UNKNOWN"
+                rec_val = res.get("recommendation") or res.get("interpretation") or ""
+
+                base_reply = (
+                    f"### Net Revenue Retention (NRR) Audit\n\n"
+                    f"- **Starting Revenue Base**: ${float(start_val):,.2f}\n"
+                    f"- **Expansion Revenue**: +${float(exp_val):,.2f}\n"
+                    f"- **Contraction Revenue**: -${float(con_val):,.2f}\n"
+                    f"- **Churn Revenue**: -${float(churn_val):,.2f}\n"
+                    f"- **Ending Cohort Revenue**: ${float(end_val):,.2f}\n"
+                    f"- **Net Revenue Retention (NRR)**: **{nrr_val}%**\n"
+                    f"- **Gross Revenue Retention (GRR)**: **{grr_val}%**\n"
+                    f"- **Retention Health Tier**: `{tier_val}`\n"
+                    f"- **Account Expansion Assessment**: {rec_val}"
+                )
+                return CopilotResponse(
+                    reply=enrich_fn(base_reply, prompt_type="diagnostic"),
+                    intent_detected="CASH_DIAGNOSTIC",
+                    requires_biometric_hitl=False,
+                )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("NRR"),
+                intent_detected="CASH_DIAGNOSTIC",
+                requires_biometric_hitl=False,
+            )
+
+            return CopilotResponse(
+                reply=get_missing_param_guidance("NRR"),
                 intent_detected="CASH_DIAGNOSTIC",
                 requires_biometric_hitl=False,
             )

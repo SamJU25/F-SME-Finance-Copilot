@@ -37,74 +37,20 @@ def _parse_intent_label(raw_output: Optional[str]) -> Optional[str]:
     return None
 
 
+from services.decision.policy_loader import load_semantic_prototypes
+
+
 class FastEmbedSemanticRouter:
     """Zero-keyword vector semantic router using on-device FastEmbed embeddings (ONNX)."""
 
     _instance: Optional["FastEmbedSemanticRouter"] = None
 
-    INTENT_PROTOTYPES = {
-        "CASH_DIAGNOSTIC": (
-            "Inquiries evaluating business cash flow, cash runway duration in days, how many days left, "
-            "days of cash remaining, daily net burn rate, bank account balance, projected cash deficits, "
-            "working capital risk, cash conversion cycle, customer DSO payment terms, supplier DPO terms, "
-            "operating in the red, customer concentration risk, client revenue concentration, break-even sales, insolvency risk, "
-            "bouncing payroll, running out of money, bleeding cash, and liquidity health from bank statements."
-        ),
-        "CREDIT_UNDERWRITING": (
-            "Inquiries regarding borrowing business money, credit line qualification, merchant invoice factoring, "
-            "commercial loan options, pre-qualified financing options, loan eligibility, borrowing capacity, "
-            "debt facilities, options, and truth-in-lending APR interest rates."
-        ),
-        "ACTION_STAGING": (
-            "Requests to stage, commit, authorize, draw down funds from an approved credit facility, "
-            "transfer money, execute loan agreements, or pledge customer invoices into the staging ledger."
-        ),
-        "GENERAL_ASSISTANCE": (
-            "Conversational greetings, introductions, hello, hi, hey, who are you, how can you assist our business, "
-            "how do you help my company, what can you do, explaining assistant capabilities, onboarding guides, "
-            "general financial concepts, business definitions, corporate finance terminology, "
-            "accounting formulas, business formulas, metrics explanations, financial education, financial literacy questions, "
-            "what is my financial status, general business financial status overview without statements, "
-            "walkthrough, or general system help."
-        ),
-        "OFF_TOPIC": (
-            "Inquiries regarding humor, comedy, funny jokes, riddles, poetry, creative writing, cooking recipes, "
-            "food ingredients, sports matches, athletes, movies, entertainment, video games, gardening, "
-            "household repairs, plumbing, romantic advice, general science, quantum physics, astrology, "
-            "weather forecasts, geography, countries, capital cities, world history, ancient civilizations, "
-            "wars, philosophy, software engineering, coding, programming, computer code, writing python scripts, "
-            "algorithms, or non-business trivia."
-        ),
-    }
+    _intents, _subs, _disc = load_semantic_prototypes()
+    INTENT_PROTOTYPES = _intents
+    SUB_INTENT_PROTOTYPES = _subs
+    DISCLAIMER_PROTOTYPE = _disc
 
-    SUB_INTENT_PROTOTYPES = {
-        "DEFICIT": "Projected cash shortfall, upcoming cash deficit, running out of money, bouncing payroll, overdraft date, overdraft risk, insolvency warning.",
-        "RUNWAY": "Cash runway duration in days, how many days left to survive, time until cash runs out.",
-        "BURN": "Average daily cash burn, spending velocity, daily outflows, operational expense drain rate.",
-        "BALANCE": "Current available bank cash balance, closing balance, available funds in bank account.",
-        "ADVICE": "Strategic CFO recommendations, advice on improving cash flow, how to extend runway.",
-        "CONCENTRATION": "Client revenue concentration, top customer share, HHI index, customer dependency risk.",
-        "BREAK_EVEN": "Calculate break-even sales, break-even revenue, contribution margin, fixed costs, margin of safety.",
-        "AMORTIZATION": "Calculate monthly loan payment, loan amortization schedule, calculate loan installment and interest charges.",
-        "DSCR": "Calculate debt service coverage ratio, calculate DSCR, net operating income to debt service.",
-        "FACTORING": "Calculate invoice factoring advance, calculate factoring discount fee, net invoice proceeds, factor rate APR.",
-        "DEFENSIVE_INTERVAL": "Calculate defensive interval ratio, DIR days, quick assets covering daily operational expenses.",
-        "OPTIONS": "Pre-qualified financing options, what loans can we qualify for, borrowing eligibility, matched credit facilities, credit line limits.",
-        "WORKING_CAPITAL": "Working capital risk, cash conversion cycle, customer DSO payment terms, supplier DPO payment terms, trade terms, receivables terms.",
-        "FCCR": "Calculate fixed charge coverage ratio, FCCR, EBITDA and lease charges coverage.",
-        "DEBT_CAPACITY": "Calculate maximum prudent debt capacity, maximum borrowing capacity based on cash flow and DAB, safe leverage limit.",
-        "WCR": "Calculate working capital requirement, WCR, operating working capital needed, receivables and inventory minus payables.",
-        "OCF_RATIO": "Calculate operating cash flow ratio, operating cash flow to current liabilities, short-term debt coverage.",
-        "BREAK_EVEN_UNITS": "Calculate break-even units, break-even sales volume, how many units must we sell to break even.",
-        "ATTRITION": "Calculate customer churn impact, lost client impact on burn rate and cash runway, revenue attrition.",
-        "INVOICE_HASH": "Verify invoice hash, check invoice double financing, check blockchain invoice integrity, consortium registry check.",
-        "GENERAL": "General overview of financial health, business concepts, definitions, corporate finance formulas, accounting formulas, metrics explanations, and general financial education.",
-    }
 
-    DISCLAIMER_PROTOTYPE = (
-        "Refusals, AI capability disclaimers, cannot access bank statements, not privy to financial data, "
-        "unable to check records, do not have access to accounts, language model limitations."
-    )
 
     def __init__(self) -> None:
         try:
@@ -184,10 +130,15 @@ class FastEmbedSemanticRouter:
 
         financial_score = max(cash_score, credit_score, action_score)
 
-        # Off-topic detection without keyword lists
-        is_off_topic = off_score > financial_score and (off_score > greet_score or greet_score < 0.50)
+        # Off-topic detection using statistical significance margins (zero keyword lists)
+        is_off_topic = False
         if financial_score < 0.44 and greet_score < 0.48:
             is_off_topic = True
+        elif off_score > financial_score:
+            if (off_score - greet_score) >= 0.005 and off_score > 0.45:
+                is_off_topic = True
+            elif greet_score < 0.42:
+                is_off_topic = True
 
         if is_off_topic:
             return "GENERAL_ASSISTANCE", "OFF_TOPIC", True
@@ -293,8 +244,18 @@ def _query_llm_for_intent(
     try:
         provider = (config.provider if config else "offline").lower()
 
-        # Offline Local SLM (Llama 3.2 1B ONNX)
+        # Offline Local Engine (SME Finance LoRA)
         if provider == "offline":
+            from services.agent.local_transformers import LocalTransformersEngine
+            trans = LocalTransformersEngine.get_instance()
+            if trans.is_available():
+                raw = trans.generate(
+                    prompt=prompt,
+                    system_instruction=INTENT_SYSTEM_PROMPT,
+                    max_new_tokens=15,
+                    temperature=0.0,
+                )
+                return _parse_intent_label(raw)
             from services.agent.local_slm import LocalSLMEngine
             engine = LocalSLMEngine.get_instance()
             if engine.is_available():

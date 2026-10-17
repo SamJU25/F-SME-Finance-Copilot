@@ -67,6 +67,17 @@ def test_sanitize_cfo_reply_removes_user_screenshot_slop():
     assert sanitize_cfo_reply(slop_input) == expected
 
 
+def test_sanitize_cfo_reply_removes_greeting_hallucinated_bullets():
+    """Verify hallucinated metric bullets generated on casual greetings are stripped."""
+    dirty_greeting = (
+        "We are the Pragmatic CFO, dedicated strictly to answering cash runway questions and protecting business assets.\n"
+        "• Cash Flow Deficit: -$8792.00\n"
+        "• Burn Velocity: 1.25x MoM in EBITDA"
+    )
+    expected = "We are the Pragmatic CFO, dedicated strictly to answering cash runway questions and protecting business assets."
+    assert sanitize_cfo_reply(dirty_greeting) == expected
+
+
 def test_sanitize_cfo_reply_strips_dangling_list_numbers():
     """Verify dangling list markers at the end of generation are trimmed."""
     truncated = (
@@ -76,6 +87,75 @@ def test_sanitize_cfo_reply_strips_dangling_list_numbers():
     expected = "1. Data Collection: The SME provides access to financial records."
     assert sanitize_cfo_reply(truncated) == expected
 
+
+def test_sanitize_cfo_reply_removes_markdown_document_headers():
+    """Verify ### document headings emitted by fine-tuned SLM on casual chat are stripped."""
+    dirty_header_replies = [
+        (
+            "### Financial Diagnostic Summary\n\nI am your Autonomous SME Finance Copilot. How can I assist with your business finances today?",
+            "I am your Autonomous SME Finance Copilot. How can I assist with your business finances today?",
+        ),
+        (
+            "### Copilot Overview\n\nYour cash runway is 60 days at the current burn rate.",
+            "Your cash runway is 60 days at the current burn rate.",
+        ),
+        (
+            "### Strategic CFO Recommendation\n### Liquidity Details\nWe should accelerate accounts receivable collections.",
+            "We should accelerate accounts receivable collections.",
+        ),
+        (
+            "### Credit Underwriting Assessment\n\nYour Daily Average Balance qualifies for Prime financing tiers.",
+            "Your Daily Average Balance qualifies for Prime financing tiers.",
+        ),
+    ]
+
+    for dirty, expected in dirty_header_replies:
+        cleaned = sanitize_cfo_reply(dirty)
+        assert cleaned == expected, f"Expected '{expected}', got '{cleaned}'"
+
+
+def test_sanitize_cfo_reply_anti_slop_word_replacements():
+    """Verify inflated AI buzzwords are replaced with direct, non-slop active verbs."""
+    dirty_text = (
+        "We can leverage our cash reserves to streamline operations and build a robust treasury. "
+        "Utilize invoice factoring to supercharge your working capital, and foster supplier goodwill."
+    )
+    cleaned = sanitize_cfo_reply(dirty_text)
+    assert "leverage" not in cleaned.lower()
+    assert "streamline" not in cleaned.lower()
+    assert "robust" not in cleaned.lower()
+    assert "utilize" not in cleaned.lower()
+    assert "supercharge" not in cleaned.lower()
+    assert "foster" not in cleaned.lower()
+
+    assert "use" in cleaned.lower()
+    assert "simplify" in cleaned.lower()
+    assert "strong" in cleaned.lower()
+    assert "accelerate" in cleaned.lower()
+    assert "support" in cleaned.lower()
+
+
+def test_sanitize_cfo_reply_strips_emojis_and_fake_insight():
+    """Verify AI slop emojis, colon reveals, faux-insights, and conclusions are stripped."""
+    dirty_text = "🚀 Here's the thing: Your burn rate is critical. ✨ Ultimately, we need collections."
+    cleaned = sanitize_cfo_reply(dirty_text)
+    assert "🚀" not in cleaned
+    assert "✨" not in cleaned
+    assert "Here's the thing" not in cleaned
+    assert "Ultimately" not in cleaned
+    assert cleaned == "Your burn rate is critical. We need collections."
+
+
+def test_sanitize_cfo_reply_strips_truncated_unclosed_markdown():
+    """Verify truncated trailing lines with unclosed bold markdown tags are dropped."""
+    truncated = (
+        "We are the Pragmatic CFO, dedicated strictly to answering cash runway questions.\n"
+        "- **Next Action**: Review supplier payment terms.\n"
+        "- **Follow Up**: **1."
+    )
+    cleaned = sanitize_cfo_reply(truncated)
+    assert "- **Follow Up**: **1." not in cleaned
+    assert "- **Next Action**: Review supplier payment terms." in cleaned
 
 
 def test_prompts_contain_cfo_invariants():

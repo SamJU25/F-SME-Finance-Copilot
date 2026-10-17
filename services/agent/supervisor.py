@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 
 from services.agent.llm_bridge import query_external_llm
 from services.agent.local_slm import LocalSLMEngine, generate_local_reply
+from services.agent.local_transformers import LocalTransformersEngine
 from services.agent.subagents import (
     CreditSubagent,
     LiquiditySubagent,
@@ -54,7 +55,7 @@ from services.agent.schema import (
     CopilotResponse,
     LLMConfig,
 )
-from services.agent.session_store import session_store
+from services.agent.session_store import SessionRecord, session_store
 from services.agent.tools import (
     tool_analyze_cash_flow,
     tool_calculate_break_even,
@@ -76,20 +77,9 @@ from services.agent.tools import (
 from services.ingestion.csv_parser import CSVIngestionError
 
 
-INJECTION_PATTERN = re.compile(
-    r"(ignore|disregard|forget|override)\s+(all\s+)?(?:previous\s+)?(?:instructions|prompts|rules|guidelines|security)"
-    r"|system\s+override"
-    r"|you\s+are\s+now\s+(?:an?\s+)?unrestricted"
-    r"|bypass\s+(?:2fa|biometric|security|hitl|tier)"
-    r"|admin\s+mode\s+enabled",
-    re.IGNORECASE,
-)
+from services.decision.policy_loader import load_security_policy_config
 
-API_KEY_PATTERN = re.compile(
-    r"\b(?:sk-ant-[a-zA-Z0-9_\-]{20,}|sk-[a-zA-Z0-9_\-]{20,}|AIzaSy[a-zA-Z0-9_\-]{30,}|gsk_[a-zA-Z0-9_\-]{20,})\b"
-    r"|(?:api[_-]?key|secret[_-]?token|bearer[_-]?token|password|pin|routing[_-]?number)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{4,})['\"]?",
-    re.IGNORECASE,
-)
+_inj_pattern, _cred_pattern, _staging_defaults = load_security_policy_config()
 
 
 def inspect_for_prompt_injection(text: str) -> bool:
@@ -104,7 +94,7 @@ def inspect_for_prompt_injection(text: str) -> bool:
         res = DecisionEngineRegistry.get_instance().evaluate(req)
         return bool(res.output_payload.get("is_prompt_injection", False))
     except Exception:
-        return bool(INJECTION_PATTERN.search(text))
+        return bool(_inj_pattern.search(text))
 
 
 def inspect_for_api_key(text: str) -> bool:
@@ -119,7 +109,8 @@ def inspect_for_api_key(text: str) -> bool:
         res = DecisionEngineRegistry.get_instance().evaluate(req)
         return bool(res.output_payload.get("is_credential_leak", False))
     except Exception:
-        return bool(API_KEY_PATTERN.search(text))
+        return bool(_cred_pattern.search(text))
+
 
 
 from services.agent.dynamic_router import (
@@ -128,6 +119,19 @@ from services.agent.dynamic_router import (
     is_ai_disclaimer,
     is_off_topic_query,
 )
+
+
+def _append_session_context(directive: str, session_rec: Optional[SessionRecord]) -> str:
+    """Appends verified episodic facts and rolling conversation summary to prompt directives."""
+    if not session_rec:
+        return directive
+    updated = directive
+    if session_rec.financial_facts:
+        facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
+        updated += f"\nKnown verified business facts: {facts_str}"
+    if session_rec.rolling_summary:
+        updated += f"\nContext from earlier in this conversation: {session_rec.rolling_summary}"
+    return updated
 
 
 def detect_intent(message: str, request: AgentChatRequest, config: Optional[LLMConfig] = None) -> str:
@@ -233,6 +237,13 @@ def run_copilot_supervisor(
 
     # Statement Memory: Persist if provided; restore if omitted in follow-up turns
     if effective_csv:
+        if effective_csv.strip().startswith("%PDF") or effective_csv.strip().startswith("JVBERi0"):
+            from services.agent.tools import _normalize_statement_bytes
+            try:
+                norm_bytes = _normalize_statement_bytes(effective_csv)
+                effective_csv = norm_bytes.decode("utf-8")
+            except Exception:
+                pass
         session_store.update_statement(effective_session, effective_csv, tenant_id=effective_tenant)
         request.csv_content = effective_csv
     elif session_rec and session_rec.csv_content:
@@ -268,31 +279,71 @@ def run_copilot_supervisor(
                 session_store.set_financial_fact(effective_session, "max_qualified_limit", resp.metrics.max_qualified_limit)
         return resp
 
-    # Default to Local SLM (Llama 3.2 1B ONNX) if available and not in automated test harness
+    LOCAL_PROVIDERS = ("offline", "local", "local_native")
+    LOCAL_MODELS = (
+        "sme-finance-lora",
+        "sme-finance-mobile-lora",
+        "qwen-0.5b-mobile",
+        "sme-finance-copilot-merged",
+        "local",
+        "offline",
+    )
+
+    # Default to Local fine-tuned or SLM model if available and not in automated test harness
+    trans_engine = LocalTransformersEngine.get_instance()
+    slm_engine = LocalSLMEngine.get_instance()
     if (
         (
             effective_config is None
-            or ((effective_config.provider or "").lower() == "offline" and not effective_config.model_name)
+            or ((effective_config.provider or "").lower() in LOCAL_PROVIDERS and not effective_config.model_name)
         )
         and "PYTEST_CURRENT_TEST" not in os.environ
-        and LocalSLMEngine.get_instance().is_available()
+        and (trans_engine.is_available() or slm_engine.is_available())
     ):
-        effective_config = LLMConfig(provider="offline", model_name="llama-3.2-1b-instruct-onnx")
+        has_cuda = False
+        try:
+            import torch
+            has_cuda = torch.cuda.is_available()
+        except Exception:
+            pass
+        if has_cuda and trans_engine.is_available("sme-finance-lora"):
+            chosen_model = "sme-finance-lora"
+        elif trans_engine.is_available("sme-finance-mobile-lora"):
+            chosen_model = "sme-finance-mobile-lora"
+        elif trans_engine.is_available("qwen2.5-0.5b-instruct"):
+            chosen_model = "qwen2.5-0.5b-instruct"
+        else:
+            chosen_model = "sme-finance-mobile-lora"
+        effective_config = LLMConfig(provider="offline", model_name=chosen_model)
+
+    has_cuda = False
+    try:
+        import torch
+        has_cuda = torch.cuda.is_available()
+    except Exception:
+        pass
+
 
     intent = detect_intent(request.message, request, config=effective_config)
 
     is_local = (
         effective_config
-        and (effective_config.provider or "").lower() == "offline"
-        and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
+        and (effective_config.provider or "").lower() in LOCAL_PROVIDERS
+        and (
+            not effective_config.model_name
+            or (effective_config.model_name or "").lower() in LOCAL_MODELS
+        )
     )
 
     def _enrich_reply(base_reply: str, prompt_type: str = "diagnostic") -> str:
-        # 1. On-Device Local SLM Execution (Meta Llama-3.2-1B-Instruct ONNX)
+        # 1. On-Device Local SLM / Fine-Tuned Model Execution
         is_explicit_local = (
             effective_config
-            and (effective_config.provider or "").lower() == "offline"
-            and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
+            and (effective_config.provider or "").lower() in LOCAL_PROVIDERS
+            and (
+                not effective_config.model_name
+                or (effective_config.model_name or "").lower() in LOCAL_MODELS
+            )
         )
         if is_explicit_local:
             sys_directive = (
@@ -300,21 +351,28 @@ def run_copilot_supervisor(
                 if prompt_type == "underwriting"
                 else get_cash_diagnostic_prompt(base_reply)
             )
-            if session_rec and session_rec.financial_facts:
-                facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
-                sys_directive += f"\nKnown verified business facts: {facts_str}"
+            sys_directive = _append_session_context(sys_directive, session_rec)
             raw_advice = generate_local_reply(
                 prompt=request.message,
                 system_instruction=sys_directive,
                 history=request.history,
                 max_new_tokens=160,
+                model_name=effective_config.model_name if effective_config else None,
             )
             local_advice = sanitize_cfo_reply(raw_advice) if raw_advice else None
             if local_advice and len(local_advice) > 20:
                 if not is_ai_disclaimer(local_advice):
-                    if not ("### Financial Diagnostic Summary" in local_advice or "### Credit Underwriting Assessment" in local_advice):
-                        return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{local_advice}"
-                    return local_advice
+                    return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{local_advice}"
+
+            if "PYTEST_CURRENT_TEST" not in os.environ:
+                from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS
+                any_local = any(trans_engine.is_available(m) for m in SUPPORTED_LOCAL_MODELS.keys()) or slm_engine.is_available()
+                if not any_local:
+                    return (
+                        f"{base_reply}\n\n"
+                        f"> ℹ️ *Strategic CFO recommendations require an on-device AI model. No local AI model was detected on disk. "
+                        f"Please download a model first using the **Download Model** button below or in AI Provider Settings.*"
+                    )
             return base_reply
 
         # 2. Pure offline fallback (deterministic templates)
@@ -327,9 +385,7 @@ def run_copilot_supervisor(
             if prompt_type == "underwriting"
             else get_cash_diagnostic_prompt(base_reply)
         )
-        if session_rec and session_rec.financial_facts:
-            facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
-            sys_directive += f"\nKnown verified business facts: {facts_str}"
+        sys_directive = _append_session_context(sys_directive, session_rec)
         ai_reply = query_external_llm(
             prompt=request.message,
             system_instruction=sys_directive,
@@ -340,9 +396,7 @@ def run_copilot_supervisor(
             cleaned_ai = sanitize_cfo_reply(ai_reply)
             if cleaned_ai and len(cleaned_ai) > 20:
                 if not is_ai_disclaimer(cleaned_ai):
-                    if not ("### Financial Diagnostic Summary" in cleaned_ai or "### Credit Underwriting Assessment" in cleaned_ai):
-                        return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{cleaned_ai}"
-                    return cleaned_ai
+                    return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{cleaned_ai}"
         return base_reply
 
     # 0. Prompt Injection Defense Barrier
@@ -377,9 +431,19 @@ def run_copilot_supervisor(
 
     # 1. Action Staging Flow (Tier 2 Proposal Creation)
     if intent == "ACTION_STAGING":
-        action_type = request.staged_action_type or "DRAW_CREDIT_LINE"
-        amount_cents = request.staged_amount_cents or 2500000  # Default $25,000.00
-        target = request.staged_target or "SME-LIQUIDITY-FACILITY"
+        from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
+        req_defaults = DecisionRequest(
+            domain=DecisionDomain.SECURITY_GATE,
+            input_state={"get_staging_defaults": True, "action_type": request.staged_action_type or ""},
+            execution_mode="DETERMINISTIC_ONLY",
+        )
+        res_defaults = DecisionEngineRegistry.get_instance().evaluate(req_defaults)
+        defaults_payload = res_defaults.output_payload
+
+        action_type = request.staged_action_type or str(defaults_payload.get("default_action_type", "DRAW_CREDIT_LINE"))
+        amount_cents = request.staged_amount_cents or int(defaults_payload.get("default_amount_cents", 2500000))
+        target = request.staged_target or str(defaults_payload.get("default_target_identifier", "SME-LIQUIDITY-FACILITY"))
+
 
         # Check if amount was mentioned in message text (e.g. "$15,000" or "50000")
         amount_match = re.search(r"\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)", request.message)
@@ -436,12 +500,14 @@ def run_copilot_supervisor(
     if intent == "CREDIT_UNDERWRITING":
         if not effective_csv:
             sys_directive = get_missing_statement_prompt("underwriting")
+            sys_directive = _append_session_context(sys_directive, session_rec)
             if is_local:
                 local_reply = generate_local_reply(
                     prompt=request.message,
                     system_instruction=sys_directive,
                     history=request.history,
                     max_new_tokens=220,
+                    model_name=effective_config.model_name if effective_config else None,
                 )
                 if local_reply:
                     return _finalize(CopilotResponse(
@@ -523,12 +589,14 @@ def run_copilot_supervisor(
     if intent == "CASH_DIAGNOSTIC":
         if not effective_csv:
             sys_directive = get_missing_statement_prompt("diagnostic")
+            sys_directive = _append_session_context(sys_directive, session_rec)
             if is_local:
                 local_reply = generate_local_reply(
                     prompt=request.message,
                     system_instruction=sys_directive,
                     history=request.history,
                     max_new_tokens=220,
+                    model_name=effective_config.model_name if effective_config else None,
                 )
                 if local_reply:
                     return _finalize(CopilotResponse(
@@ -667,35 +735,50 @@ def run_copilot_supervisor(
                 shortfall_val = cash_result.get("projected_shortfall_amount")
                 bridge_val = cash_result.get("recommended_bridge_amount") or shortfall_val
                 bridge_text = f"${float(bridge_val):,.2f}" if bridge_val else "liquidity support"
-                headline = (
-                    f"Financial Health Assessment: Your cash status is {cash_result['cash_status']} with {runway_desc} of runway. "
-                    f"A cash shortfall of ${cash_result.get('projected_shortfall_amount', '0.00')} is projected on {cash_result.get('projected_deficit_date', 'upcoming dates')} "
-                    f"due to {cash_result.get('primary_deficit_trigger', 'recurring commitments')}. "
-                    f"Recommended action: Stage a working capital bridge facility of {bridge_text} to protect operating continuity."
+                tmpl = evaluate_persona_policy(prompt_type="ADVICE_DEFICIT").get("guidance_text", "")
+                headline = tmpl.format(
+                    cash_status=cash_result["cash_status"],
+                    runway_desc=runway_desc,
+                    shortfall=cash_result.get("projected_shortfall_amount", "0.00"),
+                    date=cash_result.get("projected_deficit_date", "upcoming dates"),
+                    trigger=cash_result.get("primary_deficit_trigger", "recurring commitments"),
+                    bridge=bridge_text,
                 )
             elif cash_result.get("cash_status") == "WATCH":
-                headline = (
-                    f"Financial Health Assessment: Your cash status is WATCH with {runway_desc} of runway. "
-                    f"While current cash of ${float(cash_result['current_balance']):,.2f} covers near-term needs, "
-                    f"net daily outflows of ${float(cash_result['average_daily_burn']):,.2f}/day will deplete liquidity in approximately {cash_result['runway_days']} days. "
-                    "Recommended action: Accelerate invoice collections and evaluate a pre-qualified working capital credit line."
+                tmpl = evaluate_persona_policy(prompt_type="ADVICE_WATCH").get("guidance_text", "")
+                headline = tmpl.format(
+                    cash_status="WATCH",
+                    runway_desc=runway_desc,
+                    balance=f"{float(cash_result['current_balance']):,.2f}",
+                    burn=f"{float(cash_result['average_daily_burn']):,.2f}",
+                    runway_days=cash_result["runway_days"],
                 )
             else:
-                headline = (
-                    f"Financial Health Assessment: Your cash status is HEALTHY with {runway_desc} of runway. "
-                    f"Current balance of ${float(cash_result['current_balance']):,.2f} provides strong operational buffer against daily burn."
+                tmpl = evaluate_persona_policy(prompt_type="ADVICE_HEALTHY").get("guidance_text", "")
+                headline = tmpl.format(
+                    cash_status="HEALTHY",
+                    runway_desc=runway_desc,
+                    balance=f"{float(cash_result['current_balance']):,.2f}",
                 )
             reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
         elif sub_intent == "DEFICIT":
             if cash_result.get("has_projected_deficit"):
-                headline = (
-                    f"Deficit Early-Warning: Projected shortfall of ${cash_result.get('projected_shortfall_amount', '0.00')} in {cash_result.get('days_until_deficit', 'N/A')} days "
-                    f"({cash_result.get('projected_deficit_date', 'N/A')}). Severity is {cash_result.get('deficit_severity', 'WARNING')}. "
-                    f"Primary driver: {cash_result.get('primary_deficit_trigger', 'operational burn')}."
+                tmpl = evaluate_persona_policy(prompt_type="DEFICIT_EARLY_WARNING").get("guidance_text", "")
+                headline = tmpl.format(
+                    shortfall=cash_result.get("projected_shortfall_amount", "0.00"),
+                    days=cash_result.get("days_until_deficit", "N/A"),
+                    date=cash_result.get("projected_deficit_date", "N/A"),
+                    severity=cash_result.get("deficit_severity", "WARNING"),
+                    trigger=cash_result.get("primary_deficit_trigger", "operational burn"),
                 )
             else:
-                headline = f"No immediate deficit detected over the projected horizon. Your cash runway stands at {runway_desc} (Status: {cash_result['cash_status']})."
+                tmpl = evaluate_persona_policy(prompt_type="DEFICIT_SAFE").get("guidance_text", "")
+                headline = tmpl.format(
+                    runway_desc=runway_desc,
+                    cash_status=cash_result["cash_status"],
+                )
             reply = f"{headline}{pred_snippet}{target_snippet}{wc_snippet}"
+
         else:
             pred_line = f"\n- **Liquidity Forecast**: {pred_snippet.strip()}" if pred_snippet else ""
             target_line = f"\n- **Target Horizon**: {target_snippet.strip()}" if target_snippet else ""
@@ -724,38 +807,57 @@ def run_copilot_supervisor(
             requires_biometric_hitl=False,
         ))
 
+
     is_local = (
         effective_config
-        and (effective_config.provider or "").lower() == "offline"
-        and (effective_config.model_name or "") in ("llama-3.2-1b-instruct-onnx", "llama-3.2", "llama")
+        and (effective_config.provider or "").lower() in LOCAL_PROVIDERS
+        and (
+            not effective_config.model_name
+            or (effective_config.model_name or "").lower() in LOCAL_MODELS
+        )
     )
     if is_local:
         sys_directive = get_conversational_system_prompt()
         if effective_csv:
             sys_directive += "\nNote: A transactional bank statement is already loaded into session."
-        if session_rec and session_rec.financial_facts:
-            facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
-            sys_directive += f"\nKnown verified business facts: {facts_str}"
+        else:
+            sys_directive += (
+                "\nCRITICAL SAFETY DIRECTIVE: No bank statement CSV has been loaded yet. "
+                "You MUST NOT invent, guess, or output any financial figures, dollar amounts, "
+                "deficit amounts, burn rates, or metric bullet lists. "
+                "Introduce yourself directly in one or two sentences as the Autonomous SME Finance Copilot "
+                "and ask the business owner to upload their bank statement CSV."
+            )
+        sys_directive = _append_session_context(sys_directive, session_rec)
         local_reply = generate_local_reply(
             prompt=request.message,
             system_instruction=sys_directive,
             history=request.history,
-            max_new_tokens=220,
+            max_new_tokens=80,
+            model_name=effective_config.model_name if effective_config else None,
         )
         if local_reply:
-            return _finalize(CopilotResponse(
-                reply=sanitize_cfo_reply(local_reply),
-                intent_detected="GENERAL_ASSISTANCE",
-                requires_biometric_hitl=False,
-            ))
+            cleaned_local = sanitize_cfo_reply(local_reply)
+            if cleaned_local:
+                return _finalize(CopilotResponse(
+                    reply=cleaned_local,
+                    intent_detected="GENERAL_ASSISTANCE",
+                    requires_biometric_hitl=False,
+                ))
 
     if effective_config and (effective_config.provider or "").lower() != "offline":
         sys_directive = get_conversational_system_prompt()
         if effective_csv:
             sys_directive += "\nNote: A transactional bank statement is already loaded into session."
-        if session_rec and session_rec.financial_facts:
-            facts_str = ", ".join(f"{k}: {v}" for k, v in session_rec.financial_facts.items())
-            sys_directive += f"\nKnown verified business facts: {facts_str}"
+        else:
+            sys_directive += (
+                "\nCRITICAL SAFETY DIRECTIVE: No bank statement CSV has been loaded yet. "
+                "You MUST NOT invent, guess, or output any financial figures, dollar amounts, "
+                "deficit amounts, burn rates, or metric bullet lists. "
+                "Introduce yourself directly in one or two sentences as the Autonomous SME Finance Copilot "
+                "and ask the business owner to upload their bank statement CSV."
+            )
+        sys_directive = _append_session_context(sys_directive, session_rec)
         ai_reply = query_external_llm(
             prompt=request.message,
             system_instruction=sys_directive,
@@ -763,21 +865,44 @@ def run_copilot_supervisor(
             history=request.history,
         )
         if ai_reply:
-            return _finalize(CopilotResponse(
-                reply=sanitize_cfo_reply(ai_reply),
-                intent_detected="GENERAL_ASSISTANCE",
-                requires_biometric_hitl=False,
-            ))
+            cleaned_ai = sanitize_cfo_reply(ai_reply)
+            if cleaned_ai:
+                return _finalize(CopilotResponse(
+                    reply=cleaned_ai,
+                    intent_detected="GENERAL_ASSISTANCE",
+                    requires_biometric_hitl=False,
+                ))
 
     if effective_csv:
         general_reply = evaluate_persona_policy(prompt_type="GENERAL_STATEMENT_LOADED").get("guidance_text") or (
-            "Statement loaded. You can ask about cash runway, daily burn rate, projected deficits, or credit qualification."
+            "Your bank statement is loaded. I am ready to analyze your cash runway, daily burn rate, projected deficits, or evaluate credit qualification."
         )
     else:
         general_reply = evaluate_persona_policy(prompt_type="GENERAL_NO_STATEMENT").get("guidance_text") or (
-            "I am the Autonomous SME Finance Copilot. "
-            "Upload your bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity."
+            "Hello! I am your Autonomous SME Finance Copilot. "
+            "How can I assist with your business finances today? We can analyze your cash runway, evaluate borrowing capacity, or you can upload a bank statement CSV to run a complete financial health diagnostic."
         )
+
+    # If running in local/offline mode and no local model weights are found on disk, professionally guide user
+    if is_local and "PYTEST_CURRENT_TEST" not in os.environ:
+        from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS
+        any_local = any(trans_engine.is_available(m) for m in SUPPORTED_LOCAL_MODELS.keys()) or slm_engine.is_available()
+        if not any_local:
+            if effective_csv:
+                general_reply += (
+                    "\n\n> ℹ️ **Notice**: No local AI model was detected on disk. "
+                    "Deterministic financial diagnostics and cash calculations are operational. "
+                    "To enable AI strategic commentary and conversational dialogue, please download a model first using the **Download Model** button below or in AI Provider Settings."
+                )
+            else:
+                general_reply = (
+                    "Hello! I am your Autonomous SME Finance Copilot.\n\n"
+                    "No local AI model was detected on disk. "
+                    "Please download a model first to enable offline conversational dialogue and strategic recommendations:\n"
+                    "Click the **Download Model** button below, or open **AI Provider Settings** (gear icon) to manage local models.\n\n"
+                    "You can also upload a bank statement CSV to analyze your cash runway, burn rate, and borrowing capacity with deterministic financial rules."
+                )
+
     return _finalize(CopilotResponse(
         reply=general_reply,
         intent_detected="GENERAL_ASSISTANCE",

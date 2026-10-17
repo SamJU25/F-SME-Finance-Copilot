@@ -62,7 +62,15 @@ def _extract_history_turn(h: Any) -> tuple[str, str]:
 
 PROVIDER_DEFAULTS = {
     "offline": {
-        "model": "llama-3.2-1b-instruct-onnx",
+        "model": "sme-finance-lora",
+        "url": "local",
+    },
+    "local": {
+        "model": "sme-finance-lora",
+        "url": "local",
+    },
+    "local_native": {
+        "model": "sme-finance-lora",
         "url": "local",
     },
     "gemini": {
@@ -115,29 +123,53 @@ def _resolve_endpoint(provider: str, base_url: Optional[str], model: Optional[st
     if p_lower == "anthropic":
         return base_url or defaults.get("url", ""), model_name
 
-    return "local", "llama-3.2-1b-instruct-onnx"
+    if p_lower in ["offline", "local", "local_native"]:
+        from services.agent.local_transformers import resolve_canonical_model_name
+        return "local", resolve_canonical_model_name(model or "sme-finance-lora")
+
+    return "local", "sme-finance-lora"
 
 
 def test_llm_connection(req: TestConnectionRequest) -> TestConnectionResponse:
     """Sends a lightweight verification probe to the target LLM provider."""
     provider = (req.provider or "offline").lower()
 
-    if provider == "offline":
-        from services.agent.local_slm import LocalSLMEngine
-        engine = LocalSLMEngine.get_instance()
-        if engine.is_available():
+    if provider in ["local", "local_native", "offline"]:
+        from services.agent.local_transformers import LocalTransformersEngine, resolve_canonical_model_name
+        engine = LocalTransformersEngine.get_instance()
+        target_model = resolve_canonical_model_name(req.model_name or "sme-finance-lora")
+
+        if engine.is_available(target_model):
             return TestConnectionResponse(
                 success=True,
-                message="Offline on-device AI ready: Meta Llama-3.2-1B-Instruct (CPU INT4, zero external keys).",
-                provider="offline",
-                model_name="llama-3.2-1b-instruct-onnx",
+                message=f"Local AI model ready: '{target_model}' is installed and ready for offline inference (100% PyTorch/Transformers, 0 external daemons).",
+                provider=provider,
+                model_name=target_model,
                 latency_ms=0,
             )
+
+        from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS
+        any_installed = any(engine.is_available(m) for m in SUPPORTED_LOCAL_MODELS.keys())
+        if not any_installed:
+            return TestConnectionResponse(
+                success=False,
+                message=(
+                    f"Model '{target_model}' is not installed locally on disk. No local AI models are currently installed. "
+                    f"Please click 'Download Model' below in Settings to install a model."
+                ),
+                provider=provider,
+                model_name=target_model,
+                latency_ms=0,
+            )
+
         return TestConnectionResponse(
             success=False,
-            message="Llama-3.2-1B ONNX weights not found on disk. Please verify models/llama-3.2-1b-instruct-onnx directory.",
-            provider="offline",
-            model_name="llama-3.2-1b-instruct-onnx",
+            message=(
+                f"Model '{target_model}' is not installed locally on disk. "
+                f"Please click 'Download Model' below in Settings to install this model."
+            ),
+            provider=provider,
+            model_name=target_model,
             latency_ms=0,
         )
 
@@ -264,15 +296,27 @@ def query_external_llm(
     config: Optional[LLMConfig],
     history: Optional[List[Any]] = None,
 ) -> Optional[str]:
-    """Queries configured external LLM with PII redaction, multi-turn history, and graceful fallback."""
+    """Queries configured external or local LLM with PII redaction, multi-turn history, and graceful fallback."""
     if not config or (config.provider or "offline").lower() == "offline":
         return None
 
     provider = config.provider.lower()
+    sanitized_prompt = mask_pii(prompt)
+
+    if provider in ["local", "local_native"]:
+        from services.agent.local_transformers import LocalTransformersEngine
+        engine = LocalTransformersEngine.get_instance()
+        return engine.generate(
+            prompt=sanitized_prompt,
+            system_instruction=system_instruction,
+            history=history,
+            max_new_tokens=800,
+            temperature=0.1,
+        )
+
     api_key = (config.api_key or "").strip() if config.api_key else None
     base_url = (config.base_url or "").strip() if config.base_url else None
     endpoint, model = _resolve_endpoint(provider, base_url, config.model_name)
-    sanitized_prompt = mask_pii(prompt)
 
     try:
         with httpx.Client(timeout=10.0) as client:
@@ -362,7 +406,16 @@ def query_external_llm(
 
 FALLBACK_CATALOG: dict[str, list[ModelItem]] = {
     "offline": [
-        ModelItem(id="llama-3.2-1b-instruct-onnx", name="Meta Llama-3.2-1B-Instruct (On-Device ONNX)"),
+        ModelItem(id="sme-finance-lora", name="SME Finance Copilot 3B (Flagship LoRA 4-Bit)"),
+        ModelItem(id="sme-finance-mobile-lora", name="SME Finance Copilot Mobile 0.5B (Edge LoRA)"),
+    ],
+    "local": [
+        ModelItem(id="sme-finance-lora", name="SME Finance Copilot 3B (Flagship LoRA 4-Bit)"),
+        ModelItem(id="sme-finance-mobile-lora", name="SME Finance Copilot Mobile 0.5B (Edge LoRA)"),
+    ],
+    "local_native": [
+        ModelItem(id="sme-finance-lora", name="SME Finance Copilot 3B (Flagship LoRA 4-Bit)"),
+        ModelItem(id="sme-finance-mobile-lora", name="SME Finance Copilot Mobile 0.5B (Edge LoRA)"),
     ],
     "gemini": [
         ModelItem(id="gemini-2.0-flash", name="Gemini 2.0 Flash (Recommended)"),
@@ -399,15 +452,33 @@ def fetch_remote_models(req: FetchModelsRequest) -> FetchModelsResponse:
     provider = (req.provider or "offline").lower()
     fallbacks = FALLBACK_CATALOG.get(provider, [ModelItem(id="custom-model", name="Custom Model")])
 
-    if provider == "offline":
-        from services.agent.local_slm import LocalSLMEngine
-        engine = LocalSLMEngine.get_instance()
-        models = [ModelItem(id="llama-3.2-1b-instruct-onnx", name="Meta Llama-3.2-1B-Instruct (On-Device ONNX)")]
+    if provider in ["local", "local_native", "offline"]:
+        from services.agent.local_transformers import LocalTransformersEngine, SUPPORTED_LOCAL_MODELS
+        engine = LocalTransformersEngine.get_instance()
+        models = []
+        for m_id, m_meta in SUPPORTED_LOCAL_MODELS.items():
+            # Only show fine-tuned models on list to avoid confusing business users with base models
+            if not m_meta.get("is_lora", False):
+                continue
+            installed = engine.is_available(m_id)
+            tag = "Ready" if installed else "Not Downloaded"
+            models.append(
+                ModelItem(
+                    id=m_id,
+                    name=f"{m_meta['name']} [{tag}]",
+                )
+            )
+        ready_count = sum(1 for m in models if "[Ready]" in m.name)
+        msg = (
+            "No local AI models found on disk. Click the 'Download Model' button below to install a model."
+            if ready_count == 0
+            else f"{ready_count} of {len(models)} local models installed on disk."
+        )
         return FetchModelsResponse(
             success=True,
-            provider="offline",
+            provider=provider,
             models=models,
-            message="Offline engine ready with local on-device neural model (Meta Llama-3.2-1B-Instruct)." if engine.is_available() else "Offline on-device model files not detected on disk.",
+            message=msg,
         )
 
     api_key = (req.api_key or "").strip()

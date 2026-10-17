@@ -9,11 +9,16 @@ from __future__ import annotations
 import json
 from typing import Optional
 from fastapi import APIRouter, Header, HTTPException, status
+from starlette.concurrency import run_in_threadpool
 
 from services.agent.llm_bridge import fetch_remote_models, test_llm_connection
 from services.agent.schema import (
     AgentChatRequest,
     CopilotResponse,
+    DeleteModelRequest,
+    DeleteModelResponse,
+    DownloadModelRequest,
+    DownloadModelResponse,
     FetchModelsRequest,
     FetchModelsResponse,
     LLMConfig,
@@ -38,7 +43,7 @@ async def agent_test_connection(
     request: TestConnectionRequest,
 ) -> TestConnectionResponse:
     """Sends a lightweight verification probe to the target LLM provider."""
-    return test_llm_connection(request)
+    return await run_in_threadpool(test_llm_connection, request)
 
 
 @router.post(
@@ -52,7 +57,41 @@ async def agent_fetch_models(
     request: FetchModelsRequest,
 ) -> FetchModelsResponse:
     """Dynamically queries the target provider's models catalog."""
-    return fetch_remote_models(request)
+    return await run_in_threadpool(fetch_remote_models, request)
+
+
+@router.post(
+    "/download-model",
+    response_model=DownloadModelResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Download Local Model Weights on Demand",
+    description="Explicitly downloads weights for supported local models (sme-finance-lora or qwen-0.5b-mobile) with robust exception handling.",
+)
+async def agent_download_model(
+    request: DownloadModelRequest,
+) -> DownloadModelResponse:
+    """Explicitly downloads target model weights on demand without silent auto-downloads."""
+    from services.agent.local_transformers import LocalTransformersEngine
+    engine = LocalTransformersEngine.get_instance()
+    res = await run_in_threadpool(engine.download_model, request.model_name)
+    return DownloadModelResponse(**res)
+
+
+@router.post(
+    "/delete-model",
+    response_model=DeleteModelResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Delete Downloaded AI Model",
+    description="Deletes downloaded model files to free up disk space.",
+)
+async def agent_delete_model(
+    request: DeleteModelRequest,
+) -> DeleteModelResponse:
+    """Removes downloaded model files to free up disk space."""
+    from services.agent.local_transformers import LocalTransformersEngine
+    engine = LocalTransformersEngine.get_instance()
+    res = await run_in_threadpool(engine.delete_model, request.model_name)
+    return DeleteModelResponse(**res)
 
 
 @router.get(
@@ -126,7 +165,8 @@ async def agent_chat(
             except Exception:
                 pass
 
-        response = run_copilot_supervisor(
+        response = await run_in_threadpool(
+            run_copilot_supervisor,
             request,
             tenant_id=effective_tenant,
             llm_config=effective_llm_config,

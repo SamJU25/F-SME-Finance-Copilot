@@ -38,6 +38,7 @@ class SessionRecord(BaseModel):
     csv_content: Optional[str] = None
     cached_dossier: Optional[Dict[str, Any]] = None
     financial_facts: Dict[str, Any] = Field(default_factory=dict)
+    rolling_summary: Optional[str] = None
 
 
 class SessionStore:
@@ -162,6 +163,14 @@ class SessionStore:
             # Maintain reasonable maximum capacity (last 50 turns) to prevent memory leak
             if len(rec.messages) > 50:
                 rec.messages = rec.messages[-50:]
+
+            # If messages exceed active sliding window (6 turns), maintain rolling summary of older turns
+            if len(rec.messages) > 6:
+                try:
+                    from services.agent.context_summarizer import generate_deterministic_summary
+                    rec.rolling_summary = generate_deterministic_summary(rec.messages[:-6])
+                except Exception as exc:
+                    logger.debug("Could not generate rolling summary for session %s: %s", session_id, exc)
 
             rec.updated_at = datetime.now(timezone.utc).isoformat()
             self._persist_session(rec)

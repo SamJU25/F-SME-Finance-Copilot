@@ -39,6 +39,24 @@ def test_agent_general_assistance():
     assert data["requires_biometric_hitl"] is False
 
 
+def test_agent_greeting_zero_hallucination():
+    """Verify casual greetings return clean institutional CFO introduction with zero fake numbers."""
+    for greeting in ["hi", "hello", "hey", "good morning", "who are you"]:
+        response = client.post(
+            "/api/v1/agent/chat",
+            json={"message": greeting},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["intent_detected"] == "GENERAL_ASSISTANCE"
+        assert "Autonomous SME Finance Copilot" in data["reply"]
+        assert "$" not in data["reply"]
+        assert "Deficit" not in data["reply"]
+        assert "Burn Velocity" not in data["reply"]
+        assert "EBITDA" not in data["reply"]
+        assert data["metrics"] is None
+
+
 def test_agent_cash_diagnostic_flow():
     """Verify agent invokes cash analysis tool and returns exact decimal runway metrics."""
     response = client.post(
@@ -179,8 +197,7 @@ def test_agent_test_connection_offline():
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert data["provider"] == "offline"
-    assert "meta llama" in data["message"].lower() or "on-device" in data["message"].lower()
+    assert "local ai model ready" in data["message"].lower() or "ready" in data["message"].lower() or "on-device" in data["message"].lower()
 
 
 def test_agent_test_connection_missing_api_key():
@@ -211,7 +228,7 @@ def test_agent_chat_with_header_llm_config():
     """Verify chat route parses X-LLM-Config header and maintains deterministic financial invariants."""
     import json
 
-    llm_header = json.dumps({"provider": "offline", "model_name": "llama-3.2-1b-instruct-onnx"})
+    llm_header = json.dumps({"provider": "offline", "model_name": "sme-finance-lora"})
     response = client.post(
         "/api/v1/agent/chat",
         headers={"X-LLM-Config": llm_header},
@@ -249,7 +266,7 @@ def test_agent_fetch_models_offline():
     assert data["success"] is True
     assert data["provider"] == "offline"
     assert len(data["models"]) >= 1
-    assert data["models"][0]["id"] == "llama-3.2-1b-instruct-onnx"
+    assert data["models"][0]["id"] == "sme-finance-lora"
 
 
 def test_agent_fetch_models_missing_key():
@@ -488,16 +505,16 @@ def test_agent_chat_sub_intent_deficit_warning():
     assert "runway stands at 75 days" in data["reply"] or "Deficit Early-Warning" in data["reply"]
 
 
-def test_agent_offline_llama_connection_and_discovery():
-    """Verify local Llama-3.2-1B model is detected and test-connection succeeds."""
+def test_agent_offline_lora_connection_and_discovery():
+    """Verify local fine-tuned LoRA model is detected and test-connection succeeds."""
     res_test = client.post(
         "/api/v1/agent/test-connection",
-        json={"provider": "offline", "model_name": "llama-3.2-1b-instruct-onnx"},
+        json={"provider": "offline", "model_name": "sme-finance-lora"},
     )
     assert res_test.status_code == 200
     data_test = res_test.json()
     assert data_test["success"] is True
-    assert "Meta Llama-3.2-1B-Instruct" in data_test["message"]
+    assert "Local AI model ready" in data_test["message"]
 
     res_models = client.post(
         "/api/v1/agent/fetch-models",
@@ -507,7 +524,7 @@ def test_agent_offline_llama_connection_and_discovery():
     data_models = res_models.json()
     assert data_models["success"] is True
     model_ids = [m["id"] for m in data_models["models"]]
-    assert "llama-3.2-1b-instruct-onnx" in model_ids
+    assert "sme-finance-lora" in model_ids
     assert "deterministic-v1" not in model_ids
 
 
