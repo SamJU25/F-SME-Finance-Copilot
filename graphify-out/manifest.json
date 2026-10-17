@@ -1315,7 +1315,7 @@
   },
   "contracts/InvoiceRegistry.sol": {
     "mtime": 1791935009.5218325,
-    "seen": 1792252581.3046222,
+    "seen": 1792254231.7644367,
     "ast_hash": "",
     "semantic_hash": ""
   },
@@ -1452,9 +1452,9 @@
     "semantic_hash": ""
   },
   "services/agent/supervisor.py": {
-    "mtime": 1792252331.104073,
-    "seen": 1792252487.5217807,
-    "ast_hash": "d3d03485ca9a24315365941f4782d319",
+    "mtime": 1792254354.379291,
+    "seen": 1792254415.0155084,
+    "ast_hash": "9543a5536b45c907b99417d67264b584",
     "semantic_hash": ""
   },
   "services/agent/tools.py": {
@@ -2067,6 +2067,18 @@
     "mtime": 1792253937.0965538,
     "seen": 1792254137.9257271,
     "ast_hash": "cb60e6bc9a5d8474c948dcecd7f9a333",
+    "semantic_hash": ""
+  },
+  "services/agent/knowledge.py": {
+    "mtime": 1792254295.8169806,
+    "seen": 1792254415.0143387,
+    "ast_hash": "23d588f5d01a11acb738955aba0edcc5",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_knowledge_retrieval.py": {
+    "mtime": 1792254354.954018,
+    "seen": 1792254415.0233138,
+    "ast_hash": "944d3ab062be6f77660e1a68a6549c35",
     "semantic_hash": ""
   }
 }
