@@ -13,6 +13,7 @@ from typing import Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from services.calculations.liquidity_score import calculate_continuous_liquidity_score
 from services.decision import DecisionDomain, DecisionEngineRegistry, DecisionRequest
 from services.ingestion.csv_parser import DemoTransaction
 
@@ -43,6 +44,9 @@ class UnderwritingDossier(BaseModel):
     volatility_tier: Optional[str] = None
     decision_rule_id: Optional[str] = None
     adverse_factors: list[str] = Field(default_factory=list)
+    liquidity_score: Optional[int] = Field(default=None, ge=0, le=100)
+    score_tier: Optional[str] = None
+    conditional_proposal: Optional[str] = None
 
 
 class FinancingOption(BaseModel):
@@ -220,6 +224,15 @@ def underwrite_sme_transactions(
 
     max_limit = max(Decimal("0.00"), (dab * limit_multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
+    score, score_tier, cond_proposal = calculate_continuous_liquidity_score(
+        dab=dab,
+        nsf_count=nsf_count,
+        revenue_cv=cv,
+        transaction_count=len(transactions),
+        prime_threshold=prime_dab_threshold,
+        near_prime_threshold=near_prime_dab_threshold,
+    )
+
     return UnderwritingDossier(
         currency=currency,
         daily_average_balance=dab,
@@ -232,6 +245,9 @@ def underwrite_sme_transactions(
         volatility_tier=vol_tier,
         decision_rule_id=decision_res.matched_rule_id,
         adverse_factors=decision_res.adverse_factors,
+        liquidity_score=score,
+        score_tier=score_tier,
+        conditional_proposal=cond_proposal,
     )
 
 

@@ -148,4 +148,40 @@ def test_underwrite_dossier_includes_volatility_metrics():
     dossier = underwrite_sme_transactions(txs, nsf_count=0)
     assert dossier.revenue_volatility_cv is not None
     assert dossier.volatility_tier in ("LOW", "MODERATE", "HIGH")
+    assert dossier.liquidity_score is not None
+    assert dossier.score_tier is not None
+
+
+def test_continuous_liquidity_score_borderline_gray_zone():
+    """Verify borderline SME with $9,950 DAB receives intelligent conditional proposal."""
+    txs = [
+        make_tx(1, "9950.00", amount="1000.00"),
+        make_tx(5, "9950.00", amount="500.00"),
+        make_tx(10, "9950.00", amount="500.00"),
+        make_tx(15, "9950.00", amount="500.00"),
+        make_tx(20, "9950.00", amount="500.00"),
+    ]
+    dossier = underwrite_sme_transactions(txs, nsf_count=0)
+    assert dossier.daily_average_balance == Decimal("9950.00")
+    assert dossier.liquidity_score is not None
+    assert 75 <= dossier.liquidity_score <= 90
+    assert dossier.score_tier == "PRIME"
+    assert dossier.conditional_proposal is not None
+    assert "Borderline Tier Opportunity" in dossier.conditional_proposal
+    assert "$9,950.00" in dossier.conditional_proposal
+    assert "$50.00 below Prime" in dossier.conditional_proposal
+
+
+def test_continuous_liquidity_score_nsf_penalty():
+    """Verify multiple NSFs trigger heavy score penalty and high-risk classification."""
+    txs = [
+        make_tx(1, "8000.00", amount="1000.00"),
+        make_tx(10, "8000.00", amount="1000.00"),
+    ]
+    dossier = underwrite_sme_transactions(txs, nsf_count=3)
+    assert dossier.nsf_count == 3
+    assert dossier.liquidity_score is not None
+    assert dossier.liquidity_score < 55
+    assert dossier.score_tier == "HIGH_RISK"
+
 
