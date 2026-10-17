@@ -6,15 +6,16 @@ Scope: All software development, research, financial analysis, and architecture 
 
 ## 0. Project Truth & Engineering Documentation
 
-Start with [`AGENTS.md`](AGENTS.md) and the user's explicit task. `AGENTS.md` defines project-document precedence and the verified implementation baseline. For first-demo work, [`docs/team_execution_plan.md`](docs/team_execution_plan.md) is the target contract—not proof the endpoint, UI, or integration is implemented. Read only relevant blueprint sections and applicable ADRs; do not treat future architecture as task scope by default. Verify behavior in current source/tests, and check whether generated `graphify-out/` artifacts are fresh before relying on them. If the explicit task and target contract cannot be reconciled, ask rather than silently choosing.
+Start with [`AGENTS.md`](AGENTS.md) and the user's explicit task. `AGENTS.md` defines project-document precedence and the verified implementation baseline (**416 passed tests** on 2026-10-17). The project pairs the Lead Architect with specialized AI subagents without committee handoffs. Use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) as the verified technical contract and operational plan. Read only relevant blueprint sections and applicable ADRs. Verify behavior in current source and tests (`pytest -q`), and check whether generated `graphify-out/` artifacts are fresh before relying on them.
 
 ### Relevant references
 - [`docs/system.md`](docs/system.md): System design blueprint.
 - [`docs/architecture.md`](docs/architecture.md): Architecture blueprint.
 - [`docs/security.md`](docs/security.md): Security design blueprint.
-- [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): Team handoffs; the execution plan owns the current first-demo contract.
+- [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): Operational guide for orchestrating the 57 subagents.
+- [`docs/team_execution_plan.md`](docs/team_execution_plan.md): Execution plan and technical contract.
 - [`docs/adr/`](docs/adr/): Accepted decisions, when applicable.
-- [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): Task workflow.
+- [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): Sprint workflow and engineering lifecycle.
 
 ---
 

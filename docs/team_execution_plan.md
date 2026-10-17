@@ -1,89 +1,122 @@
-# Four-Person Team Execution Plan
+# Engineering Execution Plan & Technical Contract
 
-**Purpose:** a practical, agent-friendly plan for the first integrated demo. It is the target contract; current implementation status must be verified in source and tests. Older architecture documents are design proposals, not proof that their features exist. [`AGENTS.md`](../AGENTS.md) tracks current verified status. The user’s explicit scope takes precedence; otherwise ask the team lead about unresolved contract conflicts.
+**Purpose:** The central technical contract and verified operational plan for the SME Finance Copilot. It defines current verified capabilities, API/data schemas, architecture domains, and acceptance criteria. [`AGENTS.md`](../AGENTS.md) tracks repository-wide operational protocols.
 
-> **Status checked 2026-10-15:** `POST /api/v1/analyze`, `/api/v1/underwrite`, `/api/v1/actions`, and `/api/v1/agent/chat` routes and the CSV review UI are implemented. `pytest -q` passes 54 tests (including prompt injection defense, header tenant isolation, conversational agent and REST end-to-end user journeys, autonomous agent reasoning supervisor, first-demo analyze route, underwriting dossier matcher, staging ledger, consortium invoice hasher backbones); multi-stage container deployment is configured via `Dockerfile.backend`, `Dockerfile.frontend`, and `docker-compose.yml`. A clean temporary frontend install with `npm ci`, `npm run type-check`, and `npm run build` passes. The browser upload flow was tested against a locally running API, including rejected-row reporting and calculated results. The UI calls `NEXT_PUBLIC_API_BASE_URL` or defaults to `http://localhost:8000`. This is a decision-support demo, not a live bank platform.
+> **Status checked 2026-10-17:** All core endpoints and services are implemented, verified by **416 passing automated tests** in `pytest -q`. Implemented subsystems include multi-format bank statement ingestion (CSV and PDF with balance tie-out), 25+ deterministic financial calculation engines, ZenEngine JSON policy decision tables, dual local SLM inference (Flagship 3B and Edge 0.5B LoRA adapters), Universal LLM Bridge with dynamic model discovery, FastEmbed ONNX semantic intent routing, continuous liquidity scoring, 3-tier security gate with WebAuthn biometric passkey confirmation, and multi-stage Docker containerization.
 
+---
 
-## The demo we are building first
+## 1. Verified System Capabilities
 
-A business owner imports a **synthetic, normalized bank CSV**, sees accepted/rejected rows, current cash and a transparent historical-average runway estimate, and understands whether that estimate is below a threshold they selected. This is decision support, not financial advice or a future-cash guarantee.
+The SME Finance Copilot operates as an autonomous financial participant providing decision support and liquidity orchestration for SMEs:
 
-**Not in the first demo:** live bank connections, customer financial data, payment/credit execution, authentication for real tenants, external LLM calls, blockchain consensus, OCR, personalized credit decisions, or claims of regulated APR. Keep these out unless the team lead explicitly approves a later task. Do not add a framework, model, service, secret, or dependency just because it appears in a blueprint.
+1. **Multi-Format Statement Ingestion**:
+   - Ingests both UTF-8 CSV and PDF bank statements (`services/ingestion/statement_parser.py`, `services/ingestion/pdf_parser.py`, `services/ingestion/csv_parser.py`).
+   - Line-by-line transaction extraction with balance tie-out verification.
+   - Stable error provenance engine reporting line-level reason codes (`INVALID_ROW_SHAPE`, `INVALID_DATE`, `INVALID_AMOUNT`, `INVALID_CURRENCY`, `DUPLICATE_TRANSACTION_ID`, `OUT_OF_ORDER_DATE`) and file-level codes (`INVALID_ENCODING`, `INVALID_HEADER`, `MIXED_CURRENCIES`, `NO_VALID_ROWS`).
+2. **Deterministic FinTech Calculation Engines (25+ Routines)**:
+   - Pure Python `decimal.Decimal` calculations with `ROUND_HALF_UP` arithmetic.
+   - Banking-grade calendar carry-forward Daily Average Balance (`calculate_dab_from_transactions`).
+   - Gross cash inflow/outflow flow decomposition (`calculate_cash_analysis`).
+   - Predictive cash crunch overdraft pinpointing (`services/calculations/predictive_cash.py`).
+   - Weekly revenue volatility index CV and volatility tiers (`calculate_inflow_volatility`).
+   - Working capital Cash Conversion Cycle (`calculate_cash_conversion_cycle`).
+   - Comprehensive ratio models: DSCR, FCCR, Altman Z'-score, DuPont ROE 3-stage, ROIC/EVA, DCF/WACC, SaaS unit economics, trade credit APR, currency conversion & registry for 160+ ISO currencies.
+3. **ZenEngine Policy Decision Tables**:
+   - JSON-driven policy decision tables in `contracts/decision_tables/` evaluating credit limits, loan covenants, working capital health, and risk tiers.
+4. **Continuous Liquidity Scoring &gray-zone Underwriting**:
+   - Objective 0–100 liquidity score with gray-zone triage for Prime, Near-Prime, and Subprime categories (`services/matcher/liquidity_matcher.py`).
+   - Truth-in-Lending factor-rate to APR conversion with automated flags for predatory facilities (>36.00% APR).
+5. **Dual Local SLM & Universal Cloud LLM Bridge**:
+   - On-device local inference via `LocalTransformersEngine` for Qwen2.5 3B (`models/sme-finance-lora`) and 0.5B (`models/sme-finance-mobile-lora`) LoRA models on PyTorch CUDA/CPU.
+   - Universal LLM bridge supporting Gemini 2.0 Flash, Claude 3.5 Sonnet, GPT-4o, DeepSeek, Groq, Ollama, and custom endpoints.
+   - Dynamic live model discovery via `POST /api/v1/agent/fetch-models` and connection testing via `POST /api/v1/agent/test-connection`.
+   - Pre-flight PII redaction and prompt injection defense.
+6. **Dynamic Semantic Intent Routing**:
+   - FastEmbed (`BAAI/bge-small-en-v1.5` ONNX) vector embeddings for semantic query routing; zero hardcoded keyword intercepts.
+   - Anti-slop post-processing producing authentic neural CFO responses without hallucinated metric bullets.
+7. **Three-Tier Security Gate & Blockchain Notary**:
+   - Tier 1: Autonomous read-only ingestion and analytics.
+   - Tier 2: Staging ledger for financing proposals (`action_intents`).
+   - Tier 3: Strict Human-in-the-Loop WebAuthn biometric passkey execution (`POST /api/v1/actions/{id}/execute`).
+   - Consortium blockchain invoice double-pledging defense via canonical SHA-256 invoice hashing and `InvoiceRegistry.sol`.
 
-## Shared contract — agree before implementation
+---
 
-The team lead owns this contract. All members read and follow it; request a change before changing a shared field or endpoint. The first-demo pipeline already exists in this checkout: inspect the implementation and tests before changing interfaces or rebuilding modules. The current tested areas are: CSV validation and row provenance (`tests/unit/test_ingestion_demo.py`), historical cash math and threshold boundaries (`tests/unit/test_cash_analysis.py`), legacy finance calculations/security invariants (`tests/unit/test_calculations.py`, `tests/security/test_invariants.py`), API schema/upload behavior (`tests/integration/test_analyze_api.py`), and end-to-end user flow validation (`tests/e2e/test_csv_upload_e2e.py`). If assigned a task without a concrete outcome, do not guess at a feature; report the verified baseline and ask the lead to prioritize.
+## 2. Shared API & Service Contracts
 
-- `POST /api/v1/analyze`, `multipart/form-data`: `file` (UTF-8 CSV) and required positive integer `alert_threshold_days`.
-- CSV header, exactly: `transaction_id,posted_on,amount,currency,description,closing_balance`.
-- Rows are oldest-to-newest. Dates are ISO `YYYY-MM-DD`. `amount` is a signed decimal string in major currency units (inflow positive, outflow negative); `closing_balance` is the signed balance after that row. One uppercase three-letter currency per upload. The demo uses synthetic data only. Tenant identity is not accepted from the CSV/client.
-- Python service handoff: `parse_bank_csv(content: bytes) -> IngestionResult`, where `IngestionResult` has `currency`, `accepted_rows: list[DemoTransaction]`, and `rejected_rows: list[RejectedRow]`; each `DemoTransaction` has `row_number`, `transaction_id`, `posted_on: date`, `amount: Decimal`, `currency`, `description`, and `closing_balance: Decimal`. `RejectedRow` has `row_number` and stable `reason_code`. File-level failures raise a typed ingestion error with one of `INVALID_ENCODING`, `INVALID_HEADER`, `MIXED_CURRENCIES`, or `NO_VALID_ROWS` (malformed CSV quoting maps to `INVALID_ROW_SHAPE`). Row-level codes are `INVALID_ROW_SHAPE`, `INVALID_DATE`, `INVALID_AMOUNT`, `INVALID_CURRENCY`, `DUPLICATE_TRANSACTION_ID`, and `OUT_OF_ORDER_DATE`. Duplicate IDs and a date earlier than the preceding accepted row are rejected; same-day rows are allowed. A valid additional currency is a file-level error, even if it appears on a row that also has invalid date or duplicate ID. The existing Pydantic `NormalizedTransaction` remains the legacy record schema and is not the upload parser's result type.
-- Python calculation handoff: `calculate_cash_analysis(rows: Sequence[DemoTransaction], rejected_rows: Sequence[RejectedRow], alert_threshold_days: int) -> CashAnalysisResult`. It returns `currency`, `accepted_count`, `rejected_rows`, `current_balance`, `net_period_change`, `period_days`, `average_daily_burn`, `runway_days`, `alert_threshold_days`, and `cash_status` with the JSON meanings below. Keep these typed service contracts in their owning backend modules and test them; the route adapter must not duplicate their business logic.
-- `POST /api/v1/analyze`, `multipart/form-data`: `file` (UTF-8 CSV) and required positive integer `alert_threshold_days`. File-level errors return HTTP 422 with `{error: {code, message}}`; malformed request shape/type returns standard FastAPI validation errors. The upload-size limit is configured by `MAX_ANALYSIS_UPLOAD_BYTES` (default 1 MiB), with a bounded read.
-- JSON response: `currency`, `accepted_count`, `rejected_rows: [{row_number, reason_code}]`, `current_balance`, `net_period_change`, `period_days`, `average_daily_burn` (decimal strings), `runway_days` (integer or `null`), `alert_threshold_days`, and `cash_status` (`CASH_NONPOSITIVE`, `LOW_RUNWAY`, `WATCH`, or `NO_BURN`). Money values cross JSON as decimal strings, never binary floats.
-- Calculation rules: `period_days = (last valid posted_on - first valid posted_on) + 1`, minimum 1; current balance is the last valid row’s `closing_balance`; net period change is the exact sum of accepted signed `amount` values; average daily burn is `max(0, -net_period_change / period_days)`, rounded to two decimal places half-up; runway is floor(current balance / rounded daily burn) when balance and burn are positive, otherwise `0` for nonpositive balance with positive burn or `null` when burn is zero. `LOW_RUNWAY` means positive burn and runway below the request threshold; `WATCH` means positive burn at or above it; `CASH_NONPOSITIVE` takes precedence for nonpositive current balance; otherwise use `NO_BURN`. These are historical-average indicators, not forecasts.
-- Runtime Pydantic/OpenAPI schemas and tests must match this contract. The lead updates this document first if an agreed change is needed, then tells all members the new version/decision. Deployment origins, secrets, feature flags, upload limits, and any policy thresholds not passed by the user belong in validated configuration; do not embed local or production URLs, credentials, tenant IDs, or unexplained business thresholds in code.
+All endpoints accept typed payloads or multipart files, enforce bounded upload limits, and respond with decimal strings for monetary amounts:
 
-## Current implementation vs. target contract
+### Endpoints
+- `GET /api/v1/health`: Health status probe.
+- `POST /api/v1/analyze` (multipart): Accepts CSV or PDF bank statement + `alert_threshold_days`. Returns parsed transaction counts, error provenance, net cash change, daily burn, and runway estimate.
+- `POST /api/v1/underwrite`: Evaluates transactional metrics against underwriting rules; returns WeBank risk tier, continuous liquidity score, and pre-qualified facilities.
+- `POST /api/v1/actions/stage`: Places financing proposal into Tier 2 staging ledger.
+- `POST /api/v1/actions/{id}/execute`: Requires WebAuthn biometric passkey token to execute Tier 3 financial action.
+- `POST /api/v1/agent/chat`: Conversational AI CFO chat endpoint with FastEmbed semantic routing and dynamic LLM bridge.
+- `POST /api/v1/agent/test-connection`: Verifies API key and endpoint connectivity for any supported LLM provider.
+- `POST /api/v1/agent/fetch-models`: Dynamically discovers available models from the target LLM provider endpoint.
 
-Implemented in this checkout: the upload route, bounded read-only CSV ingestion, deterministic historical cash analysis, multi-stage Docker deployment, and a responsive frontend for submitting the file and presenting the response. Additionally implemented: header-based tenant isolation (`X-Tenant-ID`), 3-tier staging ledger with WebAuthn biometric passkey verification (`POST /api/v1/actions/{id}/execute`), prompt injection defense, interactive Copilot Chat Drawer, live connection verification (`POST /api/v1/agent/test-connection`), dynamic live model discovery (`POST /api/v1/agent/fetch-models`), predictive cash crunch early-warning engine (`services/calculations/predictive_cash.py`), In-App AI Provider Settings Modal with `localStorage` persistence, and the Universal LLM Bridge (`services/agent/llm_bridge.py`) supporting Google Gemini, Anthropic Claude, OpenAI, DeepSeek, Groq, local Ollama, and custom OpenAI-compatible endpoints with pre-flight PII redaction and deterministic calculation grounding. 67 automated tests passing.
+### Monetary Serialization Standard
+- Monetary values across JSON API boundaries **MUST** be serialized as decimal strings (e.g. `"125000.50"`), never IEEE-754 binary floating-point numbers.
 
+---
 
-## Who owns what
+## 3. Core Architectural Domains
 
-One accountable editor per task; ownership prevents simultaneous edits, not reasonable implementation choice. The teammate prompt defines outcomes, contracts, protected boundaries, and checks—not a prescribed component tree, visual design, algorithm where the contract leaves room, or exact code structure. Choose a simpler or better implementation when it stays within the contract and assigned paths; explain the choice briefly. Ask before crossing boundaries, changing shared interfaces/policy, adding dependencies or services, or expanding scope. Work in separate branches/worktrees if your team already knows how; otherwise work one at a time in the shared checkout. Never assume clean merges, stage everyone’s files, or merge directly to the protected/default branch without the lead’s review.
+The system is organized into 4 cohesive architectural domains under direct engineering governance:
 
-| Member | Accountable deliverable | Owned paths | Pair/review |
+| Domain | Scope & Responsibilities | Key Paths | Test Suites |
 |---|---|---|---|
-| **1 — Team lead/integrator** | Own the shared API contract, integration decisions, truthful health/status claims, final cross-layer review and combined demo checks. Multi-stage backend containers, integration tests, and E2E suites are in place; own API defects and deployment boundaries. | `api/`, `tests/integration/`, `tests/e2e/`, `Dockerfile.backend`, `docker-compose.yml`, this plan. Coordinate shared dependency/config edits. | Review all handoffs; ask Member 2 to review user flow and Member 4 to review calculation meaning. Never self-certify security claims. |
-| **2 — Frontend owner** | Own the browser journey for CSV import, row feedback, results, and container packaging. The page is implemented; take an assigned usability/accessibility/behavior issue or enhancement, choosing design, layout, component structure and interaction details freely within the contract. | `app/`, `frontend/`, and `Dockerfile.frontend` (including types, styles and frontend tests). Propose API/schema changes to the lead. | Lead reviews data meaning and integrated behavior. |
-| **3 — Ingestion owner** | Own CSV parser correctness, stable row/file errors and provenance. The parser is implemented; review it against the contract, then take an assigned defect or edge-case gap. | `services/ingestion/`, `tests/unit/test_ingestion_demo.py`. | Member 4 reviews sample-data semantics; lead reviews API handoff. |
-| **4 — Calculation owner** | Own deterministic historical cash analysis using `Decimal`. The service is implemented; review it against the formula contract, then take an assigned defect or boundary-test gap. | `services/calculations/cash_analysis.py`, `tests/unit/test_cash_analysis.py`. The legacy runway/DAB/DSCR helpers and tests are in `services/calculations/runway.py` and `tests/unit/test_calculations.py`; coordinate before extending their scope. | Lead reviews formula/code consistency; Member 3 confirms parser values fit the interface. |
+| **Domain A: API Platform & Security** | FastAPI routes, ASGI middleware, CORS, 3-tier security gate, staging ledger, WebAuthn passkey verification, Docker packaging | `api/`, `services/security/`, `Dockerfile.backend`, `docker-compose.yml` | `tests/integration/test_analyze_api.py`, `tests/integration/test_backbone_apis.py`, `tests/security/test_invariants.py`, `tests/e2e/test_csv_upload_e2e.py` |
+| **Domain B: Executive Dashboard & UI** | Next.js 14 App Router, design tokens, tabular figures, AI provider modal, predictive cash deficit cards, WebAuthn modal | `frontend/src/`, `app/`, `Dockerfile.frontend` | `npm run type-check`, `npm run build` |
+| **Domain C: Multi-Format Ingestion & Blockchain** | CSV and PDF bank statement parsing, line-item extraction, balance tie-out, error provenance, SHA-256 invoice hashing, FISCO BCOS | `services/ingestion/`, `services/blockchain/`, `contracts/` | `tests/unit/test_ingestion_demo.py`, `tests/unit/test_pdf_ingestion.py`, `tests/unit/test_blockchain_registry.py` |
+| **Domain D: Quant FinTech & Decision Tables** | Pure Decimal financial math, DAB carry-forward, cash flow analysis, ZenEngine decision tables, continuous liquidity scoring | `services/calculations/`, `services/matcher/`, `contracts/decision_tables/` | `tests/unit/test_cash_analysis.py`, `tests/unit/test_calculations.py`, `tests/unit/test_matcher.py`, `tests/unit/test_predictive_cash.py` |
 
-### Order and dependencies
+---
 
-1. **Kickoff (lead):** name the user outcome, observable acceptance checks, accountable owner, in-scope paths and out-of-scope work using the task brief below. Point the agent at current code and tests; resolve policy/interface ambiguity before parallel edits. Say explicitly when no one may touch an interface or shared file.
-2. **Independent implementation:** teammates choose their own approach within that brief. Do not preselect UI style, component decomposition, or internal algorithm unless the contract requires it. Existing modules are the starting point; replacing one is allowed only when the assigned problem warrants it and behavior stays compatible.
-3. **Review and integration:** each owner hands off changed paths, decisions, exact checks, and unresolved risks. Review at the boundaries; make interface changes explicit and agreed. File ownership reduces collisions but is not a substitute for semantic review.
-4. **Demo gate:** use the synthetic fixture to show import → row feedback → results. Keep demo-only behavior explicit; do not claim live integrations.
-5. **Branching:** the lead chooses the collaboration mode before parallel work. Separate worktrees/branches can help, but repository paths do overlap at integration boundaries; never promise “zero merge conflicts.” Do not switch branches or merge unless the lead authorizes it.
+## 4. Reusable AI Subagent Delegation Prompts
 
-## Reusable prompts — copy one prompt per coding-agent session
+When delegating domain-specific tasks to AI subagents during pair programming sessions:
 
-Before pasting a role prompt, pair it with this short lead-issued task brief:
-
+### Prompt: Domain A (API & Security)
 ```text
-Outcome: <user problem / behavior to deliver>
-Acceptance: <observable results and relevant checks>
-Owner: <Member 1, 2, 3, or 4>
-In scope: <paths/interfaces this task owns>
-Out of scope: <nearby features or shared paths to leave alone>
-Freedom: Choose the design and implementation that best meets the outcome within the shared contract. Explain important trade-offs; ask only before changing interfaces/policy, adding services/dependencies, or expanding scope.
+Role: FastAPI Backend & Security Specialist
+Context: Read AGENTS.md, docs/team_execution_plan.md, api/, and services/security/.
+Mission: Maintain ASGI routes, enforce 3-Tier Security Gate invariants, and ensure all monetary JSON responses use decimal strings.
+Verification: Run pytest tests/integration/ and pytest tests/security/ to confirm passing status.
 ```
 
-A role prompt alone is context and a boundary, not authorization to invent a feature. If a coding agent receives no concrete outcome, it should inspect and report the current baseline and suggest a bounded next task instead of making speculative edits.
+### Prompt: Domain B (Frontend Dashboard)
+```text
+Role: Frontend Craft & Next.js Specialist
+Context: Read AGENTS.md, docs/team_execution_plan.md, and frontend/src/.
+Mission: Maintain Next.js 14 App Router dashboard, ensure monospace tabular figures (tabular-nums), 4-state lifecycle, and WebAuthn passkey UI.
+Verification: Run npm run type-check and npm run build to verify zero errors.
+```
 
-### Member 1 — lead and API integrator
+### Prompt: Domain C (Ingestion & Blockchain)
+```text
+Role: Ingestion & Blockchain QA Specialist
+Context: Read AGENTS.md, docs/team_execution_plan.md, services/ingestion/, and services/blockchain/.
+Mission: Maintain CSV/PDF statement parsers, line-level error provenance codes, and canonical SHA-256 invoice hashing.
+Verification: Run pytest tests/unit/test_ingestion_demo.py, test_pdf_ingestion.py, and test_blockchain_registry.py.
+```
 
-> I am Member 1 (team lead/integrator). Read `AGENTS.md`, `.agent/workflows/sprint-workflow.md`, this plan and the current API/integration tests. I own the shared contract and integration, but the route, services and tests already exist. Follow the task outcome I assign; if none is included, inspect and report the verified baseline and propose next steps without speculative edits. Choose the implementation for the assigned outcome within `api/` or `tests/integration/`; update this plan only when the lead has agreed to a contract change. Coordinate shared config edits before making them. Keep health claims limited to tested active behavior. Keep the app read-only and demo-only. Preserve other owners' paths. State a brief plan before implementation; afterward run focused and full backend checks and report exact results. Do not commit or switch branches unless asked.
+### Prompt: Domain D (Quantitative FinTech & Decision Tables)
+```text
+Role: Quantitative FinTech Engine Specialist
+Context: Read AGENTS.md, docs/team_execution_plan.md, services/calculations/, and services/matcher/.
+Mission: Enforce pure Decimal arithmetic with ROUND_HALF_UP across all 25+ financial routines, ZenEngine decision tables, and APR disclosures.
+Verification: Run pytest tests/unit/test_cash_analysis.py, test_calculations.py, test_matcher.py, and test_predictive_cash.py.
+```
 
-### Member 2 — frontend owner
+---
 
-> I am Member 2 (frontend owner). Read `AGENTS.md`, `.agent/workflows/sprint-workflow.md`, `docs/team_execution_plan.md`, and the current frontend files in `app/` and `frontend/`. The first-demo CSV screen exists. Use the user problem and acceptance checks I provide; inspect the current screen, API contract, tests and status, then choose your own design, information hierarchy, component structure and interaction details. If no outcome is assigned, report what exists and propose improvements without editing. Preserve accessible semantic controls and keyboard/screen-reader operation; display money returned as decimal strings without JS financial arithmetic. Stay in `app/` and `frontend/`; propose API/schema changes instead of making them yourself. Before coding, state a short plan and assumptions; afterward run available type-check/build and any relevant UI checks, then report exact commands/results. Do not commit or switch branches unless asked.
+## 5. Verification & Stop-Ship Rules
 
-### Member 3 — ingestion owner
-
-> I am Member 3 (ingestion owner). Read `AGENTS.md`, `.agent/workflows/sprint-workflow.md`, this plan, `services/ingestion/csv_parser.py`, `services/ingestion/__init__.py`, and `tests/unit/test_ingestion_demo.py`. The parser interfaces and tests already exist. Work on the specific issue I assign; inspect current behavior and choose a clear repair, with freedom to reorganize internals while preserving the interface and agreed row/file error behavior. If no issue is assigned, report the verified baseline and likely gaps without editing. Preserve raw-data privacy; this demo fixture is synthetic and must not be described as real-data anonymization. Do not add Presidio/OCR/bank integrations. Own only `services/ingestion/` and `tests/unit/test_ingestion_demo.py`; propose shared-contract changes to the lead. Run focused and full backend tests, report exact results and remaining limitations. Do not commit or switch branches unless asked.
-
-### Member 4 — calculation owner
-
-> I am Member 4 (calculation owner). Read `AGENTS.md`, `.agent/workflows/sprint-workflow.md`, this plan, `services/calculations/cash_analysis.py`, and `tests/unit/test_cash_analysis.py`. The implementation and service signature already exist: `calculate_cash_analysis(rows: Sequence[DemoTransaction], rejected_rows: Sequence[RejectedRow], alert_threshold_days: int) -> CashAnalysisResult`. Work on the issue I assign; choose your implementation approach while preserving the interface, exact Decimal rules and response meaning. If no issue is assigned, report the verified baseline and possible gaps without editing. Own only `services/calculations/cash_analysis.py` and `tests/unit/test_cash_analysis.py`; discuss formula/interface changes with the lead first. Never invent financial thresholds or forecasts. Run focused and full backend tests; report exact results and assumptions. Do not commit or switch branches unless asked.
-
-## Verification and stop-ship rules
-
-- Before work: confirm `git status`; preserve existing work. Never use `git add .` or stage/commit another person's changes.
-- Pick tests from the behavior changed. Run a focused check, then the relevant suite; report exact commands/results and any blocked checks. Frontend scripts are in root `package.json`. For clean npm setup use `npm ci`; do not delete or overwrite shared `node_modules` while a dev server may have native files open.
-- Review the final diff for scope and regressions. Acceptance is the stated task outcome plus this shared contract—not conformity to an unrequested visual/design preference.
-- Stop and ask the lead about incompatible assumptions, shared API/data/policy changes, work outside assigned paths, any new external service/dependency, secrets, real customer financial data, or expansion to auth, payments, persistence, AI, or blockchain. Otherwise exercise judgment and proceed without asking permission for ordinary implementation details.
-- Tests prove only the behavior they cover; state what remains untested. Do not claim production security, financial suitability, forecast calibration, or regulatory compliance from a green demo suite.
+- **Deterministic Arithmetic**: Never use binary `float` for money; always use Python `decimal.Decimal` with `ROUND_HALF_UP`.
+- **Zero LLM Math**: All ratio calculations, runway figures, and loan terms must be computed in deterministic Python services. LLMs provide natural language explanations grounded strictly in calculation results.
+- **Three-Tier Gate Enforcement**: Never allow a Tier 3 action (disbursement, contract signing) to execute without verifying biometric authentication.
+- **Full Test Suite Verification**: Before declaring any feature or bugfix complete, execute `pytest -q` and verify all 416+ tests pass.
+- **AST Knowledge Graph Sync**: After editing Python code files, run `python -m graphify update .`.

@@ -1,19 +1,65 @@
-# Team Distribution Guide
+# Operational Guide: AI Agent Squad Orchestration
 
-Use the current [Four-Person Team Execution Plan](team_execution_plan.md) for the first-demo target contract, member ownership, copy-ready prompts, and acceptance checks. Its current implementation/test status is kept in [AGENTS.md](../AGENTS.md); the plan is a target contract, not proof of behavior.
+This guide outlines how the **Lead Architect & Operator** orchestrates the 57 specialized AI subagents in `.agent/agents/` to build, maintain, and scale the SME Finance Copilot.
 
-## How to start today
+Use [`team_execution_plan.md`](team_execution_plan.md) for the verified shared contract and technical domain specifications. Current implementation and test status are tracked in [`../AGENTS.md`](../AGENTS.md).
 
-1. The team lead names a user outcome, acceptance checks, accountable owner, and protected paths. Confirm shared CSV/API interfaces before parallel work.
-2. The lead fills the task-brief template in the execution plan: outcome, acceptance, owner, scope, out-of-scope, and freedom. A role prompt by itself is not a task assignment.
-3. Each teammate starts a separate coding-agent task by copying the assigned role prompt and the completed brief. The prompt provides context, boundaries and checks; the agent chooses the design and implementation details within them.
-4. Ask the lead before changing shared finance/API policy, interfaces, scope, or adding dependencies/services. Ordinary design and code-structure decisions within the assignment belong to the teammate.
-5. Review and integrate small changes as they are ready. Folder ownership reduces simultaneous edits but cannot prevent semantic conflicts; the lead reviews each handoff and the combined demo.
+---
 
-## Rules for every coding-agent task
+## 1. Operating Model: Lead Architect & AI Specialist Squads
 
-- Inspect repository status before editing. Preserve changes made by other people and agents.
-- Give one accountable owner per deliverable. Do not edit another member’s files or shared contracts without agreement.
-- Follow [`../.agent/workflows/sprint-workflow.md`](../.agent/workflows/sprint-workflow.md), add tests for behavior, and report exact commands and results.
-- Do not use `git add .`, commit, switch branches, or merge unless the team lead asks. Never claim unimplemented security, finance, AI, or blockchain controls are active.
-- Give teammates freedom over visual design, component decomposition, internal algorithms and code structure when the contract does not dictate them. State the outcome and acceptance checks; do not prescribe a solution. Ask the lead before changing interfaces/policy, adding dependencies/services, or expanding demo scope.
+All architectural, product, and implementation decisions are coordinated directly without external committee handoffs. Tasks are delegated to specialized AI agents and verified through deterministic test suites.
+
+```
+                     LEAD ARCHITECT / OPERATOR
+                                │
+                  LEAD FINANCIAL ORCHESTRATOR
+                                │
+    ┌───────────────────────────┴───────────────────────────┐
+    ▼                                                       ▼
+[ Global Specialists ]                                [ Domain Squads ]
+• Systems Architect (Backend / DB)                    • Ingestion & Blockchain
+• Frontend Craft Engineer (UI / A11y)                 • Quant FinTech Engine
+• Security Guardian (Zero-Trust / WebAuthn)           • Agentic Orchestration
+• QA Verifier (Deterministic PyTest)                  • Research & Compliance
+```
+
+---
+
+## 2. The 4 Unified Architectural Domains
+
+The codebase is partitioned into 4 functional domains, unified under direct architectural governance:
+
+| Domain | Focus Area | Key Directories & Files | Primary Subagents |
+|---|---|---|---|
+| **Domain A: Backend Platform & Security** | ASGI routes, CORS, 3-tier security gate, WebAuthn HITL, staging ledger, Docker containers | `api/`, `services/security/`, `Dockerfile.backend`, `docker-compose.yml` | `fastapi-developer`, `systems-architect`, `security-guardian` |
+| **Domain B: Executive Dashboard & UI** | Next.js 14 App Router, design tokens, tabular numbers, AI provider settings modal, chart components | `frontend/`, `app/`, `Dockerfile.frontend` | `frontend-craft-engineer`, `nextjs-developer`, `ui-designer` |
+| **Domain C: Ingestion & Blockchain** | Multi-format CSV/PDF bank parsing, transaction normalization, error provenance, SHA-256 invoice hashing, FISCO BCOS contract | `services/ingestion/`, `services/blockchain/`, `contracts/` | `fintech-engineer`, `blockchain-developer`, `qa-verifier` |
+| **Domain D: Quant FinTech & Decision Tables** | Pure Decimal financial math (DAB, CCC, DSCR, Altman Z', DuPont ROE, DCF), ZenEngine decision tables, continuous liquidity scoring | `services/calculations/`, `services/matcher/`, `contracts/decision_tables/` | `sme-cfo-diagnostician`, `risk-manager`, `credit-options-matcher` |
+
+---
+
+## 3. How to Execute Specialist Tasks
+
+1. **State the Outcome & Checks**: Define what should work and what automated command proves it.
+2. **Adopt or Delegate Persona**:
+   - For interactive sessions, command the Lead Orchestrator to adopt the primary persona (e.g. `sme-cfo-diagnostician` for financial math, `fastapi-developer` for API changes).
+   - For isolated or parallel research, invoke a subagent (`research` or `self`).
+3. **Follow the Red-Green Loop**:
+   - Write or update a focused test in `tests/`.
+   - Implement the minimal diff climbing the Senior Developer Ladder (Ponytail).
+   - Run the focused test until green.
+4. **Run Full Verification**:
+   - Backend: `pytest -q` (must verify all 416+ passing tests).
+   - Frontend: `npm run type-check` and `npm run build`.
+5. **Sync Knowledge Graph**:
+   - Run `python -m graphify update .` to update code relationships.
+
+---
+
+## 4. Standing Engineering Invariants
+
+- **Zero Floating-Point Money**: Always use Python `decimal.Decimal` with `ROUND_HALF_UP`.
+- **Truth Over Blueprints**: Code and tests define what is active today. Blueprints in `docs/` are reference designs.
+- **Root-Cause Fixes**: Fix shared utilities once rather than patching symptoms at multiple call sites.
+- **Never Self-Certify**: Always require fresh command execution output before considering any task complete.

@@ -12,7 +12,7 @@ This document combines the **complete technical system architecture, security sp
 5. [Digital Underwriting & Truth-in-Lending (Demystifying the Math)](#5-digital-underwriting--truth-in-lending)
 6. [Consortium Blockchain & Double-Financing Defense](#6-consortium-blockchain--double-financing-defense)
 7. [Physical Code Map & Verified Test Baseline](#7-physical-code-map--verified-test-baseline)
-8. [Four-Person Team Roles, Ownership & Step-by-Step Guides](#8-four-person-team-roles-ownership--step-by-step-guides)
+8. [System Architecture & Subagent Specialist Execution Guide](#8-system-architecture--subagent-specialist-execution-guide)
 
 ---
 
@@ -354,45 +354,45 @@ pytest -q
 
 ---
 
-## 8. Four-Person Team Roles, Ownership & Step-by-Step Guides
+## 8. System Architecture & Subagent Specialist Execution Guide
 
-This section defines the division of labor, file boundaries, starter code backbones, pre-built and tested components, test commands, stop-ship rules, and copy-ready AI prompts for each of the four team members.
+This section defines the 4 core architecture domains, file boundaries, starter code backbones, verified components, test commands, stop-ship rules, and copy-ready AI delegation prompts for engineering execution.
 
-### Team Ownership Matrix
+### Architectural Domain Ownership Matrix
 
-| Member | Primary Role | Owned Directories & Files | Key Deliverable |
+| Domain | Functional Specialty | Owned Directories & Files | Key Deliverables |
 |---|---|---|---|
-| **Member 1** | Team Lead, API Integrator & Security Gatekeeper | `api/`, `services/security/`, `tests/integration/`, `tests/security/`, `tests/e2e/`, `Dockerfile.backend`, `docker-compose.yml` | FastAPI routes, Three-Tier Security Gate, container orchestration, E2E tests |
-| **Member 2** | Frontend Dashboard Specialist | `frontend/src/`, `app/`, `Dockerfile.frontend` | Accessible Next.js 14 review screen, Tab 2 & 3 cards, frontend container |
-| **Member 3** | Ingestion & Blockchain QA Engineer | `services/ingestion/`, `services/blockchain/`, `contracts/`, `tests/unit/test_ingestion_demo.py` | CSV validation, error provenance codes, SHA-256 invoice hashing |
-| **Member 4** | Quantitative FinTech Engine Specialist | `services/calculations/`, `services/matcher/`, `tests/unit/test_cash_analysis.py`, `tests/unit/test_matcher.py` | Pure Decimal financial math, WeBank DAB scoring, APR matching |
+| **Domain A** | Backend Platform, API & Security Gatekeeper | `api/`, `services/security/`, `tests/integration/`, `tests/security/`, `tests/e2e/`, `Dockerfile.backend`, `docker-compose.yml` | FastAPI routes, Three-Tier Security Gate, WebAuthn HITL, container orchestration, E2E tests |
+| **Domain B** | Frontend Dashboard Specialist | `frontend/src/`, `app/`, `Dockerfile.frontend` | Accessible Next.js 14 review screen, Tab 2 & 3 cards, AI provider modal, frontend container |
+| **Domain C** | Multi-Format Ingestion & Blockchain QA | `services/ingestion/`, `services/blockchain/`, `contracts/`, `tests/unit/test_ingestion_demo.py`, `tests/unit/test_pdf_ingestion.py` | CSV/PDF statement validation, error provenance codes, SHA-256 invoice hashing |
+| **Domain D** | Quantitative FinTech Engine & Decision Tables | `services/calculations/`, `services/matcher/`, `contracts/decision_tables/`, `tests/unit/test_cash_analysis.py`, `tests/unit/test_matcher.py` | Pure Decimal financial math, WeBank DAB scoring, ZenEngine decision tables, APR matching |
 
 ---
 
-### Member 1: Team Lead, API Integrator & Security Gatekeeper
+### Domain A: Backend API, Security Gatekeeper & Container Platform
 
 #### Plain-English Role
-Member 1 acts as the project anchor. They design the shared API contracts, mount backend endpoints, manage container deployment, and enforce the Three-Tier Security Gate so that unauthorized money movement or raw data leakage cannot occur.
+Domain A acts as the project anchor. It defines the shared API contracts, mounts backend endpoints, manages container deployment, and enforces the Three-Tier Security Gate so that unauthorized money movement or raw data leakage cannot occur.
 
 #### Owned Directories & Files
 - `api/main.py`
-- `api/routes/health.py`, `api/routes/analyze.py`, `api/routes/underwrite.py`, `api/routes/actions.py`
+- `api/routes/health.py`, `api/routes/analyze.py`, `api/routes/underwrite.py`, `api/routes/actions.py`, `api/routes/agent.py`
 - `services/security/three_tier_gate.py`, `services/security/staging_ledger.py`
 - `tests/integration/test_analyze_api.py`, `tests/integration/test_backbone_apis.py`, `tests/security/test_invariants.py`, `tests/e2e/test_csv_upload_e2e.py`
 - `Dockerfile.backend`, `docker-compose.yml`, `.dockerignore`, `.env.example`
 - `docs/team_execution_plan.md`
 
 #### What Was Already Built & Tested for You (The Implemented Backbone)
-You do not need to build the API server or test suite from scratch. The following backbone is fully operational and verified by 13 passing tests:
+You do not need to build the API server or test suite from scratch. The following backbone is fully operational and verified by passing tests:
 
 1. **ASGI Application & Route Assembly (`api/main.py`)**:
    - Configured FastAPI instance with CORS middleware.
-   - All four routers are already mounted: `/health`, `/api/v1/analyze`, `/api/v1/underwrite`, and `/api/v1/actions`.
+   - All routers are mounted: `/health`, `/api/v1/analyze`, `/api/v1/underwrite`, `/api/v1/actions`, and `/api/v1/agent`.
 2. **Analysis Route (`api/routes/analyze.py`)**:
-   - Accepts multipart CSV uploads with bounded reading up to 1 MiB (`MAX_ANALYSIS_UPLOAD_BYTES`).
-   - Automatically invokes Member 3's CSV parser and Member 4's cash calculation engine, returning JSON with decimal strings.
+   - Accepts multipart CSV and PDF uploads with bounded reading up to 1 MiB (`MAX_ANALYSIS_UPLOAD_BYTES`).
+   - Automatically invokes the statement parser and cash calculation engine, returning JSON with decimal strings.
 3. **Underwriting Route (`api/routes/underwrite.py`)**:
-   - Mounts `POST /api/v1/underwrite`, accepting SME balance data and returning WeBank risk tiers and pre-qualified facilities.
+   - Mounts `POST /api/v1/underwrite`, accepting SME balance data and returning WeBank risk tiers, continuous liquidity score, and pre-qualified facilities.
 4. **Action Gate & Staging Routes (`api/routes/actions.py`)**:
    - `POST /api/v1/actions/stage`: Puts Tier 2 proposals into a staging queue without moving any money.
    - `POST /api/v1/actions/execute`: Intercepts Tier 3 execution calls, requiring a verified biometric token (`DEMO_FIDO2_PASSKEY_VALIDATED`). Returns HTTP 403 if missing or invalid.
@@ -402,11 +402,6 @@ You do not need to build the API server or test suite from scratch. The followin
    - Multi-stage Python 3.11-slim build running under unprivileged `appuser` (UID 10001) with active `/health` probe and dynamic `${PORT:-8000}`.
 7. **End-to-End User Flow Test Suite (`tests/e2e/test_csv_upload_e2e.py`)**:
    - Automated full-flow integration testing CSV ingestion, row 6 error provenance, runway math, WeBank matching, and biometric gate defense.
-
-#### What You Build Next on Top of This Backbone
-- Add API rate limiting to protect endpoints against denial-of-service attempts.
-- Replace the in-memory staging dictionary with a persistent PostgreSQL audit table.
-- Implement a real WebAuthn challenge/response registration handshake.
 
 #### Key Starter Code Backbone
 ```python
@@ -460,22 +455,20 @@ pytest tests/e2e/test_csv_upload_e2e.py
 3. Reject uploads exceeding `MAX_ANALYSIS_UPLOAD_BYTES` (1 MiB default) with HTTP 413.
 4. Never self-certify security claims without automated test proof.
 
-#### Copy-Ready AI Prompt for Member 1
+#### Copy-Ready AI Prompt for Domain A
 ```text
-I am Member 1 (Team Lead, API Integrator & Security Gatekeeper).
-Read AGENTS.md, docs/team_execution_plan.md, api/, services/security/, and tests/integration/.
-I own the shared API contracts, router mounts, and the Three-Tier Security Gate.
-Task: Inspect current routes and security tests. Preserve paths owned by Members 2, 3, and 4.
-Make sure all monetary outputs in responses use decimal strings, and verify Tier 3 biometric gate checks.
-Run pytest tests/integration/ and tests/security/ to verify pass status before reporting.
+Role: FastAPI Backend & Security Specialist (Domain A)
+Context: Read AGENTS.md, docs/team_execution_plan.md, api/, and services/security/.
+Mission: Maintain ASGI routes, enforce 3-Tier Security Gate invariants, and ensure all monetary JSON responses use decimal strings.
+Verification: Run pytest tests/integration/ and pytest tests/security/ to confirm passing status.
 ```
 
 ---
 
-### Member 2: Frontend Dashboard Specialist
+### Domain B: Frontend Dashboard & Executive UI
 
 #### Plain-English Role
-Member 2 builds what the small business owner sees and clicks. They turn backend numbers into an accessible, clear executive dashboard with instant feedback on CSV errors, financial health scores, and an action staging drawer.
+Domain B encompasses everything the small business owner sees and clicks. It delivers an accessible, high-craft executive dashboard with instant feedback on statement ingestion errors, financial health scores, predictive cash crunch warnings, an in-app AI settings modal, and an action staging drawer with biometric authorization.
 
 #### Owned Directories & Files
 - `frontend/src/app/page.tsx`, `frontend/src/app/globals.css`
@@ -485,28 +478,27 @@ Member 2 builds what the small business owner sees and clicks. They turn backend
 - `Dockerfile.frontend`
 
 #### What Was Already Built & Tested for You (The Implemented Backbone)
-You do not need to configure build systems or start from an empty screen. The UI skeleton, types, and container are live and passing:
+The UI components, state management, types, and container are live and verified:
 
 1. **Next.js 14 App Router Foundation (`frontend/src/app/page.tsx`)**:
    - Production setup with zero lint or TypeScript compilation errors (`npm run type-check` and `npm run build` pass clean).
    - Configured to point to `NEXT_PUBLIC_API_BASE_URL` with fallback to `http://localhost:8000`.
 2. **Complete TypeScript Contract File (`frontend/src/types/api.ts`)**:
    - Fully typed definitions matching backend Pydantic models: `CashAnalysisResponse`, `UnderwritingDossierResponse`, `StagedActionResponse`, and `ActionExecuteResponse`.
-   - Prevents backend/frontend property mismatches.
 3. **Tab 1: Cash Flow Review & Ingestion Screen**:
-   - Working drag-and-drop CSV file uploader with alert threshold selector (15, 30, 45, 60, 90 days).
+   - Drag-and-drop CSV and PDF statement uploader with alert threshold selector (15, 30, 45, 60, 90 days).
    - Metric overview cards rendering Current Cash Balance, Net Period Change, Daily Burn Rate, Historical Runway Days, and Status Pill.
    - Row Provenance Feedback Table: displays accepted row counts and rejected rows with exact line numbers and reason codes.
-4. **Design Tokens & High-Craft Styling (`frontend/src/app/globals.css`)**:
+4. **Tab 2 & Tab 3: Underwriting Dossier & Biometric Action Drawer**:
+   - Renders WeBank DAB, 90-day NSF incidents, continuous liquidity score, and pre-qualified financing option cards with True APR disclosures.
+   - WebAuthn biometric passkey modal invoking `POST /api/v1/actions/{id}/execute`.
+5. **In-App AI Provider Settings Modal**:
+   - Multi-provider configuration modal (Gemini, Claude, OpenAI, DeepSeek, Groq, Ollama, Local LoRA, Custom) with live connection testing, dynamic model discovery, and `localStorage` persistence.
+6. **Design Tokens & High-Craft Styling (`frontend/src/app/globals.css`)**:
    - Monospace tabular figures (`tabular-nums`) ensuring clean alignment of financial digits.
    - Neutral, privacy-first styling with zero hardcoded contest branding or decorative AI glow.
-5. **Multi-Stage Frontend Container (`Dockerfile.frontend`)**:
+7. **Multi-Stage Frontend Container (`Dockerfile.frontend`)**:
    - Production-ready Node 20-alpine container with non-root user (`nextjs`) and dynamic `NEXT_PUBLIC_API_BASE_URL` build injection.
-
-#### What You Build Next on Top of This Backbone
-- Build Tab 2 (Underwriting Dossier Card): Call `POST /api/v1/underwrite` to display WeBank DAB, 90-day NSF incidents, and pre-qualified financing option cards with True APR disclosures.
-- Build Tab 3 (Action Intent Drawer): Render staged proposals from `POST /api/v1/actions/stage` and provide a simulated Passkey/TouchID modal that invokes `POST /api/v1/actions/execute`.
-- Add an interactive runway forecast chart using SVG or lightweight charting.
 
 #### Key Starter Code Backbone
 ```typescript
@@ -554,36 +546,33 @@ npm run build
 3. Provide the 4 mandatory UI states for every data view: loading skeleton, empty guidance, error with retry, and populated data.
 4. Avoid ungrounded glow effects, decorative cards-in-cards, and promotional buzzwords.
 
-#### Copy-Ready AI Prompt for Member 2
+#### Copy-Ready AI Prompt for Domain B
 ```text
-I am Member 2 (Frontend Dashboard Specialist).
-Read AGENTS.md, docs/team_execution_plan.md, and frontend/src/.
-I own the Next.js user interface, design tokens, and frontend types.
-Task: Connect to the backend endpoints using types in frontend/src/types/api.ts.
-Render financial metrics with tabular numbers and display row-level error provenance clearly.
-Run npm run type-check and npm run build to verify zero errors before reporting.
+Role: Frontend Craft & Next.js Specialist (Domain B)
+Context: Read AGENTS.md, docs/team_execution_plan.md, and frontend/src/.
+Mission: Maintain Next.js 14 App Router dashboard, ensure monospace tabular figures (tabular-nums), 4-state lifecycle, and WebAuthn passkey UI.
+Verification: Run npm run type-check and npm run build to verify zero errors.
 ```
 
 ---
 
-### Member 3: Ingestion & Blockchain QA Engineer
+### Domain C: Multi-Format Ingestion & Blockchain QA
 
 #### Plain-English Role
-Member 3 is responsible for data safety and authenticity. They parse raw bank CSV files, identify bad rows with clear error codes, and compute SHA-256 cryptographic hashes for invoices to prevent double-pledging on consortium blockchains.
+Domain C guarantees data safety and authenticity. It parses bank statements across multiple formats (CSV and PDF), verifies closing balances and transaction order, reports line-level error provenance codes, and computes deterministic SHA-256 cryptographic fingerprints to prevent invoice double-financing on consortium blockchains.
 
 #### Owned Directories & Files
-- `services/ingestion/csv_parser.py`, `services/ingestion/__init__.py`
+- `services/ingestion/statement_parser.py`, `services/ingestion/csv_parser.py`, `services/ingestion/pdf_parser.py`, `services/ingestion/__init__.py`
 - `services/blockchain/invoice_hasher.py`, `services/blockchain/__init__.py`
 - `contracts/InvoiceRegistry.sol`
-- `tests/unit/test_ingestion_demo.py`, `tests/unit/test_blockchain_registry.py`
+- `tests/unit/test_ingestion_demo.py`, `tests/unit/test_pdf_ingestion.py`, `tests/unit/test_blockchain_registry.py`
 
 #### What Was Already Built & Tested for You (The Implemented Backbone)
-The data parsing and cryptographic verification pipelines are complete and covered by 9 passing unit tests:
+The data parsing and cryptographic verification pipelines are complete and covered by passing unit tests:
 
-1. **Strict CSV Bank Parser (`services/ingestion/csv_parser.py`)**:
-   - `parse_bank_csv(content: bytes) -> IngestionResult`: parses streaming bytes without crashing.
-   - Enforces exact header layout: `transaction_id,posted_on,amount,currency,description,closing_balance`.
-   - Converts row amounts directly to `Decimal` objects (zero float corruption).
+1. **Multi-Format Bank Parser (`services/ingestion/statement_parser.py`)**:
+   - `parse_bank_statement(content: bytes, filename: str) -> IngestionResult`: automatically routes CSV or PDF files through specialized parsers with balance tie-out and validation.
+   - Enforces exact column layouts and converts row amounts directly to `Decimal` objects (zero float corruption).
    - Validates chronological ordering and flags reversed or duplicate transaction IDs.
 2. **Stable Error Provenance Engine**:
    - File-level failures: `INVALID_ENCODING`, `INVALID_HEADER`, `MIXED_CURRENCIES`, `NO_VALID_ROWS`.
@@ -594,11 +583,6 @@ The data parsing and cryptographic verification pipelines are complete and cover
    - `anchor_invoice_hash()`: detects duplicate hashes and raises `DOUBLE_PLEDGE_DETECTED` to stop double-financing across lenders.
 4. **Solidity Smart Contract (`contracts/InvoiceRegistry.sol`)**:
    - Designed for consortium blockchain deployment (FISCO BCOS) to anchor invoice hashes with immutable timestamps.
-
-#### What You Build Next on Top of This Backbone
-- Add support for JSON and PDF electronic invoice ingestion.
-- Connect `ConsortiumInvoiceRegistry` to a persistent SQLite or PostgreSQL table.
-- Build a Web3.py client connector to dispatch anchoring transactions to a live FISCO BCOS test node.
 
 #### Key Starter Code Backbone
 ```python
@@ -642,6 +626,7 @@ class ConsortiumInvoiceRegistry:
 ```bash
 # Run ingestion and blockchain tests
 pytest tests/unit/test_ingestion_demo.py
+pytest tests/unit/test_pdf_ingestion.py
 pytest tests/unit/test_blockchain_registry.py
 ```
 
@@ -651,49 +636,43 @@ pytest tests/unit/test_blockchain_registry.py
 3. Raise a double-pledge error whenever an invoice hash is re-submitted.
 4. Never commit real customer credentials or bank tokens to git.
 
-#### Copy-Ready AI Prompt for Member 3
+#### Copy-Ready AI Prompt for Domain C
 ```text
-I am Member 3 (Ingestion & Blockchain QA Engineer).
-Read AGENTS.md, docs/team_execution_plan.md, services/ingestion/, and services/blockchain/.
-I own bank statement CSV parsing, row error provenance, and invoice hash verification.
-Task: Ensure parse_bank_csv returns typed IngestionResult with exact row provenance.
-Verify ConsortiumInvoiceRegistry prevents double-financing using canonical SHA-256 hashes.
-Run pytest tests/unit/test_ingestion_demo.py and tests/unit/test_blockchain_registry.py.
+Role: Ingestion & Blockchain QA Specialist (Domain C)
+Context: Read AGENTS.md, docs/team_execution_plan.md, services/ingestion/, and services/blockchain/.
+Mission: Maintain CSV/PDF statement parsers, line-level error provenance codes, and canonical SHA-256 invoice hashing.
+Verification: Run pytest tests/unit/test_ingestion_demo.py, test_pdf_ingestion.py, and test_blockchain_registry.py.
 ```
 
 ---
 
-### Member 4: Quantitative FinTech Engine Specialist
+### Domain D: Quantitative FinTech Engine & Decision Tables
 
 #### Plain-English Role
-Member 4 is the financial mathematician. They write deterministic calculations using Python's `Decimal` module so that runway, daily burn, debt service coverage, WeBank DAB, and loan APRs are calculated with zero rounding bugs or LLM hallucinations.
+Domain D acts as the quantitative brain. It runs deterministic calculations using Python's `Decimal` module and ZenEngine policy decision tables so that runway, daily burn, debt service coverage, WeBank DAB, and loan APRs are calculated with mathematical precision and zero LLM hallucinations.
 
 #### Owned Directories & Files
-- `services/calculations/cash_analysis.py`, `services/calculations/runway.py`
+- `services/calculations/` (25+ calculation modules including `cash_analysis.py`, `runway.py`, `predictive_cash.py`, `working_capital.py`, `dscr.py`, `altman_z.py`, `dupont.py`)
 - `services/matcher/liquidity_matcher.py`
-- `tests/unit/test_cash_analysis.py`, `tests/unit/test_calculations.py`, `tests/unit/test_matcher.py`
+- `contracts/decision_tables/`
+- `tests/unit/test_cash_analysis.py`, `tests/unit/test_calculations.py`, `tests/unit/test_matcher.py`, `tests/unit/test_predictive_cash.py`
 
 #### What Was Already Built & Tested for You (The Implemented Backbone)
-All core financial math and digital underwriting logic are built and verified across 18 passing tests:
+All core financial math, decision tables, and digital underwriting logic are built and verified:
 
 1. **Cash Runway Engine (`services/calculations/cash_analysis.py`)**:
    - `calculate_cash_analysis()`: calculates period length in days (`last_date - first_date + 1`), net period cash change, and current balance.
    - Calculates average daily burn rate using `ROUND_HALF_UP`: `max(0, -net_period_change / period_days)`.
    - Computes historical runway days as `floor(current_balance / average_daily_burn)`.
    - Evaluates cash status: `CASH_NONPOSITIVE`, `LOW_RUNWAY`, `WATCH`, or `NO_BURN`.
-2. **WeBank Digital Underwriting Engine (`services/matcher/liquidity_matcher.py`)**:
+2. **WeBank Digital Underwriting & Continuous Scoring (`services/matcher/liquidity_matcher.py`)**:
    - `build_underwriting_dossier()`: calculates Daily Average Balance (DAB) and tallies 90-day NSF incidents from transactional feeds.
-   - Assigns objective risk tiers: `PRIME`, `NEAR_PRIME`, or `SUBPRIME`.
+   - Computes continuous liquidity score (0-100) with gray-zone triage across `PRIME`, `NEAR_PRIME`, and `SUBPRIME`.
 3. **Truth-in-Lending APR Matcher (`services/matcher/liquidity_matcher.py`)**:
    - `convert_factor_rate_to_apr()`: converts commercial factor rates (e.g., 1.15x) into true APR: `((factor - 1) / (months / 12)) * 100`.
    - `is_predatory_rate()`: flags any facility exceeding 36.00% APR as predatory.
-4. **Pure Decimal Legacy Helpers (`services/calculations/runway.py`)**:
-   - Contains pure `Decimal` helper routines for Debt Service Coverage Ratio (DSCR) and transaction aggregations.
-
-#### What You Build Next on Top of This Backbone
-- Build a 30/60/90-day predictive cash deficit forecasting model with payroll date markers.
-- Implement a seasonal revenue volatility index based on monthly variance.
-- Calculate dynamic credit limits based on historical invoice settlement velocity.
+4. **ZenEngine Policy Decision Tables (`contracts/decision_tables/`)**:
+   - JSON policy decision tables executing deterministic logic for credit limit eligibility, covenants, and working capital ratios.
 
 #### Key Starter Code Backbone
 ```python
@@ -720,10 +699,11 @@ def is_predatory_rate(apr: Decimal) -> bool:
 
 #### Verification & Test Commands
 ```bash
-# Run quantitative calculation and matcher tests
+# Run quantitative calculation, matcher, and decision table tests
 pytest tests/unit/test_cash_analysis.py
 pytest tests/unit/test_calculations.py
 pytest tests/unit/test_matcher.py
+pytest tests/unit/test_predictive_cash.py
 ```
 
 #### Stop-Ship Rules
@@ -732,24 +712,22 @@ pytest tests/unit/test_matcher.py
 3. Always disclose true APR alongside factor rates (Truth-in-Lending requirement).
 4. Calculate daily burn using `max(0, -net_period_change / period_days)` with `ROUND_HALF_UP`.
 
-#### Copy-Ready AI Prompt for Member 4
+#### Copy-Ready AI Prompt for Domain D
 ```text
-I am Member 4 (Quantitative FinTech Engine Specialist).
-Read AGENTS.md, docs/team_execution_plan.md, services/calculations/, and services/matcher/.
-I own deterministic cash runway calculations, WeBank underwriting scores, and APR conversions.
-Task: Enforce pure Decimal arithmetic across all calculation routines.
-Flag facilities exceeding 36.00% APR as predatory under Truth-in-Lending rules.
-Run pytest tests/unit/test_cash_analysis.py and tests/unit/test_matcher.py to verify calculations.
+Role: Quantitative FinTech Engine Specialist (Domain D)
+Context: Read AGENTS.md, docs/team_execution_plan.md, services/calculations/, and services/matcher/.
+Mission: Enforce pure Decimal arithmetic with ROUND_HALF_UP across all 25+ financial routines, ZenEngine decision tables, and APR disclosures.
+Verification: Run pytest tests/unit/test_cash_analysis.py, test_calculations.py, test_matcher.py, and test_predictive_cash.py.
 ```
 
 ---
 
-### Cross-Team Integration Protocol
+### Unified Architecture Verification Protocol
 
-Follow this 5-step checklist when combining work across team boundaries:
+Follow this 5-step checklist when executing tasks across architectural domains:
 
-1. **Contract First**: Member 1 approves any shared field or schema changes in `docs/team_execution_plan.md` before other members update code.
-2. **Boundary Discipline**: Each member works strictly within their owned files. Do not modify another member's files without mutual agreement.
-3. **Local Testing**: Each member runs their own unit or integration test suite before requesting a review.
-4. **Full Test Suite Run**: Run `pytest -q` across all 45 test assertions to confirm zero regressions across the codebase.
-5. **AST Synchronization**: After modifying Python code, run `python -m graphify update .` to update the knowledge graph.
+1. **Contract First**: Verify changes against `docs/team_execution_plan.md` and `AGENTS.md` before updating code.
+2. **Deterministic TDD**: Author or update a focused test in `tests/` before implementation.
+3. **Local Testing**: Run the focused test suite until green.
+4. **Full Test Suite Run**: Run `pytest -q` across all 416+ test assertions to confirm zero regressions across the codebase.
+5. **AST Synchronization**: After modifying Python code, run `python -m graphify update .` to keep the knowledge graph synchronized.

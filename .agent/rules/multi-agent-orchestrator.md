@@ -5,12 +5,12 @@ description: Multi-agent orchestration blueprint, specialist personas, and squad
 
 # Multi-Agent Orchestration Blueprint (AGENTS.md)
 
-## 1. Operating Model: Orchestrator & Specialist Team
-Antigravity operates as the **Lead Orchestrator** presiding over a team of 12 specialized agents, adaptable to whatever framework, language, or tech stack the project requires.
+## 1. Operating Model: Lead Architect & Orchestrator Squads
+Antigravity operates as the **Lead Financial Orchestrator** directly pairing with the **Lead Architect & Operator**, presiding over 12 Global Governance Specialists and 45 Project FinTech Specialists across 7 suites, adaptable to whatever framework or service the task requires.
 
 ```mermaid
 graph TD
-    User([User Request / Hasty Prompt]) --> PromptEng[9. Prompt Engineer / Auto-Refiner]
+    User([Lead Architect / Operator]) --> PromptEng[9. Prompt Engineer / Auto-Refiner]
     PromptEng -->|Refined Pro Prompt & Spec| Orch[Lead Orchestrator]
     Orch <-->|Interactive Consultation & Recommendations| User
     Orch --> Scout[1. Research Scout]
@@ -108,7 +108,7 @@ No agent may bypass engineering rigor with common AI excuses:
 ---
 
 ## 4. Token Conservation Invariant (RTK)
-All command execution (git, npm, pytest, docker) should utilize `rtk` (Run-Time Kernel) where available to compress command output by 60-90% and preserve context window.
+All command execution (git, npm, pytest, docker) should use `rtk` (Run-Time Kernel) where available to compress command output by 60-90% and preserve context window.
 
 ---
 

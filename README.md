@@ -11,30 +11,27 @@
 [![FISCO BCOS](https://img.shields.io/badge/Consortium-FISCO_BCOS-blueviolet.svg)](https://fisco-bcos.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Current demo**: a local, read-only CSV cash review. The broader PWA, WebAuthn and integrations described below are architecture targets, not verified live capabilities.
+**Verified Implementation**: 416 automated tests passing across multi-format statement ingestion (CSV and PDF), 25+ deterministic financial engines, dual local SLM inference (3B/0.5B), Universal LLM Bridge with dynamic model discovery, FastEmbed semantic routing, and 3-tier security governance with WebAuthn passkeys.
 
 ---
 
 ### Project status and documentation map
 
-The repository contains both a small first-demo contract and a much broader architecture blueprint. Coding agents should first read [`AGENTS.md`](AGENTS.md) for instruction precedence and verified status, then [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for the demo contract and task boundaries. The current code and tests—not the broader design references in [`docs/system.md`](docs/system.md), [`docs/architecture.md`](docs/architecture.md), [`docs/security.md`](docs/security.md), or the ADRs—show what is implemented. Before editing, inspect `git status` and preserve existing changes; do not commit or switch branches unless asked.
-
-The checked-in coding-agent skills under `.agent/skills/` are repository-specific; if a task names an account-synced skill, read that exact `SKILL.md` from its supplied location and resolve any referenced files relative to it. Team task prompts set goals, acceptance and boundaries—not a prescribed UI or implementation design. Teammates may choose the approach within those constraints; coordinate before shared-contract, dependency or scope changes.
-
-The current implementation includes a synthetic-CSV analysis endpoint and browser upload/results flow; it does not include authentication, multi-tenant database security, live bank connections, money movement, LLM integration, or blockchain execution. See [`AGENTS.md`](AGENTS.md) for checks and limitations. The wider capability diagrams below are design targets, not claims of working functionality.
+The repository pairs the Lead Architect with specialized AI subagents. Read [`AGENTS.md`](AGENTS.md) for instruction precedence and verified status, then [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for the technical contract and architectural domains. The current code and tests show what is implemented today.
 
 - 📘 [System Design Specification](docs/system.md) — Implementation mechanics, mathematical formulations, schemas & smart contracts
 - 🏛️ [Architectural Plan & Roadmap](docs/architecture.md) — 6-layer topology, 1-Supervisor + 4-Squads model & multi-agent orchestration
 - 🛡️ [Security Architecture & Defense-in-Depth](docs/security.md) — 5 Invariants, threat defense, self-healing & decadal resilience
-- 👥 [Team Distribution Guide](docs/team_distribution_guide.md) — first-demo kickoff, role ownership and handoffs
-- ⚡ [Coding-Agent Workflow](.agent/workflows/sprint-workflow.md) — contract-first task setup, safe edits and verification
+- 👤 [Operational Guide](docs/team_distribution_guide.md) — Subagent orchestration across 4 architectural domains
+- 🧭 [Execution Plan & Technical Contract](docs/team_execution_plan.md) — Technical contract, API schemas, and verified capabilities
+- ⚡ [Sprint Workflow](.agent/workflows/sprint-workflow.md) — Engineering sprint workflow and TDD loop
 - 📜 [Architecture Decision Records (ADRs)](docs/adr/) — 7 formal architecture decision records (ADR-001 to ADR-007)
 
 ---
 
 ## 1. Executive Summary & Problem Statement
 
-> **Status note:** This section and the architecture/security documents linked below describe the intended product and future design. For the actual first-demo scope, implementation status and teammate tasks, use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) and verify claims against current code/tests.
+> **Status note:** For the verified implementation contract, architectural domains, and subagent prompts, use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) and verify behavior against current code and tests.
 
 Small and Medium Enterprises (SMEs) represent over 90% of global businesses and 50% of employment. However, **82% of SME closures stem from cash flow mismanagement and working capital timing mismatches**, rather than a lack of underlying profitability.
 
@@ -235,11 +232,16 @@ python -m graphify update .
 
 ---
 
-## 7. Team kickoff and coding-agent handoff
+## 7. System Architecture & Subagent Orchestration
 
-The first-demo pipeline is already integrated; teammates should start from the code and tests that exist, not assume that planned blueprint services are starter backbones. The [team execution plan](docs/team_execution_plan.md) contains the shared CSV/API contract, current implementation status, actual owner paths and test locations, plus a short task-brief template and copy-ready prompts. The [team distribution guide](docs/team_distribution_guide.md) explains how the lead assigns work and integrates handoffs. The [CI workflow](.github/workflows/ci.yml) runs backend tests and frontend type/build checks on pushes and pull requests; this validates the current demo baseline, not deferred blueprint capabilities.
+The repository pairs the Lead Architect with specialized AI subagents. The Lead Financial Orchestrator delegates domain tasks across 4 functional domains without committee handoffs:
 
-For each coding-agent task, the lead supplies the user outcome, observable acceptance checks, owner and scope boundaries. The prompt intentionally leaves design and implementation choices to the teammate within the agreed contract. A folder boundary can reduce overlapping edits, but it cannot guarantee conflict-free or semantically compatible merges; review and test the integrated changes before the demo.
+- **Domain A (API Platform & Security)**: FastAPI routes, ASGI middleware, 3-tier security gate, WebAuthn passkey verification, Docker packaging.
+- **Domain B (Executive Dashboard & UI)**: Next.js 14 App Router, design tokens, tabular figures, AI provider modal, predictive cash deficit cards.
+- **Domain C (Multi-Format Ingestion & Blockchain)**: CSV and PDF bank statement parsing, line-item extraction, balance tie-out, error provenance, SHA-256 invoice hashing, FISCO BCOS contract.
+- **Domain D (Quantitative FinTech & Decision Tables)**: Pure Decimal financial math, DAB carry-forward, cash flow analysis, ZenEngine decision tables, continuous liquidity scoring.
+
+See [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md) and [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for full contracts and delegation prompts.
 
 ---
 

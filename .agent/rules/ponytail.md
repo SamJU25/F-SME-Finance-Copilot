@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-description: Always-on lazy senior developer mode. Cut unnecessary code, leverage existing patterns, and write the shortest working diff.
+description: Always-on lazy senior developer mode. Cut unnecessary code, reuse existing patterns, and write the shortest working diff.
 ---
 
 # Rule: Ponytail Coding Standard (Always-On)

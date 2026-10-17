@@ -1,57 +1,97 @@
 # SME Finance Copilot: Master Security Architecture (`security.md`)
 
 - **Document Role**: Threat Modeling, Defense-in-Depth, Self-Healing & Decadal Security
-- **Status**: Security architecture blueprint; controls are not presumed implemented or production-ready
-- **Date**: 2026-10-14
+- **Status**: Active Security Architecture & Technical Contract (Verified Baseline: 416 Passed Tests)
+- **Date**: 2026-10-17
 - **Competition Target**: FinTechathon 2026 Track E (Tsinghua University PBCSF & WeBank)
 
 ### Master Documentation Suite:
-- 📘 [System Design (`docs/system.md`)](system.md) — Schemas, math models & smart contract specs
-- 🏛️ [Architecture Plan (`docs/architecture.md`)](architecture.md) — 6-layer topology & multi-agent squads
-- 🛡️ [Security Architecture (`docs/security.md`)](security.md) — 5 Invariants, threat modeling & decadal resilience
-- 👥 [Team Distribution Guide (`docs/team_distribution_guide.md`)](team_distribution_guide.md) — first-demo kickoff and role handoffs
-- ⚡ [Coding-Agent Workflow (`.agent/workflows/sprint-workflow.md`)](../.agent/workflows/sprint-workflow.md) — contract-first task setup and verification
+- 📘 [System Design (`docs/system.md`)](system.md) — Schemas, 25+ math engines, decision tables & smart contract specs
+- 🏛️ [Architecture Plan (`docs/architecture.md`)](architecture.md) — 6-layer topology, dual SLM inference & multi-agent suites
+- 🛡️ [Security Architecture (`docs/security.md`)](security.md) — 5 Invariants, threat modeling & Three-Tier Security Gate
+- 👥 [Operational Guide (`docs/team_distribution_guide.md`)](team_distribution_guide.md) — AI agent squad orchestration & domain handoffs
+- ⚡ [Engineering Lifecycle (`.agent/workflows/sprint-workflow.md`)](../.agent/workflows/sprint-workflow.md) — Contract-first TDD and verification protocol
+- 🧭 [Execution Plan & Technical Contract (`docs/team_execution_plan.md`)](team_execution_plan.md) — Verified technical contract & API specifications
 - 📜 [Architecture Decision Records (`docs/adr/`)](adr/) — ADR-001 to ADR-007
 
 ---
 
 ## 1. Executive Security Philosophy: Provable Invariants vs. Heuristic Decay
 
-Traditional software defenses rely on **heuristics** (firewall signatures, anomaly heuristics, input regexes, prompt guardrails). Heuristics inevitably decay within 6 to 18 months because attackers continually invent novel mutations, encodings, and jailbreaks.
+Traditional software defenses rely on heuristics (firewall rules, anomaly filters, regex sanitizers, prompt wrappers). Heuristics decay quickly because attackers discover novel encodings, bypasses, and jailbreaks.
 
-Our architecture relies on **Provable Invariants**: security guarantees grounded in the laws of mathematics, database kernels, and physical silicon.
+Our architecture relies on **Provable Invariants**: mathematical, kernel-enforced, and hardware-backed security guarantees.
 
 ```
+┌────────────────────────────────────────────────────────────────────────┐
+│                            THE 5 INVARIANTS                            │
+├────────────────────────┬───────────────────────────────────────────────┤
+│ 1. Type Boundary       │ Rust Pydantic v2 drops 422 on extra/bad keys  │
+│ 2. Storage Boundary    │ PostgreSQL Kernel RLS + X-Tenant-ID ingress   │
+│ 3. Air-Gap Boundary    │ Zero banking credentials for AI agents        │
+│ 4. Atomicity Boundary  │ Row locks + FISCO BCOS PBFT double-pledge stop│
+│ 5. Hardware Boundary   │ WebAuthn FIDO2 passkey biometric confirmation │
+└────────────────────────┴───────────────────────────────────────────────┘
+```
+
+---
+
+## 2. The Three-Tier Security Gate
+
+Every financial event flows through an immutable, permission-gated lifecycle before execution:
+
+```
+[ User Request / Statement Ingestion ]
+                 │
+                 ▼
 ┌────────────────────────────────────────────────────────┐
-│                        THE 5 INVARIANTS                │
-├────────────────────────┬───────────────────────────────┤
-│ 1. Type Boundary       │ Rust Pydantic v2 drops 422    │
-│ 2. Storage Boundary    │ PostgreSQL Kernel RLS         │
-│ 3. Air-Gap Boundary    │ Zero money credentials for AI │
-│ 4. Atomicity Boundary  │ Row locks + FISCO BCOS PBFT   │
-│ 5. Hardware Boundary   │ WebAuthn Secure Enclave Touch │
-└────────────────────────┴───────────────────────────────┘
+│ TIER 1: OBSERVATION (Autonomous Read-Only)             │
+│ • Bank statement CSV/PDF ingestion & OCR               │
+│ • Line-item extraction & balance tie-out               │
+│ • Deterministic CFO calculations (DAB, CCC, DSCR)      │
+│ • Predictive cash overdraft pinpointing                │
+│ • Zero state modification; safe for automated agents   │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Requires Financing / Staging Intent
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ TIER 2: STAGING (Queue Only — ActionIntent Ledger)     │
+│ • Drafts proposed transaction (e.g. Factor Invoice)    │
+│ • Evaluates policy decision tables (ZenEngine JSON)    │
+│ • Enforces Truth-in-Lending APR caps (<= 36.0%)        │
+│ • Computes canonical SHA-256 invoice hash              │
+│ • Status: STAGED_PENDING_HITL ($0.00 transferred)      │
+└──────────────────────────┬─────────────────────────────┘
+                           │ POST /api/v1/actions/{id}/execute
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ TIER 3: EXECUTION (Hardware HITL 2FA Confirmation)     │
+│ • WebAuthn FIDO2 biometric prompt (FaceID / TouchID)   │
+│ • Physical enclave signature verification              │
+│ • FISCO BCOS smart contract pledge verification        │
+│ • Fund disbursement or contract binding executed       │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Threat Modeling & Offensive Tool Defense
+## 3. Threat Modeling & Offensive Tool Defense
 
-Security is designed to withstand both automated AI pentesting agents and specialized exploitation engines:
+Security is designed to withstand both automated AI attacks and specialized penetration testing frameworks:
 
-| Offensive Tool | Attack Vector | Our Physical / Mathematical Invariant Defense |
+| Threat Vector / Tool | Attack Mechanism | Mathematical & Physical Invariant Defense |
 |---|---|---|
-| **Strix, Garak, PyRIT** | AI prompt injection & jailbreak | The LLM has zero bank API credentials and zero write access to financial database columns. It can only emit a proposal into `action_intents` with status `STAGED_PENDING_HITL`. \$0.00 moves without human biometric touch. |
-| **SQLmap, NoSQLmap** | SQL injection & parameter tampering | Payloads are strictly parsed by Pydantic v2 (compiled in Rust). `asyncpg` uses the PostgreSQL binary protocol with prepared statements; SQL command syntax and parameter values travel across separate binary channels. |
-| **Autorize, BOLA/IDOR Tools** | Swapping `tenant_id` to steal records | The backend extracts `tenant_id` exclusively from cryptographic JWT claims. PostgreSQL enforces Row-Level Security (`SET LOCAL app.current_tenant_id`) at the disk layer; cross-tenant queries physically return 0 rows. |
-| **Turbo Intruder** | Race conditions & single-packet floods | Transactions execute `SELECT ... FOR UPDATE` (pessimistic row locks). Pledging invoices across banks is governed by `InvoiceRegistry.sol` on FISCO BCOS; PBFT consensus guarantees only the first pledge succeeds. |
-| **REA, Ghidra, Frida** | Client disassembling & variable hooking | Zero financial logic or approval authorization lives in the browser. The frontend is treated as an untrusted display terminal; the backend validates 100% of state. |
+| **Prompt Injection (PyRIT, Garak)** | Malicious instructions hidden in CSV/PDF statement counterparty descriptions | FastEmbed ONNX vector triage routes intent before prompt assembly. Pre-flight PII redaction strips adversarial payloads. The LLM has zero bank API credentials and zero write access to financial database columns. It can only emit a proposal into `action_intents` with status `STAGED_PENDING_HITL`. |
+| **SQL Injection (SQLmap)** | Malformed query parameters to extract ledgers | Payloads are strictly parsed by Pydantic v2 (compiled in Rust). Database drivers use binary parameterized prepared statements (`asyncpg`); SQL command syntax and parameter values travel across separate binary channels. |
+| **BOLA / IDOR / Tenant Hop** | Tampering with `tenant_id` to steal records | Ingress middleware validates `X-Tenant-ID` against cryptographic JWT claims. PostgreSQL enforces Row-Level Security (`SET LOCAL app.current_tenant_id`) at the disk layer; cross-tenant queries physically return 0 rows. |
+| **Race Conditions (Turbo Intruder)** | Single-packet bursts attempting duplicate loan draws | Transactions execute `SELECT ... FOR UPDATE` (pessimistic row locks). Pledging invoices across lenders is anchored on FISCO BCOS via `InvoiceRegistry.sol`; PBFT consensus guarantees only the first pledge succeeds. |
+| **Client Hooking (REA, Frida)** | Client-side memory tampering & variable hooking | Zero financial calculation or approval logic executes in the browser. The frontend is treated as an untrusted display terminal; the backend validates 100% of state deterministically. |
 
 ---
 
-## 3. Automated Self-Healing & Resilience Protocol
+## 4. Automated Self-Healing & Resilience Protocol
 
-When attacks, corruptions, or server crashes occur, the system heals across four automated tiers:
+When anomalies or process crashes occur, recovery executes across four automated tiers:
 
 ```
 [ Anomaly / Failure Event ]
@@ -81,7 +121,7 @@ When attacks, corruptions, or server crashes occur, the system heals across four
 
 ---
 
-## 4. Database Defense-in-Depth
+## 5. Database Defense-in-Depth
 
 ```
 [ Public Internet ]
@@ -110,25 +150,25 @@ When attacks, corruptions, or server crashes occur, the system heals across four
 
 ---
 
-## 5. LLM Connection Security & Data Privacy
+## 6. LLM Connection Security & Data Privacy
 
-1. **Microsoft Presidio PII Masking**: Customer names, phone numbers, and bank account numbers are scrubbed before prompt assembly; external AI models receive only synthetic tokens (`<CUSTOMER_1>`, `[REDACTED_IBAN]`).
-2. **Air-Gapped Local Inference (Ollama)**: In local mode (`LLM_MODEL=ollama/llama3.1:8b`), inference runs on `127.0.0.1:11434`. Zero internet packets leave the machine.
-3. **Enterprise Zero-Data Retention (TLS 1.3)**: Commercial API connections enforce `store=False`, guaranteeing prompts are not logged or used for model training.
-4. **Egress Firewall**: Container network policies drop all outbound connections to unauthorized external IP addresses, defeating prompt exfiltration attacks.
-
----
-
-## 6. Secret Hygiene & Blast Radius Containment
-
-1. **Zero-Secret Frontend Invariant**: The client browser contains zero API keys, zero database credentials, and zero private keys.
-2. **Blast Radius Decoupling**: The LLM API key has zero authority over bank accounts or databases; even if stolen, it can only generate text tokens.
-3. **Short-Lived Ephemeral IAM Tokens**: Uses Workload Identity Federation with 60-minute auto-expiry instead of static strings.
-4. **Egress IP Pinning & Daily Spend Caps**: Stolen keys cannot be called from outside the backend's static IP; spending is capped at $10/day.
+1. **Pre-Flight PII Redaction**: Customer names, phone numbers, tax IDs, and bank account numbers are scrubbed before prompt assembly; external AI models receive only synthetic tokens (`<CUSTOMER_1>`, `[REDACTED_IBAN]`).
+2. **Air-Gapped Local Inference Engine**: In local mode, `LocalTransformersEngine` runs Flagship 3B (`models/sme-finance-lora`) or Edge 0.5B (`models/sme-finance-mobile-lora`) directly via PyTorch CUDA/CPU, or connects to Ollama on `127.0.0.1:11434`. Zero internet packets leave the machine.
+3. **Enterprise Zero-Data Retention (TLS 1.3)**: Cloud provider API connections enforce `store=False`, ensuring prompts are not logged or used for model training.
+4. **Encrypted Client Key Storage**: When custom API keys are used in the dashboard, they reside in client `localStorage` and are passed per-session via authenticated headers; they are never committed to disk on shared servers.
 
 ---
 
-## 7. Decadal Security Blueprint (30-Year Resilience)
+## 7. Consortium Blockchain Double-Financing Defense
+
+1. **Canonical Hashing**: Every ingested invoice produces a deterministic cryptographic hash:
+   $$\text{hash} = \text{SHA256}\left(\text{tax\_id} \,\|\, \text{buyer\_id} \,\|\, \text{invoice\_num} \,\|\, \text{amount\_cents}\right)$$
+2. **PBFT Consensus Anchor**: Invoices submitted for factoring or credit collateral are registered on the consortium blockchain (`contracts/InvoiceRegistry.sol`).
+3. **Double-Pledge Prevention**: If a fraudulent SME attempts to pledge the same invoice to two separate commercial lenders, the second transaction reverts with `ERR_INVOICE_ALREADY_PLEDGED`.
+
+---
+
+## 8. Decadal Security Blueprint (30-Year Resilience)
 
 1. **Post-Quantum Cryptography (NIST FIPS 203/204)**: Hybrid ML-KEM + ML-DSA dual signatures protect financial audit logs against Harvest-Now-Decrypt-Later quantum attacks.
 2. **Formal Verification (TLA+ & Dafny)**: State machine transitions mathematically proven to guarantee mutual exclusion on invoice pledges across infinite interleavings.

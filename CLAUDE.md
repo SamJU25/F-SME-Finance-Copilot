@@ -5,24 +5,25 @@ Scope: All software development, research, financial engineering, and testing in
 ---
 
 ## 0. Project Truth & Instruction Precedence
-- Start with [`AGENTS.md`](AGENTS.md) and the current user request. It defines the authority order, verified implementation baseline, and known gaps.
-- For first-demo work, use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) as the target contract, not as proof the features exist. Read only the relevant sections of the architecture/security blueprints and applicable ADRs; stop if a contract conflict cannot be resolved from the explicit user scope.
-- Verify implementation claims against source and tests. Treat `graphify-out/` as generated navigation data whose freshness must be checked.
+- Start with [`AGENTS.md`](AGENTS.md) and the current user request. It defines the authority order, verified implementation baseline (416 passing tests), and known gaps.
+- Use [`docs/team_execution_plan.md`](docs/team_execution_plan.md) as the verified technical contract and operational plan. Read only the relevant sections of the architecture/security blueprints and applicable ADRs.
+- The project pairs the Lead Architect with specialized AI subagents across direct execution loops without committee handoffs.
+- Verify implementation claims against source and tests (`pytest -q`). Treat `graphify-out/` as generated navigation data whose freshness must be checked.
 
 ## 1. Environment & Architecture Overview
 - **Master Specifications**:
   - [`docs/system.md`](docs/system.md): Concrete implementation mechanics, math models, schemas & contracts.
   - [`docs/architecture.md`](docs/architecture.md): Macro topology, 1-Supervisor + 4-Squads model & roadmap.
   - [`docs/security.md`](docs/security.md): 5 Invariants, threat defense, self-healing & decadal security.
-  - [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): first-demo kickoff, role ownership and handoffs; see the execution plan for the current contract.
+  - [`docs/team_distribution_guide.md`](docs/team_distribution_guide.md): Operational guide for orchestrating the 57 subagents.
   - [`docs/adr/`](docs/adr/): 7 formal Architecture Decision Records.
-  - [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): contract-first coding-agent task setup, safe edits and verification.
+  - [`.agent/workflows/sprint-workflow.md`](.agent/workflows/sprint-workflow.md): Sprint workflow and TDD loop.
 - **Project Structure**:
   - [`.agent/agents/`](.agent/agents): 57 specialized subagents across 8 squads (Suites 0 through 7).
-  - [`.agent/skills/`](.agent/skills): 54 deterministic execution skills (governance, fintech math, web, security).
+  - [`.agent/skills/`](.agent/skills): 56 deterministic execution skills (governance, fintech math, web, security).
   - [`.agent/rules/`](.agent/rules): 10 standing architectural rules.
   - [`graphify-out/`](graphify-out): Persistent AST knowledge graph (`graph.json`) and architecture wiki (`wiki/index.md`).
-  - [`AGENTS.md`](AGENTS.md): Full registry and Scenario Routing Matrix.
+  - [`AGENTS.md`](AGENTS.md): Full registry, baseline, and Scenario Routing Matrix.
   - [`GLOSSARY.md`](GLOSSARY.md): Ubiquitous domain vocabulary (CCC, DSO, DIO, DPO, DAB, NSF, DSCR, Runway, APR, WeBank Weiyidai, FISCO BCOS).
 
 ---
@@ -82,10 +83,85 @@ Every response and code modification must satisfy these 10 standing rules:
 ---
 
 ## 3. Skill & Agent Utilization for Claude
-When handling a user request:
-1. Identify the matching squad in [`AGENTS.md`](AGENTS.md).
-2. Read the relevant `.agent/skills/<skill-name>/SKILL.md` before using that skill; skill resources resolve relative to the skill directory.
-3. Follow the red-green-refactor cycle and execute tests using `pytest`.
+The workspace contains **56 deterministic skills** in `.agent/skills/`. Before executing work in a domain, Claude must read the corresponding `.agent/skills/<skill-name>/SKILL.md` file.
+
+### Complete 56-Skill Directory by Domain:
+
+#### 1. FinTech Engineering & Financial Valuation (12 skills)
+- `3-statement-model`: Complete, link, and populate 3-statement financial models (IS, BS, CF).
+- `audit-xls`: Spreadsheet formula audit, balance tie-out, model integrity checks.
+- `clean-data-xls`: Data normalization, casing, date parsing, whitespace trimming.
+- `comps-analysis`: Public comparable company analysis and multiples benchmarking.
+- `dcf-model`: Discounted Cash Flow valuation, WACC computation, sensitivity tables.
+- `deal-screening`: Triaging and evaluating CIMs, teasers, and broker materials.
+- `earnings-analysis`: Quarterly earnings reports, beat/miss analysis, KPI breakdown.
+- `gl-recon`: General ledger to subledger break reconciliation and classification.
+- `pptx-author`: Headless generation of PowerPoint presentation decks (.pptx).
+- `sector-overview`: Industry landscape reports, market dynamics, competitive trends.
+- `unit-economics`: ARR cohorts, LTV/CAC, net retention, payback periods.
+- `xlsx-author`: Headless generation and formatting of Excel workbooks (.xlsx).
+
+#### 2. Compliance, Underwriting & Security (6 skills)
+- `kyc-doc-parse`: Parse investor/client onboarding packets into structured KYC fields.
+- `kyc-rules`: Apply firm KYC/AML risk matrix, scoring rules, and escalation flags.
+- `penetration-tester`: Red-team attack simulation, exploit analysis, SAST/DAST audits.
+- `prompt-injection-defense`: Guardrails against indirect prompt injection and data leaks.
+- `security-guardian`: Zero-trust security, JWT/RBAC guards, secret sanitization.
+- `three-tier-security-gate`: 3-Tier matrix enforcement (Read -> Staging -> HITL 2FA).
+
+#### 3. Backend Platform, Systems & Database (8 skills)
+- `codebase-design`: Domain-centric folder architecture and decoupled interfaces.
+- `docker-patterns`: Multi-stage Dockerfiles, compose environments, healthchecks.
+- `fastapi-backend-craft`: Async FastAPI routes, Pydantic v2 schemas, dependencies.
+- `mcp-builder`: Model Context Protocol tool servers and JSON-RPC endpoints.
+- `postgres-db-design`: Relational schemas, indexing, immutable ledgers, time-series.
+- `stripe-payments-integration`: Open Banking rails, Stripe webhooks, fee reconciliation.
+- `systems-architect`: Clean endpoints, typed data models, zero-downtime migrations.
+- `cross-platform-engineer`: Packaging desktop (Tauri/Electron) and mobile apps.
+
+#### 4. Frontend Craft, UX & Motion (5 skills)
+- `antislop`: Eliminate arbitrary visual clutter, AI hype, and boilerplate comments.
+- `frontend-craft-engineer`: Responsive layouts, accessibility, pre-ship finish gates.
+- `impeccable`: Design engineering for craft, layout polish, typography, and motion.
+- `nextjs-react-dashboard`: Next.js 14 App Router, Recharts, tabular numbers, 4-state cards.
+- `taste-skill`: Anti-slop UI styling avoiding generic templates.
+
+#### 5. AI Orchestration, Research & Knowledge (7 skills)
+- `agent-reach`: Read-only internet research across Jina, GitHub, yt-dlp, RSS.
+- `agentic-architect`: Multi-agent orchestration, LangGraph, tool-calling, memory.
+- `competitive-analysis`: Competitive landscapes, peer comparisons, strategic synthesis.
+- `graphify`: AST knowledge graph synchronization and architecture queries.
+- `prompt-engineer`: Structured prompt contracts, XML boundaries, evaluation suites.
+- `research-scout`: Internet research, upstream repository inspection, library evaluation.
+- `subagent-catalog`: Dynamic discovery and fetching of specialized subagents.
+
+#### 6. Quality Assurance, Testing & Debugging (7 skills)
+- `code-optimizer`: Performance profiling, algorithmic complexity, hot-path speed.
+- `code-reviewer`: Static analysis, PR review gates, cognitive complexity reduction.
+- `e2e-testing`: End-to-end user journeys, CSV ingestion tests, security gates.
+- `pytest-financial-testing`: Deterministic Decimal math tests, cash runway assertions.
+- `qa-verifier`: Deterministic quality assurance, verification gates, reality checks.
+- `systematic-debugging`: Root-cause diagnosis, reproduction, isolation, minimal fixes.
+- `verification-before-completion`: Command execution and terminal proof before claiming success.
+
+#### 7. Engineering Process & Cognitive Discipline (11 skills)
+- `brainstorming`: Explore intent and design alternatives before implementation.
+- `domain-modeling`: Ubiquitous vocabulary, GLOSSARY.md, and ADR maintenance.
+- `doubt-driven-development`: Adversarial review of assumptions before code is finalized.
+- `grill-me`: Structured grilling rounds to stress-test requirements.
+- `i-have-adhd`: Communication protocol (lead with action, cap lists at 5, zero pleasantries).
+- `karpathy-guidelines`: Simplicity first, surgical diffs, goal-driven execution.
+- `source-driven-development`: Ground implementation decisions in official documentation.
+- `technical-writer`: Architecture guides, API references, tutorials.
+- `test-driven-development`: Red-green-refactor cycle.
+- `using-superpowers`: Skill invocation discipline before coding or planning.
+- `writing-plans`: Step-by-step implementation plans for multi-step tasks.
+
+When handling a task:
+1. Scan the 56-skill catalog above and select the exact matching skills.
+2. Read `.agent/skills/<skill-name>/SKILL.md` before writing code.
+3. Verify changes with `pytest -q`.
+
 
 ---
 

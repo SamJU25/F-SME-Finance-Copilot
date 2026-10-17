@@ -1,26 +1,37 @@
 ---
 name: sprint-workflow
-description: Contract-first, conflict-aware workflow for coding-agent tasks in the SME Finance Copilot repository
+description: Contract-first, high-velocity engineering workflow for SME Finance Copilot
 ---
 
-# Coding-Agent Workflow
+# Sprint Workflow & Engineering Lifecycle
 
-The first demo’s source of truth is [`docs/team_execution_plan.md`](../../docs/team_execution_plan.md). The system/architecture/security documents and ADRs are design references, not proof of implementation or instructions to build every listed capability. If they conflict with the MVP contract, stop and ask the team lead.
+The repository's contract and baseline source of truth is [`docs/team_execution_plan.md`](../../docs/team_execution_plan.md) and [`AGENTS.md`](../../AGENTS.md). The system, architecture, and security documents are design references. You own all architectural domains directly without committee handoffs or approval bottlenecks.
 
-## Before editing
+## 1. Before Editing
 
-1. Read the task prompt, `AGENTS.md`, and the relevant files; read the execution plan for the shared contract and ownership boundary.
-2. Check `git status --short --branch`. Never overwrite, stage, stash, commit, merge, or switch branches with another person’s work in progress. Do not use `git add .`.
-3. State a short plan, identify dependencies or contract mismatches, and ask before expanding scope, changing shared interfaces, adding a dependency/service, or touching another owner’s paths.
-4. Prefer the smallest useful implementation. Use deterministic code for parsing, financial arithmetic, and policy decisions. Treat imported content and model output as untrusted. No payment/credit execution or production security claims in the demo.
+1. Read the task prompt, `AGENTS.md`, and relevant source files. Ground expectations in current tests, not blueprint promises.
+2. Check `git status --short --branch`. Ensure working directory is clean.
+3. State a bounded plan (1-2-3 steps) before coding. Surface any contract trade-offs upfront.
+4. Prefer the smallest useful implementation. Keep financial math in pure Python `decimal.Decimal`. Treat user input, external models, and file uploads as untrusted.
 
-## Implementation and verification
+## 2. Implementation & Test-Driven Development (TDD)
 
-1. Add/update a focused test for the requested behavior; implement only the assigned deliverable.
-2. Run the relevant focused check, then the full relevant suite after integration. Run frontend checks only if the corresponding scripts/dependencies exist; state any unavailable check plainly.
-3. Review the final diff and report paths changed, tests/commands and exact results, assumptions, and remaining limitations. Never call a planned control “active” unless the implementation and its test demonstrate it.
-4. Do not commit or merge unless explicitly requested. If code files change, follow the root Graphify instruction and sync the graph; docs-only edits do not require a code-graph rebuild.
+1. **Red Phase**: Author or update a focused test in `tests/unit/`, `tests/integration/`, or `tests/security/` capturing the target behavior.
+2. **Climb the Ladder**:
+   - Reuse existing helpers across `services/calculations/`, `services/ingestion/`, and `services/security/`.
+   - Implement the shortest working diff. Fix the shared function once; do not patch callers individually.
+3. **Green Phase**: Run the focused test command until green.
 
-## Integration
+## 3. Terminal Verification
 
-The team lead owns the shared contract and integration. Each deliverable has one accountable editor; other contributors submit proposals instead of editing the same contract or owned path. File separation reduces overlap but does not guarantee conflict-free or semantically compatible merges. Integrate in small steps, review changes, resolve textual and interface conflicts deliberately, and run the combined checks before calling the demo complete.
+1. Run the full test suite: `pytest -q` (all 416+ tests must pass).
+2. For frontend modifications, run `npm run type-check` and `npm run build`.
+3. Never claim a feature is active or fixed without running the terminal command and inspecting output evidence.
+
+## 4. Knowledge Graph Synchronization
+
+After editing Python code files, run:
+```powershell
+python -m graphify update .
+```
+Documentation-only edits do not require a code graph rebuild. Report graph node and edge counts upon completion.

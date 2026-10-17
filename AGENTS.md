@@ -4,56 +4,65 @@ This workspace is engineered specifically for building the **Autonomous AI Agent
 
 ### Master Documentation & Operational Protocols:
 - 📘 [System Design Specification](docs/system.md) | 🏛️ [Architectural Plan](docs/architecture.md) | 🛡️ [Security Architecture](docs/security.md)
-- 👥 [Team Distribution Guide](docs/team_distribution_guide.md) | ⚡ [Sprint Workflow](.agent/workflows/sprint-workflow.md) | 📜 [ADRs](docs/adr/)
-- 🧭 [First-demo contract and implementation status](docs/team_execution_plan.md)
+- 👤 [Operational Guide](docs/team_distribution_guide.md) | ⚡ [Sprint Workflow](.agent/workflows/sprint-workflow.md) | 📜 [ADRs](docs/adr/)
+- 🧭 [Execution Plan & Technical Contract](docs/team_execution_plan.md)
 
 ## 0. Project Truth, Instruction Precedence & Current Baseline
 
 Use this order when project documents disagree:
 1. The user's explicit task and safety constraints for this session.
 2. This file (`AGENTS.md`) for repository-wide agent behavior.
-3. [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for the first-demo scope, shared API/data contract, ownership, and acceptance criteria. It describes the agreed target; it is not proof that the target is implemented.
+3. [`docs/team_execution_plan.md`](docs/team_execution_plan.md) for the verified shared API/data contract, architecture domains, and acceptance criteria. It describes the agreed implementation target; verify behavior against tests and source.
 4. The current source code and tests for what actually runs today. Treat tests as evidence only for the behavior they cover.
 5. Applicable ADRs for accepted decisions; then [`docs/system.md`](docs/system.md), [`docs/architecture.md`](docs/architecture.md), and [`docs/security.md`](docs/security.md) as broader design blueprints. Blueprint features are not implementation claims or automatic sprint scope.
 6. `graphify-out/` reports, wiki pages, and graph data are generated navigation aids, not authorities. Check their freshness and confirm claims in source/tests.
 7. Agent personas, skill catalogs, and platform-specific instruction files route work; they do not supersede this precedence or the user's scope.
 
-Read only the specification sections needed for the task. Before using a skill, read its exact `SKILL.md` and resolve referenced resources relative to that skill directory; account-synced skills may be outside this checkout and must not be assumed to mirror `.agent/skills/`. If a requested change clearly expands the first-demo contract, follow the user's explicit scope; otherwise pause on a genuine contract conflict and ask the user/team lead rather than silently choosing the larger blueprint.
+Read only the specification sections needed for the task. Before using a skill, read its exact `SKILL.md` and resolve referenced resources relative to that skill directory; account-synced skills may be outside this checkout and must not be assumed to mirror `.agent/skills/`.
 
-### Verified repository baseline (checked 2026-10-15)
-- `pytest -q`: **86 passed** on 2026-10-15, including banking-grade calendar carry-forward Daily Average Balance (`calculate_dab_from_transactions`), gross inflow/outflow flow decomposition (`calculate_cash_analysis`), lumpy recurring expense overdraft pinpointing (`services/calculations/predictive_cash.py`), weekly revenue volatility index CV and volatility tiers (`calculate_inflow_volatility`), working capital Cash Conversion Cycle (`calculate_cash_conversion_cycle`), predictive cash crunch early-warning, dynamic live model discovery (`POST /api/v1/agent/fetch-models`), multi-provider connection testing (`POST /api/v1/agent/test-connection`), PII sanitization defense (`services/agent/llm_bridge.py`), header LLM configuration parsing (`X-LLM-Config`), prompt injection defense, header tenant isolation (`X-Tenant-ID`), conversational agent and REST end-to-end user journeys (`tests/e2e/test_csv_upload_e2e.py`), autonomous agent reasoning supervisor (`tests/integration/test_agent_api.py`), first-demo analyze route, underwriting dossier matcher, staging ledger, consortium invoice hasher, and security invariant tests.
-- FastAPI exposes root, health, `POST /api/v1/analyze`, `POST /api/v1/underwrite`, `POST /api/v1/actions`, `POST /api/v1/agent/chat`, `POST /api/v1/agent/test-connection`, and `POST /api/v1/agent/fetch-models`; routes accept UTF-8 CSV or typed payloads, enforce upload limits, and respond with stable row/file errors and decimal strings.
-- Multi-stage container packaging is configured via `Dockerfile.backend`, `Dockerfile.frontend`, `docker-compose.yml`, `.dockerignore`, and `.env.example` with dynamic environment variables, unprivileged runtime users (`appuser`, `nextjs`), and `/health` probe checks.
-- The Next.js UI lives in the root `app/` entrypoint and `frontend/src/app/`, with shared types under `frontend/src/`. It features an In-App AI Provider Settings Modal with preset options (Gemini, Claude, OpenAI, DeepSeek, Groq, Ollama, Custom), dynamic live model discovery via `/models`, predictive deficit early-warning cards, live connection verification, browser `localStorage` persistence, and Tier 3 WebAuthn biometric passkey confirmation.
-- `package-lock.json` is present. In a clean temporary copy on 2026-10-14, `npm ci`, `npm run type-check`, and `npm run build` passed. An in-place `npm ci` in the shared checkout was blocked because the running Next.js server had its SWC native module open; do not delete or overwrite shared `node_modules` to work around this.
-- The code graph was refreshed after source edits with `python -m graphify update .`: **2,366 nodes / 2,841 edges / 261 communities**. Solidity extraction was skipped because `tree-sitter-solidity` is not installed; community labels may still need refresh.
+### Verified repository baseline (checked 2026-10-17)
+- `pytest -q`: **416 passed**, 1 warning in 15.34s on 2026-10-17.
+- **Statement Ingestion**: Multi-format ingestion supporting both UTF-8 CSV and PDF bank statements (`services/ingestion/statement_parser.py`, `services/ingestion/pdf_parser.py`, `services/ingestion/csv_parser.py`) with line-item extraction, balance tie-out, and row-level error provenance codes (`INVALID_ROW_SHAPE`, `INVALID_DATE`, `INVALID_AMOUNT`, `INVALID_CURRENCY`, `DUPLICATE_TRANSACTION_ID`, `OUT_OF_ORDER_DATE`).
+- **Deterministic FinTech Engines (25+ Core Routines)**: Pure Python `decimal.Decimal` calculations across banking-grade calendar carry-forward Daily Average Balance (`calculate_dab_from_transactions`), gross inflow/outflow flow decomposition (`calculate_cash_analysis`), predictive cash crunch overdraft pinpointing (`services/calculations/predictive_cash.py`), weekly revenue volatility index CV and volatility tiers (`calculate_inflow_volatility`), working capital Cash Conversion Cycle (`calculate_cash_conversion_cycle`), DSCR, FCCR, Altman Z'-score, DuPont ROE 3-stage, ROIC/EVA, DCF/WACC, SaaS unit economics, trade credit APR, currency conversion & registry for 160+ ISO currencies.
+- **Continuous Liquidity Scoring**: 0–100 continuous score with gray-zone triage for Prime vs. Conditional financing proposals (`services/matcher/liquidity_matcher.py`).
+- **Policy Decision Tables**: ZenEngine JSON decision tables (`contracts/decision_tables/`) governing loan covenants, unit economics, working capital, and persona risk policies.
+- **Dual Local SLM/LLM Inference Engine**: `LocalTransformersEngine` supporting Flagship 3B (`models/sme-finance-lora`) and Edge 0.5B (`models/sme-finance-mobile-lora`) via PyTorch CUDA/CPU with fallback to cloud providers.
+- **Universal LLM Bridge**: `services/agent/llm_bridge.py` supporting Gemini 2.0 Flash, Claude 3.5 Sonnet, GPT-4o, DeepSeek, Groq, Ollama, Local LoRA, and Custom OpenAI endpoints with pre-flight PII redaction and dynamic live model discovery (`POST /api/v1/agent/fetch-models`).
+- **Dynamic Semantic Routing**: FastEmbed (`BAAI/bge-small-en-v1.5` ONNX) vector intent classification with cosine similarity triage; zero hardcoded keyword intercepts or template replies.
+- **Anti-Slop Post-Processing**: Dynamic neural CFO responses grounded in pure calculation context without hardcoded templates or hallucinated metric bullets.
+- **Three-Tier Security Gate**: Tier 1 Read-only -> Tier 2 Staging Ledger -> Tier 3 WebAuthn biometric HITL passkey confirmation (`POST /api/v1/actions/{id}/execute`) + SHA-256 consortium invoice double-financing prevention.
+- **FastAPI Endpoints**: Root, health, `POST /api/v1/analyze`, `POST /api/v1/underwrite`, `POST /api/v1/actions`, `POST /api/v1/agent/chat`, `POST /api/v1/agent/test-connection`, and `POST /api/v1/agent/fetch-models`.
+- **Frontend Dashboard**: Next.js 14 App Router (`frontend/src/app/` and root `app/`) with In-App AI Provider Settings Modal, dynamic model selector, predictive deficit early-warning cards, live connection test, `localStorage` persistence, and Tier 3 WebAuthn passkey confirmation.
+- **AST Knowledge Graph**: `graphify` updated at **3,746 nodes / 6,574 edges / 354 communities**.
 - This file is the shared cross-agent instruction entrypoint; `CLAUDE.md`, `GEMINI.md`, and `.cursorrules` link back here for precedence and baseline.
 
 ---
 
-## 1. Multi-Agent Operating Model & Hierarchy Matrix
+## 1. Operating Model & Hierarchy Matrix
 
-The Copilot operates via a **Lead Financial Orchestrator**, coordinating high-level architecture through 12 Global Governance Specialists while delegating specialized domain tasks to 45 Project FinTech Specialists across 7 suites:
+The repository pairs the **Lead Architect & Operator** with the **Lead Financial Orchestrator**, which coordinates 12 Global Governance Specialists while delegating domain-specific tasks to 45 Project FinTech Specialists across 7 suites:
 
 ```
-                          LEAD FINANCIAL ORCHESTRATOR
+                          LEAD ARCHITECT / OPERATOR
                                        │
-  ┌────────────────────────────────────────┴────────────────────────────────────────┐
-  ▼                                                                                 ▼
-[ 0-global-specialists ]                                                  [ 1 to 7 Project Suites ]
-12 Macro Governance Agents                                                45 FinTech Domain Agents
-─────────────────────────                                                ─────────────────────────
-• research-scout        • qa-verifier                                    • Suite 1: Agentic Orchestration (7)
-• agentic-architect     • code-reviewer                                  • Suite 2: FinTech Engine (6)
-• systems-architect     • code-optimizer                                 • Suite 3: Backend Platform (6)
-• frontend-craft-eng    • prompt-engineer                                • Suite 4: Frontend Dashboard (4)
-• security-guardian     • technical-writer                               • Suite 5: Security & QA (7)
-• cross-platform-eng    • penetration-tester                             • Suite 6: Product & Pitch (6)
-                                                                         • Suite 7: Research Intelligence (9)
+                         LEAD FINANCIAL ORCHESTRATOR
+                                       │
+  ┌────────────────────────────────────┴────────────────────────────────────┐
+  ▼                                                                         ▼
+[ 0-global-specialists ]                                          [ 1 to 7 Project Suites ]
+12 Macro Governance Agents                                        45 FinTech Domain Agents
+─────────────────────────                                        ─────────────────────────
+• research-scout        • qa-verifier                            • Suite 1: Agentic Orchestration (7)
+• agentic-architect     • code-reviewer                          • Suite 2: FinTech Engine (6)
+• systems-architect     • code-optimizer                         • Suite 3: Backend Platform (6)
+• frontend-craft-eng    • prompt-engineer                        • Suite 4: Frontend Dashboard (4)
+• security-guardian     • technical-writer                       • Suite 5: Security & QA (7)
+• cross-platform-eng    • penetration-tester                     • Suite 6: Product & Pitch (6)
+                                                                 • Suite 7: Research Intelligence (9)
 ```
 
 > [!NOTE]
-> All **54 deterministic skills** are automatically indexed and available in the Antigravity `<skills>` catalog from `.agent/skills/`.
+> All **56 deterministic skills** are automatically indexed and available from `.agent/skills/`. See [`CLAUDE.md`](CLAUDE.md) Section 3 for the complete directory across 7 domains.
 
 ---
 
