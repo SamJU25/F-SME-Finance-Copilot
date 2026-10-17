@@ -45,6 +45,7 @@ from services.agent.prompts import (
     get_missing_statement_guidance,
     get_missing_statement_prompt,
     get_off_topic_reply,
+    numbers_are_grounded,
     sanitize_cfo_reply,
 )
 from services.agent.schema import (
@@ -336,7 +337,11 @@ def run_copilot_supervisor(
     )
 
     def _enrich_reply(base_reply: str, prompt_type: str = "diagnostic") -> str:
-        # 1. On-Device Local SLM / Fine-Tuned Model Execution
+        """
+        Has the model write the whole reply from the verified engine output (base_reply).
+        base_reply is returned unchanged when no model is configured or answers, when the
+        answer is a refusal, or when it states a figure the engine did not produce.
+        """
         is_explicit_local = (
             effective_config
             and (effective_config.provider or "").lower() in LOCAL_PROVIDERS
@@ -345,58 +350,51 @@ def run_copilot_supervisor(
                 or (effective_config.model_name or "").lower() in LOCAL_MODELS
             )
         )
-        if is_explicit_local:
-            sys_directive = (
-                get_credit_underwriting_prompt(base_reply)
-                if prompt_type == "underwriting"
-                else get_cash_diagnostic_prompt(base_reply)
-            )
-            sys_directive = _append_session_context(sys_directive, session_rec)
-            raw_advice = generate_local_reply(
-                prompt=request.message,
-                system_instruction=sys_directive,
-                history=request.history,
-                max_new_tokens=160,
-                model_name=effective_config.model_name if effective_config else None,
-            )
-            local_advice = sanitize_cfo_reply(raw_advice) if raw_advice else None
-            if local_advice and len(local_advice) > 20:
-                if not is_ai_disclaimer(local_advice):
-                    return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{local_advice}"
-
-            if "PYTEST_CURRENT_TEST" not in os.environ:
-                from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS
-                any_local = any(trans_engine.is_available(m) for m in SUPPORTED_LOCAL_MODELS.keys()) or slm_engine.is_available()
-                if not any_local:
-                    return (
-                        f"{base_reply}\n\n"
-                        f"> ℹ️ *Strategic CFO recommendations require an on-device AI model. No local AI model was detected on disk. "
-                        f"Please download a model first using the **Download Model** button below or in AI Provider Settings.*"
-                    )
+        if not is_explicit_local and (
+            not effective_config or (effective_config.provider or "offline").lower() == "offline"
+        ):
             return base_reply
 
-        # 2. Pure offline fallback (deterministic templates)
-        if not effective_config or (effective_config.provider or "offline").lower() == "offline":
-            return base_reply
-
-        # 3. External Cloud LLM Execution (Gemini, Claude, OpenAI, etc.)
         sys_directive = (
             get_credit_underwriting_prompt(base_reply)
             if prompt_type == "underwriting"
             else get_cash_diagnostic_prompt(base_reply)
         )
         sys_directive = _append_session_context(sys_directive, session_rec)
-        ai_reply = query_external_llm(
-            prompt=request.message,
-            system_instruction=sys_directive,
-            config=effective_config,
-            history=request.history,
-        )
-        if ai_reply:
-            cleaned_ai = sanitize_cfo_reply(ai_reply)
-            if cleaned_ai and len(cleaned_ai) > 20:
-                if not is_ai_disclaimer(cleaned_ai):
-                    return f"{base_reply}\n\n**Strategic CFO Recommendation:**\n{cleaned_ai}"
+
+        if is_explicit_local:
+            raw_reply = generate_local_reply(
+                prompt=request.message,
+                system_instruction=sys_directive,
+                history=request.history,
+                max_new_tokens=400,
+                model_name=effective_config.model_name if effective_config else None,
+            )
+        else:
+            raw_reply = query_external_llm(
+                prompt=request.message,
+                system_instruction=sys_directive,
+                config=effective_config,
+                history=request.history,
+            )
+
+        written = sanitize_cfo_reply(raw_reply) if raw_reply else ""
+        if (
+            len(written) > 20
+            and not is_ai_disclaimer(written)
+            and numbers_are_grounded(written, base_reply, context=f"{sys_directive}\n{request.message}")
+        ):
+            return written
+
+        if is_explicit_local and "PYTEST_CURRENT_TEST" not in os.environ:
+            from services.agent.local_transformers import SUPPORTED_LOCAL_MODELS
+            any_local = any(trans_engine.is_available(m) for m in SUPPORTED_LOCAL_MODELS.keys()) or slm_engine.is_available()
+            if not any_local:
+                return (
+                    f"{base_reply}\n\n"
+                    f"> ℹ️ *Strategic CFO recommendations require an on-device AI model. No local AI model was detected on disk. "
+                    f"Please download a model first using the **Download Model** button below or in AI Provider Settings.*"
+                )
         return base_reply
 
     # 0. Prompt Injection Defense Barrier
@@ -833,7 +831,7 @@ def run_copilot_supervisor(
             prompt=request.message,
             system_instruction=sys_directive,
             history=request.history,
-            max_new_tokens=80,
+            max_new_tokens=300,
             model_name=effective_config.model_name if effective_config else None,
         )
         if local_reply:

@@ -11,6 +11,7 @@ from services.agent.prompts import (
     get_cash_diagnostic_prompt,
     get_conversational_system_prompt,
     get_credit_underwriting_prompt,
+    numbers_are_grounded,
     sanitize_cfo_reply,
 )
 
@@ -376,5 +377,42 @@ def test_vector_greeting_routing_zero_keywords():
 
 
 
+def test_sanitize_cfo_reply_strips_closed_thought_block():
+    raw = "<thought>\n1. Request Inspection: user asked for DSCR.\n2. Compute.\n</thought>\n\nYour DSCR is 1.45x, above the 1.25x covenant."
+    assert sanitize_cfo_reply(raw) == "Your DSCR is 1.45x, above the 1.25x covenant."
 
 
+def test_sanitize_cfo_reply_drops_unclosed_thought_block():
+    raw = "<thought>\n1. Request Inspection: user asked for runway.\n2. Parameter Extraction"
+    assert sanitize_cfo_reply(raw) == ""
+
+
+def test_numbers_grounded_when_every_figure_is_sourced():
+    base = "- **Current Balance**: $12,500.00 USD\n- **Average Daily Burn**: $416.67/day\n- **Runway**: 30 days"
+    reply = "You have 30 days of runway: $12,500 in cash against $416.67 of daily burn. Collect receivables within 2 weeks."
+    assert numbers_are_grounded(reply, base, context="How long will our cash last?")
+
+
+def test_numbers_not_grounded_when_model_invents_a_figure():
+    base = "- **Current Balance**: $12,500.00 USD\n- **Runway**: 30 days"
+    reply = "You have 30 days of runway, so draw a $25,000 bridge loan now."
+    assert not numbers_are_grounded(reply, base, context="What should we do?")
+
+
+def test_numbers_from_user_message_are_allowed():
+    base = "- **Runway**: 30 days"
+    reply = "Your 30 days of runway falls short of the 45 days you asked about."
+    assert numbers_are_grounded(reply, base, context="Will we survive 45 days?")
+
+
+def test_numbers_not_grounded_when_reply_omits_the_result():
+    base = "### DSCR Assessment\n- **DSCR Metric**: **1.45x**"
+    reply = "Your coverage looks comfortable, so keep current debt terms."
+    assert not numbers_are_grounded(reply, base, context="What is our DSCR?")
+
+
+def test_advisory_prompts_ask_for_full_grounded_reply():
+    for prompt in (get_cash_diagnostic_prompt("Runway: 30 days"), get_credit_underwriting_prompt("DAB: $9,000.00")):
+        assert "2 concise sentences" not in prompt
+        assert "complete reply" in prompt
+        assert "Never calculate" in prompt

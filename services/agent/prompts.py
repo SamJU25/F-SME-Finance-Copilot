@@ -198,6 +198,10 @@ AI_SLOP_PHRASES = [
     re.compile(r"\b(?:the\s+best\s+part|the\s+kicker|the\s+key\s+takeaway|here'?s\s+the\s+bottom\s+line)[:.]*\s*", re.IGNORECASE),
 ]
 
+# The fine-tune dataset opens many replies with <thought> reasoning; an unclosed block
+# means generation stopped mid-reasoning, so everything after the tag is discarded.
+THOUGHT_BLOCK_PATTERN = re.compile(r"<(thought|think)>.*?(?:</\1>|\Z)", re.IGNORECASE | re.DOTALL)
+
 CONCLUSION_SLOP_PATTERN = re.compile(
     r"((?:^|(?<=[.!?\n]))\s*)(?:in\s+conclusion|ultimately|all\s+in\s+all|in\s+summary)[,:]*\s*",
     re.IGNORECASE,
@@ -219,8 +223,10 @@ def sanitize_cfo_reply(text: str) -> str:
     if not text:
         return ""
 
+    cleaned = THOUGHT_BLOCK_PATTERN.sub("", text)
+
     # Strip surrounding quotation marks or backticks first
-    cleaned = text.strip().strip("'\"“”`").strip()
+    cleaned = cleaned.strip().strip("'\"“”`").strip()
 
     # Strip AI slop emojis (rockets, sparkles, robots, fire, lightbulbs) first
     cleaned = AI_SLOP_EMOJI_PATTERN.sub("", cleaned)
@@ -297,3 +303,31 @@ def sanitize_cfo_reply(text: str) -> str:
 
     return cleaned
 
+
+_FIGURE_PATTERN = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?")
+
+
+def _figures(text: str) -> set[str]:
+    found = set()
+    for raw in _FIGURE_PATTERN.findall(text):
+        value = raw.replace(",", "")
+        if "." in value:
+            value = value.rstrip("0").rstrip(".")
+        found.add(value)
+    return found
+
+
+def numbers_are_grounded(reply: str, base_reply: str, context: str = "") -> bool:
+    """
+    Guards model-written replies against invented figures: every figure in the reply must
+    appear in the verified engine output or the prompt context, and when the engine output
+    contains figures the reply must restate at least one of them. Integers up to 12 are
+    exempt because they are counts and time spans ("2 weeks", "3 options"), not results.
+    """
+    base_figures = _figures(base_reply)
+    allowed = base_figures | _figures(context)
+    reply_figures = _figures(reply)
+    for figure in reply_figures:
+        if figure not in allowed and not (figure.isdigit() and int(figure) <= 12):
+            return False
+    return not base_figures or bool(reply_figures & base_figures)
