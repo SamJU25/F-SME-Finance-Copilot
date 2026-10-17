@@ -13,9 +13,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 from services.agent.schema import LLMConfig
+from services.agent.session_store import session_store
 from services.calculations.cash_analysis import calculate_cash_analysis
 from services.calculations.runway import calculate_cash_conversion_cycle
 from services.ingestion.csv_parser import CSVIngestionError, parse_bank_csv, parse_multiple_bank_csv
+from services.ingestion.pdf_parser import parse_pdf_statement
+from services.ingestion.pdf_validator import PDFValidationError
 
 router = APIRouter(prefix="/api/v1", tags=["Cash analysis"])
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_ANALYSIS_UPLOAD_BYTES", "1048576"))
@@ -78,6 +81,9 @@ class CashAnalysisResponse(BaseModel):
     has_overlaps_deduped: bool | None = None
     operational_inflows: str | None = None
     operational_outflows: str | None = None
+    document_format: Literal["CSV", "PDF", "HYBRID"] | None = None
+    page_count: int | None = None
+    normalized_csv: str | None = None
 
 
 @router.post("/analyze", response_model=CashAnalysisResponse)
@@ -91,6 +97,8 @@ async def analyze_csv(
     dio_days: int | None = Form(0, ge=0),
     as_of_date: date | None = Form(None),
     x_llm_config: Optional[str] = Header(default=None, alias="X-LLM-Config"),
+    x_session_id: Optional[str] = Header(default=None, alias="X-Session-ID"),
+    x_tenant_id: Optional[str] = Header(default=None, alias="X-Tenant-ID"),
 ) -> CashAnalysisResponse | JSONResponse:
     if MAX_UPLOAD_BYTES <= 0:
         raise RuntimeError("MAX_ANALYSIS_UPLOAD_BYTES must be a positive integer")
@@ -133,20 +141,43 @@ async def analyze_csv(
     if not upload_list:
         return JSONResponse(
             status_code=422,
-            content={"error": {"code": "INVALID_HEADER", "message": "CSV upload is required."}},
+            content={"error": {"code": "INVALID_HEADER", "message": "Statement upload is required."}},
         )
 
     file_contents: list[tuple[str, bytes]] = []
     total_bytes = 0
+    pdf_pages_total = 0
+    has_pdf = False
+    has_csv = False
+    normalized_csv_parts: list[str] = []
+
     for upload in upload_list:
         content = await upload.read(MAX_UPLOAD_BYTES + 1)
         total_bytes += len(content)
         if total_bytes > MAX_UPLOAD_BYTES or len(content) > MAX_UPLOAD_BYTES:
             return JSONResponse(
                 status_code=413,
-                content={"error": {"code": "UPLOAD_TOO_LARGE", "message": "CSV upload exceeds the configured size limit."}},
+                content={"error": {"code": "UPLOAD_TOO_LARGE", "message": "Statement upload exceeds the configured size limit."}},
             )
-        file_contents.append((upload.filename or "statement.csv", content))
+        filename = upload.filename or "statement.csv"
+        is_pdf = filename.lower().endswith(".pdf") or content.startswith(b"%PDF")
+        if is_pdf:
+            has_pdf = True
+            try:
+                pdf_res = parse_pdf_statement(content, tenant_id=x_tenant_id or "SME-DEFAULT")
+                pdf_pages_total += pdf_res.page_count
+                csv_bytes = pdf_res.csv_text.encode("utf-8")
+                normalized_csv_parts.append(pdf_res.csv_text)
+                file_contents.append((filename, csv_bytes))
+            except PDFValidationError as exc:
+                return JSONResponse(status_code=422, content={"error": {"code": exc.code, "message": str(exc)}})
+        else:
+            has_csv = True
+            try:
+                normalized_csv_parts.append(content.decode("utf-8", errors="replace"))
+            except Exception:
+                pass
+            file_contents.append((filename, content))
 
     try:
         if len(file_contents) == 1:
@@ -212,6 +243,23 @@ async def analyze_csv(
         op_inflows = _format_money(t.operational_inflows)
         op_outflows = _format_money(t.operational_outflows)
 
+    doc_format: Literal["CSV", "PDF", "HYBRID"] = "CSV"
+    if has_pdf and has_csv:
+        doc_format = "HYBRID"
+    elif has_pdf:
+        doc_format = "PDF"
+
+    combined_csv = "\n".join(normalized_csv_parts) if normalized_csv_parts else None
+    if combined_csv and x_session_id:
+        try:
+            session_store.update_statement(
+                session_id=x_session_id,
+                csv_content=combined_csv,
+                tenant_id=x_tenant_id or "SME-DEFAULT",
+            )
+        except Exception:
+            pass
+
     return CashAnalysisResponse(
         currency=result.currency,
         accepted_count=result.accepted_count,
@@ -241,6 +289,9 @@ async def analyze_csv(
         has_overlaps_deduped=has_deduped,
         operational_inflows=op_inflows,
         operational_outflows=op_outflows,
+        document_format=doc_format,
+        page_count=pdf_pages_total if has_pdf else None,
+        normalized_csv=combined_csv if has_pdf else None,
     )
 
 

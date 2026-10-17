@@ -14,6 +14,8 @@ from typing import Any, Sequence
 from pydantic import BaseModel, ConfigDict, Field
 
 from services.agent.schema import LLMConfig
+from services.decision.registry import DecisionEngineRegistry
+from services.decision.types import DecisionDomain, DecisionRequest
 from services.ingestion.dynamic_profiler import ProfiledSchema, profile_table_content
 from services.ingestion.financial_parsers import (
     _CURRENCY_SYMBOL_MAP,
@@ -156,9 +158,72 @@ _CURRENCY_ALIASES = {
 
 
 def _detect_columns(header: list[str]) -> dict[str, int] | None:
-    norm_cols = [_normalize_col_name(c) for c in header]
+    """Detects semantic roles of CSV header columns via Decision Engine policies with safety fallback."""
     mapping: dict[str, int] = {}
+    registry = DecisionEngineRegistry.get_instance()
 
+    # 1. Primary Path: evaluate declarative JDM policy via Decision Engine
+    for idx, raw_col in enumerate(header):
+        if not raw_col or not str(raw_col).strip():
+            continue
+        clean_hdr = str(raw_col).lower().strip()
+        norm_hdr = _normalize_col_name(str(raw_col))
+
+        canonical = "UNKNOWN"
+        try:
+            dec_req = DecisionRequest(
+                domain=DecisionDomain.BANK_STATEMENT_PROFILE,
+                input_state={"header_clean": clean_hdr, "header_raw": str(raw_col)},
+                execution_mode="DETERMINISTIC_ONLY",
+            )
+            dec_res = registry.evaluate(dec_req)
+            canonical = dec_res.output_payload.get("canonical_column") or dec_res.selected_choice
+        except Exception:
+            canonical = "UNKNOWN"
+
+        if canonical == "UNKNOWN":
+            try:
+                dec_req2 = DecisionRequest(
+                    domain=DecisionDomain.BANK_STATEMENT_PROFILE,
+                    input_state={"header_clean": norm_hdr, "header_raw": str(raw_col)},
+                    execution_mode="DETERMINISTIC_ONLY",
+                )
+                dec_res2 = registry.evaluate(dec_req2)
+                canonical = dec_res2.output_payload.get("canonical_column") or dec_res2.selected_choice
+            except Exception:
+                canonical = "UNKNOWN"
+
+        if canonical == "TX_ID" and "tx_id" not in mapping:
+            mapping["tx_id"] = idx
+        elif canonical == "DATE" and "date" not in mapping:
+            mapping["date"] = idx
+        elif canonical == "BALANCE" and "balance" not in mapping:
+            mapping["balance"] = idx
+        elif canonical == "OUTFLOW" and "debit" not in mapping:
+            mapping["debit"] = idx
+        elif canonical == "INFLOW" and "credit" not in mapping:
+            mapping["credit"] = idx
+        elif canonical == "NET_AMOUNT":
+            # Net settlement amount takes priority over gross amount
+            mapping["amount"] = idx
+            mapping["_has_net_amount"] = 1
+        elif canonical == "SIGNED_AMOUNT" and "_has_net_amount" not in mapping:
+            if "amount" not in mapping:
+                mapping["amount"] = idx
+        elif canonical == "DESCRIPTION" and "description" not in mapping:
+            mapping["description"] = idx
+        elif canonical == "CURRENCY" and "currency" not in mapping:
+            mapping["currency"] = idx
+
+    mapping.pop("_has_net_amount", None)
+
+    has_date = "date" in mapping
+    has_amount = "amount" in mapping or "debit" in mapping or "credit" in mapping
+    if has_date and has_amount:
+        return mapping
+
+    # 2. Safety Fallback: static alias mapping if Decision Engine table missed edge cases
+    norm_cols = [_normalize_col_name(c) for c in header]
     for idx, col in enumerate(norm_cols):
         if not col:
             continue
@@ -172,8 +237,7 @@ def _detect_columns(header: list[str]) -> dict[str, int] | None:
             mapping["debit"] = idx
         elif "credit" not in mapping and col in _CREDIT_ALIASES:
             mapping["credit"] = idx
-        elif col in _NET_ALIASES:
-            # Net amount has priority over gross amount
+        elif col in _NET_ALIASES and "amount" not in mapping:
             mapping["amount"] = idx
         elif "amount" not in mapping and col in _AMOUNT_ALIASES:
             mapping["amount"] = idx

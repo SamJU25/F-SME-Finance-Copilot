@@ -49,6 +49,9 @@ def test_analyze_api_returns_decimal_strings_and_row_provenance():
         "has_overlaps_deduped": None,
         "operational_inflows": None,
         "operational_outflows": None,
+        "document_format": "CSV",
+        "page_count": None,
+        "normalized_csv": None,
     }
 
 
